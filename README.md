@@ -13,6 +13,21 @@ TSKBattleLog captures and analyzes battle events from the game runtime, includin
 - Combat state analysis
 - Configurable auto-battle skill selection via `char_skill.json`
 
+## Example Output
+
+After a battle, TSKBattleLog can generate a damage summary from captured battle events:
+
+```text
+[00:10:27] enter TSKBattleManager.InitializeResult
+[00:10:27] [TSKBattleLog] onEndBattle: total damage=34096197125
+[00:10:27] [TSKBattleLog] 初日の出を迎えて (フィオナ) damage:1542869178(5%)
+[00:10:27] [TSKBattleLog] バニーサンタ (蘭美) damage:8171700221(24%)
+[00:10:27] [TSKBattleLog] 霹靂の射手 (梨緒) damage:11016266663(32%)
+[00:10:27] [TSKBattleLog] 夏色マジカル☆ (リーリア) damage:289089448(1%)
+[00:10:27] [TSKBattleLog] 星を見るもの (フィオナ《魔王》) damage:10674388148(31%)
+[00:10:27] return: 0x7ffcd60e2bd0
+```
+
 ## Technical Notes
 
 TSKBattleLog uses Frida and frida-il2cpp-bridge to hook IL2CPP methods at runtime and reconstruct battle events.
