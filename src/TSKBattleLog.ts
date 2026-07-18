@@ -12,6 +12,7 @@ export class TSKBattleLog {
   notes: TSKBattleNote[] = [];
   logs: string[] = [];
   damageTotal: bigint = BigInt(0);
+  unisonDamageTotal: bigint = BigInt(0);
 
   constructor() {}
 
@@ -19,6 +20,7 @@ export class TSKBattleLog {
     this.notes = [];
     this.logs = [];
     this.damageTotal = BigInt(0);
+    this.unisonDamageTotal = BigInt(0);
   }
 
   init(notes: Il2Cpp.Array<Il2Cpp.Object>): void {
@@ -47,13 +49,22 @@ export class TSKBattleLog {
     log(`[TSKBattleLog] init: notes=${this.notes.length}`);
   }
 
-  addDamageNote(address: string, damage: string, damageType: string): void {
+  addDamageNote(
+    address: string,
+    damage: string,
+    damageType: string,
+    isCritical: string = "Unknown"
+  ): void {
     let note = this.notes.find((n) => n.address === address);
     const damageBigInt = BigInt(damage);
     this.damageTotal += damageBigInt;
-    log(
-      `[TSKBattleLog] addDamageNote: address=${address}, damage=${damageBigInt}, damageType=${damageType}, damageTotal=${this.damageTotal}`
-    );
+    const logMessage = `[TSKBattleLog] addDamageNote[${
+      note?.getName() ?? address
+    }]: damage=${damageBigInt}, critical = ${isCritical}, damageType=${damageType}, damageTotal=${
+      this.damageTotal
+    }`;
+    log(logMessage);
+    this.logs.push(logMessage);
     if (!note) {
       log(
         `[TSKBattleLog] addDamageNote: note not found for address ${address}`
@@ -62,7 +73,7 @@ export class TSKBattleLog {
       return;
     }
     if (damageType === DamageType.Unison) {
-      // tototo do: 处理Unison伤害类型
+      this.unisonDamageTotal += damageBigInt;
       return;
     }
     note!.addDamage(damageBigInt);
@@ -71,7 +82,6 @@ export class TSKBattleLog {
     log(
       `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`
     );
-    this.logs.push(`[${damageType}] ${note!.toString()}`);
   }
 
   toString(): string {
@@ -87,5 +97,11 @@ export class TSKBattleLog {
         `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`
       );
     }
+    const unisonValue =
+      Number(this.unisonDamageTotal) / Number(this.damageTotal);
+    const unisonPercentage = `${(unisonValue * 100).toFixed(0)}%`;
+    log(
+      `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`
+    );
   }
 }

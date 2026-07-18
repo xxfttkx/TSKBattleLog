@@ -21,9 +21,9 @@ function handleArgs(
   if (method.name == "SetSkillDamageValue") {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
-    const isCritical = args[8].toInt32() != 0;
+    const isCritical = args[8].toInt32() != 0 ? "True" : "False";
     log(`SetSkillDamageValue: value=${value} attackAddress=${attackAddress}`);
-    tskBattleLog.addDamageNote(attackAddress, value, "Skill");
+    tskBattleLog.addDamageNote(attackAddress, value, "Skill", isCritical);
     return;
   }
   if (method.name == "SetSkillMultiDamageValue") {
@@ -47,9 +47,9 @@ function handleArgs(
   if (method.name == "SetDamageValue") {
     const value = args[1].toString();
     const attackAddress = args[5].toString();
-    const isCritical = args[4].toInt32() != 0;
+    const isCritical = args[4].toInt32() != 0 ? "True" : "False";
     log(`SetDamageValue: value=${value} attackAddress=${attackAddress}`);
-    tskBattleLog.addDamageNote(attackAddress, value, "Normal");
+    tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
     return;
   }
   if (method.name == "SetUnisonDamageValue") {
