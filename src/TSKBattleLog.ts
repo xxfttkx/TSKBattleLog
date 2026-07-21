@@ -42,7 +42,7 @@ export class TSKBattleLog {
       const unitNameInSkillMap = skillMap.has(battleNote.unitName);
       log(
         `[TSKBattleLog] add: note=${battleNote.toString()}${
-          unitNameInSkillMap ? "" : " (not in map)"
+          unitNameInSkillMap ? "" : " (not in skill map)"
         }`
       );
     }
