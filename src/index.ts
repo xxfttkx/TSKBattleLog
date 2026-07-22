@@ -232,6 +232,9 @@ function handleArgs(
     // 直接使用枚举的反向映射
     const modeName = BattleMode[mode]; // "DamageChallengeAtMode"
     const teamType = type == 0 ? "Player" : type == 1 ? "Enemy" : "Unknown";
+    if (teamType === "Unknown") {
+      log(`Unknown team type: ${type}`);
+    }
 
     // dumpObject(type);
     log(
