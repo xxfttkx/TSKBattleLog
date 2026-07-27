@@ -241,7 +241,7 @@ function handleArgs(
       `${teamType} Initialize: hp=${hp} maxHp=${maxHp} stun=${stun} notes.length=${notesSize} mode=${modeName} overHealRate=${overHealRate}`
     );
 
-    if (teamType === "Player") {
+    if (teamType === "Player" || teamType === "Unknown") {
       tskBattleLog.init(notes);
     }
   }
