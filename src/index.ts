@@ -1,15 +1,114 @@
 import "frida-il2cpp-bridge";
-import { skillMap } from "./common";
-import { log, dumpArgs } from "./utils";
+import {
+  skillMap,
+  AttackType,
+  TeamType,
+  AbilityCompatibility,
+  SkillType,
+  Timing,
+} from "./common";
+import { log, dumpArgs, parseArgument } from "./utils";
 import { TSKBattleLog } from "./TSKBattleLog";
 
 const tskBattleLog = new TSKBattleLog();
+var enter_CaluculationNormalDamage = false;
+
+function onLeaveMethod(
+  cls: Il2Cpp.Class,
+  method: Il2Cpp.Method,
+  retval: InvocationReturnValue
+) {
+  if (method.name == "CaluculationNormalDamage") {
+    enter_CaluculationNormalDamage = false;
+  }
+  log(`${method.name} return: ${retval}\n`);
+}
 
 function handleArgs(
   cls: Il2Cpp.Class,
   method: Il2Cpp.Method,
   args: InvocationArguments
 ) {
+  if (method.name == "CaluculationNormalDamage") {
+    enter_CaluculationNormalDamage = true;
+    const attack = new Il2Cpp.Object(args[0]); //TSKBattleNote
+    const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
+    const beforeRushCount = args[2].toInt32();
+    const rushCount = args[3].toInt32();
+    const skillValue = parseArgument(args[4], "float");
+    const kind = AttackType[parseArgument(args[8], "enum") as number];
+    const criticalUp = parseArgument(args[9], "int");
+    const targetCount = parseArgument(args[10], "int");
+    const multipleCount = parseArgument(args[11], "int");
+    // dumpArgs(method, args);
+
+    const baseAttack = attack.method("GetBaseAttack").invoke() as number;
+    const atk = attack.method("GetAttack").invoke(false) as number;
+    const crt = attack.method("GetCritical").invoke() as number;
+    log(
+      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
+    );
+    log(
+      `[CaluculationNormalDamage]: beforeRushCount=${beforeRushCount} rushCount=${rushCount} skillValue=${skillValue}`
+    );
+    log(
+      `[CaluculationNormalDamage]: kind=${kind} criticalUp=${criticalUp} targetCount=${targetCount} multipleCount=${multipleCount}`
+    );
+
+    const teamPtr = attack.handle.add(0x28).readPointer();
+    const team = new Il2Cpp.Object(teamPtr);
+    const teamType = team.handle.add(0x28).readS32();
+    log(`attack teamType=${TeamType[teamType]}`);
+
+    // const TSKBattleUtility = Il2Cpp.domain
+    //   .assembly("Assembly-CSharp")
+    //   .image.class("TSKBattleUtility");
+    // const GetAbilityCompatibility = TSKBattleUtility.methods.find(
+    //   (m) =>
+    //     m.name === "GetAbilityCompatibility" &&
+    //     m.parameters[0].type.name === "TSKBattleNote" &&
+    //     m.parameters[1].type.name === "TSKBattleNote"
+    // );
+    // if (!GetAbilityCompatibility) {
+    //   log("GetAbilityCompatibility not found");
+    //   return;
+    // }
+    // log(GetAbilityCompatibility.toString());
+
+    // const result = GetAbilityCompatibility?.invoke(attack, defence, teamType);
+    // log(`GetAbilityCompatibility result = ${result?.toString()}`);
+
+    const GetSkillEffect = defence.method("GetSkillEffect");
+    console.log(GetSkillEffect.toString());
+    const DmgUpList = GetSkillEffect!.invoke(
+      SkillType["DmgUp"]
+    ) as Il2Cpp.Object;
+    // dumpObject(DmgUpList);
+    var size = DmgUpList.field("_size").value as number;
+    var items = DmgUpList.field("_items").value as Il2Cpp.Array;
+    log(`defencer DmgUpList count = ${size}`);
+    for (let i = 0; i < size; i++) {
+      const item = items.get(i) as Il2Cpp.Object;
+
+      log(`item[${i}] = ${item.class.name}`);
+    }
+    const DamageDowList = GetSkillEffect!.invoke(
+      SkillType["DamageDown"]
+    ) as Il2Cpp.Object;
+    size = DamageDowList.field("_size").value as number;
+    log(`defencer DamageDowList count = ${size}`);
+    const AtkUpList = attack
+      .method("GetSkillEffect")!
+      .invoke(SkillType["AtkUp"]) as Il2Cpp.Object;
+    size = AtkUpList.field("_size").value as number;
+    log(`attcker AtkUpList count = ${size}`);
+    logSkillEffectList(defence);
+    return;
+  }
+  if (method.name == "GetAbilityCompatibility") {
+    // dumpArgs(method, args);
+    return;
+  }
   if (method.name == "CaluculationUnisonDamage") {
     dumpArgs(method, args);
     return;
@@ -112,6 +211,12 @@ function handleArgs(
   if (method.name == "LotterySkill") {
     // args[2] = TSKBattleNote
     const unit = new Il2Cpp.Object(args[2]);
+    const baseAttack = unit.method("GetBaseAttack").invoke() as number;
+    const atk = unit.method("GetAttack").invoke(false) as number;
+    const crt = unit.method("GetCritical").invoke() as number;
+    log(
+      `LotterySkill: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
+    );
 
     const selectPattern = new Il2Cpp.Object(args[1]);
 
@@ -138,8 +243,12 @@ function handleArgs(
       const time = effect.field("<Time>k__BackingField").value as number;
       const value = effect.field("<SkillValue1>k__BackingField")
         .value as number;
+      const effectValue = effect.field("<SkillEffectValue>k__BackingField")
+        .value as number;
       // if (time > 9000) continue;
-      // log(`effect ${i}: type=${type} time=${time} value=${value}`);
+      // log(
+      //   `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue}`
+      // );
       effectMap.set(type, (effectMap.get(type) ?? 0) + value);
     }
 
@@ -193,6 +302,8 @@ function handleArgs(
     }
   }
   if (method.name == "LotterySkillAction") {
+    const nowTurnCount = parseInt(args[5].toString(), 16);
+    log(`LotterySkillAction: nowTurnCount = ${nowTurnCount}`);
     return;
     for (var i = 0; i < 7; i++) {
       if (args[i] != null) {
@@ -279,9 +390,16 @@ function traceMethod(cls: Il2Cpp.Class, method: Il2Cpp.Method) {
         log("returnAddress =", this.returnAddress);
         log("RVA =", this.returnAddress.sub(module.base));
       }
+      if (method.name == "FluctuationOffset") {
+        const f = new NativeFunction(method.virtualAddress, "float", []);
+
+        console.log(f());
+      }
     },
     onLeave(retval) {
-      log(`return: ${retval}\n`);
+      onLeaveMethod(cls, method, retval);
+      // console.log(method.returnType.name);
+      // console.log(method.virtualAddress);
     },
   });
 }
@@ -309,11 +427,29 @@ Il2Cpp.perform(() => {
     }
     traceMethod(cls, method);
   }
+  const TSKBattleMain = image.class("TSKBattleMain");
+  const QTEResutl = TSKBattleMain.method("QTEResutl");
+  const QTEResutlOriginal = new NativeFunction(
+    QTEResutl.virtualAddress,
+    "void",
+    ["pointer", "int"]
+  ) as any;
+
+  QTEResutl.implementation = function (timing: any) {
+    log(`QTEResutl called with timing = ${Timing[timing]}(${timing})`);
+    // 强制 PREFECT
+    const newTiming = 3;
+    log(`QTEResutl modified timing to = ${Timing[newTiming]}(${newTiming})`);
+    return QTEResutlOriginal(this.handle, newTiming);
+  };
   traceMethodByName("TSKBattleAI", "LotterySkill");
+  traceMethodByName("TSKBattleAI", "LotterySkillAction");
   traceMethodByName("TSKBattleTeam", "Initialize");
   traceMethodByName("TSKBattleManager", "InitializeResult");
   traceMethodByName("TSKBattleAttack", "SetDamageNormal");
   traceMethodByName("TSKBattleNote", "SetDamageValue");
+  traceMethodByName("TSKBattleCalculationManager", "CaluculationNormalDamage");
+  // traceMethodByName("TSKBattleUtility", "GetAbilityCompatibility");
   // traceMethodByName("TSKBattleNote", "SetDamage");
   // traceMethodByName("DamageText", "PlayDamage");
   // traceMethodByName("TSKBattleTeam", "SetMultiDanameTextView");
@@ -328,6 +464,97 @@ Il2Cpp.perform(() => {
 
   // const PlayDamage = image.class("DamageText").method("PlayDamage");
   // Il2Cpp.trace(false).methods(PlayDamage).and().attach();
+  // hookMethodReturn(
+  //   image.class("TSKBattleUtility").method("GetAbilityCompatibility"),
+  //   "int",
+  //   ["int", "int", "int"],
+  //   (ret) => {
+  //     console.log("GetAbilityCompatibility =", ret);
+  //   }
+  // );
+  hookMethodReturn(
+    image.class("TSKBattleCalculationManager").method("FluctuationOffset"),
+    "float",
+    [],
+    (ret) => {
+      if (enter_CaluculationNormalDamage) {
+        console.log("FluctuationOffset =", ret);
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleCalculationManager").method("RushOffset"),
+    "float",
+    ["int", "pointer", "int"],
+    (ret) => {
+      if (enter_CaluculationNormalDamage) {
+        console.log("RushOffset =", ret);
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleCalculationManager").method("AttributeOffset"),
+    "float",
+    ["int", "pointer", "int"],
+    (ret, args) => {
+      if (enter_CaluculationNormalDamage) {
+        const compatibility = args[0];
+        console.log(
+          `AttributeOffset = ${ret} (compatibility=${AbilityCompatibility[compatibility]})`
+        );
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleCalculationManager").method("CriticalOffset"),
+    "float",
+    ["bool", "pointer", "int", "int"],
+    (ret, args) => {
+      if (enter_CaluculationNormalDamage) {
+        const isCritilal = args[0];
+        console.log(
+          `CriticalOffset = ${ret} (isCritical=${
+            isCritilal == 1 ? "true" : "false"
+          })`
+        );
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleCalculationManager").method("DownOffset"),
+    "float",
+    ["pointer", "pointer"],
+    (ret, args) => {
+      if (enter_CaluculationNormalDamage) {
+        console.log(`DownOffset = ${ret}`);
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleNote").method("GetDamageRateValue"),
+    "int64",
+    ["pointer", "int64", "int", "int", "pointer"],
+    (ret, args) => {
+      if (enter_CaluculationNormalDamage) {
+        console.log(`GetDamageRateValue = ${ret}`);
+      }
+    }
+  );
+  hookMethodReturn(
+    image.class("TSKBattleNote").method("GetPassiveDamageRate"),
+    "int",
+    ["pointer", "int", "int", "pointer"],
+    (ret, args) => {
+      if (enter_CaluculationNormalDamage) {
+        console.log(`GetPassiveDamageRate = ${ret}`);
+      }
+    }
+  );
+  // traceMethodByName("TSKBattleCalculationManager", "FluctuationOffset");
+  // traceMethodByName("TSKBattleCalculationManager", "RushOffset");
+  // traceMethodByName("TSKBattleNote", "GetAttack");
+  // traceMethodByName("TSKBattleCalculationManager", "CriticalOffset");
+  // traceMethodByName("TSKBattleCalculationManager", "DownOffset");
   type MethodInfo = {
     start: NativePointer;
     method: Il2Cpp.Method;
@@ -393,3 +620,127 @@ Il2Cpp.perform(() => {
     // });
   });
 });
+function hookMethodReturn(
+  method: Il2Cpp.Method,
+  returnType: NativeFunctionReturnType,
+  argTypes: NativeFunctionArgumentType[],
+  handler?: (ret: any, args: any[]) => any
+) {
+  if (!method) {
+    console.log("[hookMethodReturn] method is undefined");
+    return;
+  }
+  const original = new NativeFunction(
+    method.virtualAddress,
+    returnType,
+    argTypes
+  ) as any;
+  const isStatic = method.isStatic;
+  method.implementation = function (...args: any[]) {
+    const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
+    console.log(
+      `${method.name} args:`,
+      args.map((x) => typeof x + ":" + x)
+    );
+    // if (method.name == "GetDamageRateValue") {
+    //   args.forEach((arg, i) => {
+    //     console.log("arg", i);
+    //     console.log("typeof:", typeof arg);
+    //     console.log("constructor:", arg?.constructor?.name);
+
+    //     if (arg instanceof Il2Cpp.Object) {
+    //       console.log("Object class:", arg.class.name);
+    //     }
+
+    //     if (arg instanceof Il2Cpp.ValueType) {
+    //       console.log("ValueType toString:", arg.toString());
+    //     }
+    //   });
+    // }
+    if (expectedArgsNum !== args.length) {
+      console.log(
+        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`
+      );
+      // 走原 bridge implementation
+      return method.invoke(...args);
+    }
+    const nativeArgs = args.map(convertArg);
+    console.log(
+      `${method.name} nativeArgs:`,
+      nativeArgs.map((x) => typeof x + ":" + x)
+    );
+    var ret: any;
+    if (method.isStatic) {
+      ret = original(...nativeArgs);
+    } else {
+      ret = original(this.handle, ...nativeArgs);
+    }
+
+    const result = handler?.(ret, nativeArgs);
+
+    return (result ?? ret) as any;
+  };
+}
+function convertArg(arg: any): any {
+  // bool
+  if (typeof arg === "boolean") {
+    return arg ? 1 : 0;
+  }
+  // Il2Cpp.Object
+  if (arg instanceof Il2Cpp.Object) {
+    return arg.handle;
+  }
+
+  // ValueType (enum / struct)
+  if (arg instanceof Il2Cpp.ValueType) {
+    return arg.handle.readS32();
+  }
+
+  // frida-il2cpp-bridge Int64 / UInt64
+  if (
+    arg?.constructor?.name === "Int64" ||
+    arg?.constructor?.name === "UInt64"
+  ) {
+    return BigInt(arg.toString());
+  }
+
+  return arg;
+}
+
+function logSkillEffectList(unit: Il2Cpp.Object) {
+  const skillEffectList = unit.field("skillEffectList").value as Il2Cpp.Object;
+
+  if (skillEffectList.isNull()) {
+    log("skillEffectList = null");
+    return;
+  }
+
+  // List<T> 当前元素数量
+  const size = skillEffectList.field("_size").value as number;
+
+  // T[] 数组
+  const items = skillEffectList.field("_items")
+    .value as Il2Cpp.Array<Il2Cpp.Object>;
+
+  log("skillEffectList size =", size);
+  const effectMap = new Map<string, number>();
+  for (let i = 0; i < size; i++) {
+    const effect = items.get(i);
+    const type = effect.field("<Type>k__BackingField").value.toString();
+    const time = effect.field("<Time>k__BackingField").value as number;
+    const value = effect.field("<SkillValue1>k__BackingField").value as number;
+    const effectValue = effect.field("<SkillEffectValue>k__BackingField")
+      .value as number;
+
+    // if (time > 9000) continue;
+    log(
+      `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue}`
+    );
+    effectMap.set(type, (effectMap.get(type) ?? 0) + value);
+  }
+
+  log("===== Effect Summary =====");
+  for (const [type, total] of effectMap) {
+    log(`${type}: ${total}`);
+  }
+}

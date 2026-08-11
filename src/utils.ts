@@ -47,11 +47,15 @@ function dumpArgs(method: Il2Cpp.Method, args: InvocationArguments) {
         case "System.Boolean":
           value = arg.toInt32() != 0;
           break;
-
+        case "System.Int32":
+          value = arg.toInt32();
+          break;
         case "System.Int64":
           value = parseInt(arg.toString(), 16); // 先输出十六进制
           break;
-
+        case "System.Single":
+          value = intBitsToFloat(arg.toString());
+          break;
         default:
           value = arg.toString();
       }
@@ -60,4 +64,26 @@ function dumpArgs(method: Il2Cpp.Method, args: InvocationArguments) {
   }
 }
 
-export { log, dumpArgs };
+function parseArgument(arg: NativePointer, typeName: string): unknown {
+  switch (typeName) {
+    case "float":
+      return intBitsToFloat(arg.toString());
+    case "enum":
+      return arg.toInt32();
+    case "int":
+      return arg.toInt32();
+    default:
+      return arg.toString();
+  }
+}
+
+function intBitsToFloat(hex: string): number {
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+
+  view.setUint32(0, parseInt(hex, 16), true);
+
+  return view.getFloat32(0, true);
+}
+
+export { log, dumpArgs, parseArgument };
