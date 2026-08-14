@@ -86,4 +86,13 @@ function intBitsToFloat(hex: string): number {
   return view.getFloat32(0, true);
 }
 
-export { log, dumpArgs, parseArgument };
+function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
+  // note: TSKBattleNote
+  const unitData = note.field("<UnitData>k__BackingField")
+    .value as Il2Cpp.Object; // TSKBattleUnit
+  const name_0 = unitData.field("<UnitName>k__BackingField").value;
+  const name_1 = unitData.field("<CharacterName>k__BackingField").value;
+  return `${name_0} (${name_1})`;
+}
+
+export { log, dumpArgs, parseArgument, getNameByTSKBattleNote };

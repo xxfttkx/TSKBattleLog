@@ -7,7 +7,7 @@ import {
   SkillType,
   Timing,
 } from "./common";
-import { log, dumpArgs, parseArgument } from "./utils";
+import { log, dumpArgs, parseArgument, getNameByTSKBattleNote } from "./utils";
 import { TSKBattleLog } from "./TSKBattleLog";
 
 const tskBattleLog = new TSKBattleLog();
@@ -79,7 +79,7 @@ function handleArgs(
     // log(`GetAbilityCompatibility result = ${result?.toString()}`);
 
     const GetSkillEffect = defence.method("GetSkillEffect");
-    console.log(GetSkillEffect.toString());
+    log(GetSkillEffect.toString());
     const DmgUpList = GetSkillEffect!.invoke(
       SkillType["DmgUp"]
     ) as Il2Cpp.Object;
@@ -102,6 +102,7 @@ function handleArgs(
       .invoke(SkillType["AtkUp"]) as Il2Cpp.Object;
     size = AtkUpList.field("_size").value as number;
     log(`attcker AtkUpList count = ${size}`);
+    logSkillEffectList(attack);
     logSkillEffectList(defence);
     return;
   }
@@ -176,20 +177,12 @@ function handleArgs(
   }
   if (method.name == "SetDamageNormal") {
     const attack = new Il2Cpp.Object(args[1]); //TSKBattleNote
-    const attackUnitData = attack.field("<UnitData>k__BackingField")
-      .value as Il2Cpp.Object;
     const target = new Il2Cpp.Object(args[2]);
-    const targetUnitData = target.field("<UnitData>k__BackingField")
-      .value as Il2Cpp.Object;
-    const name_a_0 = attackUnitData.field("<UnitName>k__BackingField").value;
-    const name_a_1 = attackUnitData.field(
-      "<CharacterName>k__BackingField"
-    ).value;
-    const name_t_0 = targetUnitData.field("<UnitName>k__BackingField").value;
-    const name_t_1 = targetUnitData.field(
-      "<CharacterName>k__BackingField"
-    ).value;
-    log(`SetDamageNormal: ${name_a_0} ${name_a_1} -> ${name_t_0} ${name_t_1}`);
+    log(
+      `SetDamageNormal: ${getNameByTSKBattleNote(
+        attack
+      )} -> ${getNameByTSKBattleNote(target)}`
+    );
   }
   if (method.name == "SetDamage") {
     dumpArgs(method, args);
@@ -220,43 +213,6 @@ function handleArgs(
 
     const selectPattern = new Il2Cpp.Object(args[1]);
 
-    const skillEffectList = unit.field("skillEffectList")
-      .value as Il2Cpp.Object;
-
-    if (skillEffectList.isNull()) {
-      log("skillEffectList = null");
-      return;
-    }
-
-    // List<T> 当前元素数量
-    const size = skillEffectList.field("_size").value as number;
-
-    // T[] 数组
-    const items = skillEffectList.field("_items")
-      .value as Il2Cpp.Array<Il2Cpp.Object>;
-
-    log("skillEffectList size =", size);
-    const effectMap = new Map<string, number>();
-    for (let i = 0; i < size; i++) {
-      const effect = items.get(i);
-      const type = effect.field("<Type>k__BackingField").value.toString();
-      const time = effect.field("<Time>k__BackingField").value as number;
-      const value = effect.field("<SkillValue1>k__BackingField")
-        .value as number;
-      const effectValue = effect.field("<SkillEffectValue>k__BackingField")
-        .value as number;
-      // if (time > 9000) continue;
-      // log(
-      //   `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue}`
-      // );
-      effectMap.set(type, (effectMap.get(type) ?? 0) + value);
-    }
-
-    log("===== Effect Summary =====");
-    for (const [type, total] of effectMap) {
-      log(`${type}: ${total}`);
-    }
-
     const unitData = unit.field("<UnitData>k__BackingField")
       .value as Il2Cpp.Object;
 
@@ -271,7 +227,7 @@ function handleArgs(
     const critical = unitData.field("<Critical>k__BackingField").value;
 
     log(
-      `${unitName} ${characterName}: hp=${hp} attack=${attack} critical=${critical}`
+      `${unitName} (${characterName}): hp=${hp} attack=${attack} critical=${critical}`
     );
 
     if (unitName && skillMap.has(unitName)) {
@@ -393,13 +349,13 @@ function traceMethod(cls: Il2Cpp.Class, method: Il2Cpp.Method) {
       if (method.name == "FluctuationOffset") {
         const f = new NativeFunction(method.virtualAddress, "float", []);
 
-        console.log(f());
+        log(f());
       }
     },
     onLeave(retval) {
       onLeaveMethod(cls, method, retval);
-      // console.log(method.returnType.name);
-      // console.log(method.virtualAddress);
+      // log(method.returnType.name);
+      // log(method.virtualAddress);
     },
   });
 }
@@ -469,7 +425,7 @@ Il2Cpp.perform(() => {
   //   "int",
   //   ["int", "int", "int"],
   //   (ret) => {
-  //     console.log("GetAbilityCompatibility =", ret);
+  //     log("GetAbilityCompatibility =", ret);
   //   }
   // );
   hookMethodReturn(
@@ -478,7 +434,7 @@ Il2Cpp.perform(() => {
     [],
     (ret) => {
       if (enter_CaluculationNormalDamage) {
-        console.log("FluctuationOffset =", ret);
+        log("FluctuationOffset =", ret);
       }
     }
   );
@@ -488,7 +444,7 @@ Il2Cpp.perform(() => {
     ["int", "pointer", "int"],
     (ret) => {
       if (enter_CaluculationNormalDamage) {
-        console.log("RushOffset =", ret);
+        log("RushOffset =", ret);
       }
     }
   );
@@ -499,7 +455,7 @@ Il2Cpp.perform(() => {
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
         const compatibility = args[0];
-        console.log(
+        log(
           `AttributeOffset = ${ret} (compatibility=${AbilityCompatibility[compatibility]})`
         );
       }
@@ -512,7 +468,7 @@ Il2Cpp.perform(() => {
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
         const isCritilal = args[0];
-        console.log(
+        log(
           `CriticalOffset = ${ret} (isCritical=${
             isCritilal == 1 ? "true" : "false"
           })`
@@ -526,7 +482,7 @@ Il2Cpp.perform(() => {
     ["pointer", "pointer"],
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
-        console.log(`DownOffset = ${ret}`);
+        log(`DownOffset = ${ret}`);
       }
     }
   );
@@ -536,7 +492,7 @@ Il2Cpp.perform(() => {
     ["pointer", "int64", "int", "int", "pointer"],
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
-        console.log(`GetDamageRateValue = ${ret}`);
+        log(`GetDamageRateValue = ${ret}`);
       }
     }
   );
@@ -546,7 +502,7 @@ Il2Cpp.perform(() => {
     ["pointer", "int", "int", "pointer"],
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
-        console.log(`GetPassiveDamageRate = ${ret}`);
+        log(`GetPassiveDamageRate = ${ret}`);
       }
     }
   );
@@ -603,7 +559,7 @@ Il2Cpp.perform(() => {
       const frames = Thread.backtrace(context, Backtracer.ACCURATE);
 
       for (let i = 1; i < Math.min(frames.length, depth + 1); i++) {
-        console.log(`${"  ".repeat(i - 1)}└─ ${resolveMethod(frames[i])}`);
+        log(`${"  ".repeat(i - 1)}└─ ${resolveMethod(frames[i])}`);
       }
     }
     // const PlayDamage = image
@@ -627,7 +583,7 @@ function hookMethodReturn(
   handler?: (ret: any, args: any[]) => any
 ) {
   if (!method) {
-    console.log("[hookMethodReturn] method is undefined");
+    log("[hookMethodReturn] method is undefined");
     return;
   }
   const original = new NativeFunction(
@@ -638,37 +594,39 @@ function hookMethodReturn(
   const isStatic = method.isStatic;
   method.implementation = function (...args: any[]) {
     const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
-    console.log(
-      `${method.name} args:`,
-      args.map((x) => typeof x + ":" + x)
-    );
+    enter_CaluculationNormalDamage &&
+      log(
+        `${method.name} args:`,
+        args.map((x) => typeof x + ":" + x)
+      );
     // if (method.name == "GetDamageRateValue") {
     //   args.forEach((arg, i) => {
-    //     console.log("arg", i);
-    //     console.log("typeof:", typeof arg);
-    //     console.log("constructor:", arg?.constructor?.name);
+    //     log("arg", i);
+    //     log("typeof:", typeof arg);
+    //     log("constructor:", arg?.constructor?.name);
 
     //     if (arg instanceof Il2Cpp.Object) {
-    //       console.log("Object class:", arg.class.name);
+    //       log("Object class:", arg.class.name);
     //     }
 
     //     if (arg instanceof Il2Cpp.ValueType) {
-    //       console.log("ValueType toString:", arg.toString());
+    //       log("ValueType toString:", arg.toString());
     //     }
     //   });
     // }
     if (expectedArgsNum !== args.length) {
-      console.log(
+      log(
         `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`
       );
       // 走原 bridge implementation
       return method.invoke(...args);
     }
     const nativeArgs = args.map(convertArg);
-    console.log(
-      `${method.name} nativeArgs:`,
-      nativeArgs.map((x) => typeof x + ":" + x)
-    );
+    enter_CaluculationNormalDamage &&
+      log(
+        `${method.name} nativeArgs:`,
+        nativeArgs.map((x) => `${typeof x}:${x}`)
+      );
     var ret: any;
     if (method.isStatic) {
       ret = original(...nativeArgs);
@@ -721,26 +679,33 @@ function logSkillEffectList(unit: Il2Cpp.Object) {
   // T[] 数组
   const items = skillEffectList.field("_items")
     .value as Il2Cpp.Array<Il2Cpp.Object>;
-
-  log("skillEffectList size =", size);
-  const effectMap = new Map<string, number>();
+  const unitName = getNameByTSKBattleNote(unit);
+  log(`${unitName} skillEffectList size = ${size}`);
+  const valueMap = new Map<string, number>();
+  const effectValueMap = new Map<string, number>();
   for (let i = 0; i < size; i++) {
     const effect = items.get(i);
     const type = effect.field("<Type>k__BackingField").value.toString();
     const time = effect.field("<Time>k__BackingField").value as number;
     const value = effect.field("<SkillValue1>k__BackingField").value as number;
+    const value2 = effect.field("<SkillValue2>k__BackingField").value as number;
+    const value3 = effect.field("<SkillValue3>k__BackingField").value as number;
+    const value4 = effect.field("<SkillValue4>k__BackingField").value as number;
+    const value5 = effect.field("<SkillValue5>k__BackingField").value as number;
     const effectValue = effect.field("<SkillEffectValue>k__BackingField")
       .value as number;
 
     // if (time > 9000) continue;
     log(
-      `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue}`
+      `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue} value2=${value2} value3=${value3} value4=${value4} value5=${value5}`
     );
-    effectMap.set(type, (effectMap.get(type) ?? 0) + value);
+    valueMap.set(type, (valueMap.get(type) ?? 0) + value);
+    effectValueMap.set(type, (effectValueMap.get(type) ?? 0) + effectValue);
   }
 
-  log("===== Effect Summary =====");
-  for (const [type, total] of effectMap) {
-    log(`${type}: ${total}`);
+  log(`===== ${unitName} Effect Summary =====`);
+  for (const [type, totalValue] of valueMap.entries()) {
+    const totalEffectValue = effectValueMap.get(type) ?? 0;
+    log(`${type}: value=${totalValue} effectValue=${totalEffectValue}`);
   }
 }

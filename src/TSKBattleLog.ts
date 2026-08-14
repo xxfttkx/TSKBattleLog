@@ -40,9 +40,10 @@ export class TSKBattleLog {
       battleNote.address = note.handle.toString();
       this.notes.push(battleNote);
       const unitNameInSkillMap = skillMap.has(battleNote.unitName);
+      const autoSkillIndex = skillMap.get(battleNote.unitName) ?? -1;
       log(
         `[TSKBattleLog] add: note=${battleNote.toString()}${
-          unitNameInSkillMap ? "" : " (not in skill map)"
+          unitNameInSkillMap ? ` (${autoSkillIndex})` : " (not in skill map)"
         }`
       );
     }
