@@ -12,6 +12,7 @@ import { TSKBattleLog } from "./TSKBattleLog";
 
 const tskBattleLog = new TSKBattleLog();
 var enter_CaluculationNormalDamage = false;
+var debug = false;
 
 function onLeaveMethod(
   cls: Il2Cpp.Class,
@@ -45,9 +46,7 @@ function handleArgs(
     const baseAttack = attack.method("GetBaseAttack").invoke() as number;
     const atk = attack.method("GetAttack").invoke(false) as number;
     const crt = attack.method("GetCritical").invoke() as number;
-    log(
-      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
-    );
+
     log(
       `[CaluculationNormalDamage]: beforeRushCount=${beforeRushCount} rushCount=${rushCount} skillValue=${skillValue}`
     );
@@ -59,51 +58,14 @@ function handleArgs(
     const team = new Il2Cpp.Object(teamPtr);
     const teamType = team.handle.add(0x28).readS32();
     log(`attack teamType=${TeamType[teamType]}`);
-
-    // const TSKBattleUtility = Il2Cpp.domain
-    //   .assembly("Assembly-CSharp")
-    //   .image.class("TSKBattleUtility");
-    // const GetAbilityCompatibility = TSKBattleUtility.methods.find(
-    //   (m) =>
-    //     m.name === "GetAbilityCompatibility" &&
-    //     m.parameters[0].type.name === "TSKBattleNote" &&
-    //     m.parameters[1].type.name === "TSKBattleNote"
-    // );
-    // if (!GetAbilityCompatibility) {
-    //   log("GetAbilityCompatibility not found");
-    //   return;
-    // }
-    // log(GetAbilityCompatibility.toString());
-
-    // const result = GetAbilityCompatibility?.invoke(attack, defence, teamType);
-    // log(`GetAbilityCompatibility result = ${result?.toString()}`);
-
-    const GetSkillEffect = defence.method("GetSkillEffect");
-    log(GetSkillEffect.toString());
-    const DmgUpList = GetSkillEffect!.invoke(
-      SkillType["DmgUp"]
-    ) as Il2Cpp.Object;
-    // dumpObject(DmgUpList);
-    var size = DmgUpList.field("_size").value as number;
-    var items = DmgUpList.field("_items").value as Il2Cpp.Array;
-    log(`defencer DmgUpList count = ${size}`);
-    for (let i = 0; i < size; i++) {
-      const item = items.get(i) as Il2Cpp.Object;
-
-      log(`item[${i}] = ${item.class.name}`);
-    }
-    const DamageDowList = GetSkillEffect!.invoke(
-      SkillType["DamageDown"]
-    ) as Il2Cpp.Object;
-    size = DamageDowList.field("_size").value as number;
-    log(`defencer DamageDowList count = ${size}`);
-    const AtkUpList = attack
-      .method("GetSkillEffect")!
-      .invoke(SkillType["AtkUp"]) as Il2Cpp.Object;
-    size = AtkUpList.field("_size").value as number;
-    log(`attcker AtkUpList count = ${size}`);
     logSkillEffectList(attack);
     logSkillEffectList(defence);
+
+    log(
+      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt} 倍率=${(
+        atk / baseAttack
+      ).toFixed(2)}`
+    );
     return;
   }
   if (method.name == "GetAbilityCompatibility") {
@@ -492,7 +454,13 @@ Il2Cpp.perform(() => {
     ["pointer", "int64", "int", "int", "pointer"],
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
-        log(`GetDamageRateValue = ${ret}`);
+        const damage = convertArg(args[0]);
+        const damageNum = Number(damage);
+        log(
+          `GetDamageRateValue = ${damage} -> ${ret} (易伤: ${(
+            ret / damageNum
+          ).toFixed(2)})`
+        );
       }
     }
   );
@@ -592,9 +560,11 @@ function hookMethodReturn(
     argTypes
   ) as any;
   const isStatic = method.isStatic;
+  // args 中不含this
   method.implementation = function (...args: any[]) {
     const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
-    enter_CaluculationNormalDamage &&
+    debug &&
+      enter_CaluculationNormalDamage &&
       log(
         `${method.name} args:`,
         args.map((x) => typeof x + ":" + x)
@@ -622,7 +592,8 @@ function hookMethodReturn(
       return method.invoke(...args);
     }
     const nativeArgs = args.map(convertArg);
-    enter_CaluculationNormalDamage &&
+    debug &&
+      enter_CaluculationNormalDamage &&
       log(
         `${method.name} nativeArgs:`,
         nativeArgs.map((x) => `${typeof x}:${x}`)
