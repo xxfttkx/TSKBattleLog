@@ -42,7 +42,7 @@ export class TSKBattleLog {
       const unitNameInSkillMap = skillMap.has(battleNote.unitName);
       const autoSkillIndex = skillMap.get(battleNote.unitName) ?? -1;
       log(
-        `[TSKBattleLog] add: note=${battleNote.toString()}${
+        `[TSKBattleLog] add note: ${battleNote.toString()}${
           unitNameInSkillMap ? ` (${autoSkillIndex})` : " (not in skill map)"
         }`
       );

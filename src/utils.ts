@@ -92,7 +92,7 @@ function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
     .value as Il2Cpp.Object; // TSKBattleUnit
   const name_0 = unitData.field("<UnitName>k__BackingField").value;
   const name_1 = unitData.field("<CharacterName>k__BackingField").value;
-  return `${name_0} (${name_1})`;
+  return `[${name_0}] ${name_1}`;
 }
 
 export { log, dumpArgs, parseArgument, getNameByTSKBattleNote };

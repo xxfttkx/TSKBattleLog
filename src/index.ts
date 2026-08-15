@@ -36,7 +36,7 @@ function handleArgs(
     const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
     const beforeRushCount = args[2].toInt32();
     const rushCount = args[3].toInt32();
-    const skillValue = parseArgument(args[4], "float");
+    const skillValue = parseArgument(args[4], "float") as number;
     const kind = AttackType[parseArgument(args[8], "enum") as number];
     const criticalUp = parseArgument(args[9], "int");
     const targetCount = parseArgument(args[10], "int");
@@ -58,13 +58,16 @@ function handleArgs(
     const team = new Il2Cpp.Object(teamPtr);
     const teamType = team.handle.add(0x28).readS32();
     log(`attack teamType=${TeamType[teamType]}`);
-    logSkillEffectList(attack);
-    logSkillEffectList(defence);
+    debug && logSkillEffectList(attack);
+    debug && logSkillEffectList(defence);
 
     log(
-      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt} 倍率=${(
-        atk / baseAttack
-      ).toFixed(2)}`
+      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
+    );
+    log(
+      `${getNameByTSKBattleNote(attack)}: ATK倍率=${(atk / baseAttack).toFixed(
+        2
+      )} attack=${atk}(ignore charge) skillValue=${skillValue.toFixed(2)}`
     );
     return;
   }
@@ -396,7 +399,7 @@ Il2Cpp.perform(() => {
     [],
     (ret) => {
       if (enter_CaluculationNormalDamage) {
-        log("FluctuationOffset =", ret);
+        log("FluctuationOffset =", ret.toFixed(2));
       }
     }
   );
@@ -406,7 +409,7 @@ Il2Cpp.perform(() => {
     ["int", "pointer", "int"],
     (ret) => {
       if (enter_CaluculationNormalDamage) {
-        log("RushOffset =", ret);
+        log("RushOffset =", ret.toFixed(2));
       }
     }
   );
@@ -431,7 +434,7 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         const isCritilal = args[0];
         log(
-          `CriticalOffset = ${ret} (isCritical=${
+          `CriticalOffset = ${ret.toFixed(2)} (isCritical=${
             isCritilal == 1 ? "true" : "false"
           })`
         );

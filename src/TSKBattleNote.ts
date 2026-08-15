@@ -39,10 +39,10 @@ export class TSKBattleNote {
   }
 
   toString(): string {
-    return `[address:${this.address}] ${this.unitName} (${this.characterName}) damage=${this.damage}`;
+    return `[address:${this.address}] ${this.getName()} damage=${this.damage}`;
   }
 
   getName(): string {
-    return `${this.unitName} (${this.characterName})`;
+    return `[${this.unitName}] ${this.characterName}`;
   }
 }
