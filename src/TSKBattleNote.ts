@@ -1,3 +1,5 @@
+import { log } from "./utils";
+
 export class TSKBattleNote {
   /** UnitName */
   unitName: string;
@@ -11,6 +13,26 @@ export class TSKBattleNote {
   /** 伤害 */
   damage: bigint;
 
+  ex: number;
+  exUp: number;
+  hp: number;
+  atk: number;
+  critical: number;
+
+  initByUnitData(unitData: Il2Cpp.Object): void {
+    this.unitName =
+      (unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String)
+        .content ?? "Unknown UnitName";
+    this.characterName =
+      (unitData.field("<CharacterName>k__BackingField").value as Il2Cpp.String)
+        .content ?? "Unknown CharacterName";
+    this.ex = unitData.field("<InitExGauge>k__BackingField").value as number;
+    this.exUp = unitData.field("<ExGaugeRate>k__BackingField").value as number;
+    this.hp = unitData.field("<HP>k__BackingField").value as number;
+    this.atk = unitData.field("<Attack>k__BackingField").value as number;
+    this.critical = unitData.field("<Critical>k__BackingField").value as number;
+  }
+
   addDamage(damage: bigint): void {
     this.damage += damage;
   }
@@ -20,26 +42,29 @@ export class TSKBattleNote {
     this.characterName = "";
     this.address = "";
     this.damage = BigInt(0);
+    this.ex = 0;
+    this.exUp = 0;
+    this.hp = 0;
+    this.atk = 0;
+    this.critical = 0;
   }
 
-  clear(): void {
-    this.unitName = "";
-    this.characterName = "";
-    this.address = "";
-    this.damage = BigInt(0);
-  }
-
-  clone(): TSKBattleNote {
-    const note = new TSKBattleNote();
-    note.unitName = this.unitName;
-    note.characterName = this.characterName;
-    note.address = this.address;
-    note.damage = this.damage;
-    return note;
+  logUnitData(): void {
+    log(
+      `${this.getName()}: ex=${this.ex} exUp=${this.exUp} hp=${this.hp} atk=${
+        this.atk
+      } critical=${
+        this.critical
+      } 通常攻击回复EX: ${this.getNormalAttackExRate()}`
+    );
   }
 
   toString(): string {
-    return `[address:${this.address}] ${this.getName()} damage=${this.damage}`;
+    return `${this.getName()} damage=${this.damage}`;
+  }
+
+  getNormalAttackExRate(): number {
+    return Math.ceil((100 + this.exUp) / 3.75);
   }
 
   getName(): string {

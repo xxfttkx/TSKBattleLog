@@ -7,7 +7,13 @@ import {
   SkillType,
   Timing,
 } from "./common";
-import { log, dumpArgs, parseArgument, getNameByTSKBattleNote } from "./utils";
+import {
+  log,
+  dumpArgs,
+  parseArgument,
+  getNameByTSKBattleNote,
+  dumpObject,
+} from "./utils";
 import { TSKBattleLog } from "./TSKBattleLog";
 
 const tskBattleLog = new TSKBattleLog();
@@ -275,19 +281,6 @@ function handleArgs(
 
     if (teamType === "Player" || teamType === "Unknown") {
       tskBattleLog.init(notes);
-    }
-  }
-}
-
-function dumpObject(obj: Il2Cpp.Object) {
-  log(`\n===== ${obj.class.name} =====`);
-
-  for (const field of obj.class.fields) {
-    try {
-      const value = obj.field(field.name).value;
-      log(`${field.name} = ${value}`);
-    } catch (e) {
-      log(`${field.name} = <error>`);
     }
   }
 }

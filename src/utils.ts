@@ -95,4 +95,17 @@ function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
   return `[${name_0}] ${name_1}`;
 }
 
-export { log, dumpArgs, parseArgument, getNameByTSKBattleNote };
+function dumpObject(obj: Il2Cpp.Object) {
+  log(`\n===== ${obj.class.name} =====`);
+
+  for (const field of obj.class.fields) {
+    try {
+      const value = obj.field(field.name).value;
+      log(`${field.name} = ${value}`);
+    } catch (e) {
+      log(`${field.name} = <error>`);
+    }
+  }
+}
+
+export { log, dumpArgs, parseArgument, getNameByTSKBattleNote, dumpObject };

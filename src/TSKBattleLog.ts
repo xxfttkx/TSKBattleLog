@@ -1,5 +1,5 @@
 import { TSKBattleNote } from "./TSKBattleNote";
-import { log } from "./utils";
+import { dumpArgs, log, dumpObject } from "./utils";
 import { skillMap } from "./common";
 
 enum DamageType {
@@ -29,14 +29,7 @@ export class TSKBattleLog {
       const battleNote = new TSKBattleNote();
       const unitData = note.field("<UnitData>k__BackingField")
         .value as Il2Cpp.Object;
-      battleNote.unitName =
-        (unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String)
-          .content ?? "Unknown UnitName";
-      battleNote.characterName =
-        (
-          unitData.field("<CharacterName>k__BackingField")
-            .value as Il2Cpp.String
-        ).content ?? "Unknown CharacterName";
+      battleNote.initByUnitData(unitData);
       battleNote.address = note.handle.toString();
       this.notes.push(battleNote);
       const unitNameInSkillMap = skillMap.has(battleNote.unitName);
@@ -47,7 +40,24 @@ export class TSKBattleLog {
         }`
       );
     }
-    log(`[TSKBattleLog] init: notes=${this.notes.length}`);
+    log(`[TSKBattleLog] Init complete: notes=${this.notes.length}`);
+    for (const note of this.notes) {
+      note.logUnitData();
+    }
+    let totalEx = 0;
+    for (const note of this.notes) {
+      totalEx += note.ex;
+    }
+    log(`战斗初始EX: ${totalEx}`);
+    log(`一巡可使用EX: ${this.getTotalNormalAttackExRate() + 40 * 5}`);
+  }
+
+  getTotalNormalAttackExRate(): number {
+    let totalExRate = 0;
+    for (const note of this.notes) {
+      totalExRate += note.getNormalAttackExRate();
+    }
+    return totalExRate;
   }
 
   addDamageNote(
