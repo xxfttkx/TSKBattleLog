@@ -1,3 +1,5 @@
+import { skillMap } from "./common";
+
 function log(...args: any[]) {
   const now = new Date();
   const time =
@@ -108,4 +110,67 @@ function dumpObject(obj: Il2Cpp.Object) {
   }
 }
 
-export { log, dumpArgs, parseArgument, getNameByTSKBattleNote, dumpObject };
+function saveJson(fileName: string, data: any[]) {
+  const FridaFile = (globalThis as any).File;
+
+  const file = new FridaFile(fileName, "w");
+
+  file.write(JSON.stringify(data, null, 2));
+
+  file.close();
+}
+
+function saveFile(fileName: string, content: string) {
+  const FridaFile = (globalThis as any).File;
+
+  const file = new FridaFile(fileName, "w");
+
+  file.write(content);
+
+  file.close();
+}
+
+function convertValue(value: any): any {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  // System.String
+  if (value instanceof Il2Cpp.String) {
+    return value.content;
+  }
+
+  // Il2Cpp.Array
+  if (value instanceof Il2Cpp.Array) {
+    const result = [];
+
+    for (let i = 0; i < value.length; i++) {
+      result.push(convertValue(value.get(i)));
+    }
+
+    return result;
+  }
+
+  // 其他 Il2Cpp.Object
+  if (value instanceof Il2Cpp.Object) {
+    return value.class.type.name;
+  }
+
+  return value;
+}
+
+function getAutoUseSkillIndex(unitName: string, characterName: string): number {
+  const name = `[${unitName}] ${characterName}`;
+  return skillMap.get(name) ?? skillMap.get(unitName) ?? -1;
+}
+
+export {
+  log,
+  dumpArgs,
+  parseArgument,
+  getNameByTSKBattleNote,
+  dumpObject,
+  saveJson,
+  convertValue,
+  getAutoUseSkillIndex,
+};

@@ -1,5 +1,5 @@
 import { TSKBattleNote } from "./TSKBattleNote";
-import { dumpArgs, log, dumpObject } from "./utils";
+import { dumpArgs, log, dumpObject, getAutoUseSkillIndex } from "./utils";
 import { skillMap } from "./common";
 
 enum DamageType {
@@ -32,8 +32,11 @@ export class TSKBattleLog {
       battleNote.initByUnitData(unitData);
       battleNote.address = note.handle.toString();
       this.notes.push(battleNote);
-      const unitNameInSkillMap = skillMap.has(battleNote.unitName);
-      const autoSkillIndex = skillMap.get(battleNote.unitName) ?? -1;
+      const autoSkillIndex = getAutoUseSkillIndex(
+        battleNote.unitName,
+        battleNote.characterName
+      );
+      const unitNameInSkillMap = autoSkillIndex != -1;
       log(
         `[TSKBattleLog] add note: ${battleNote.toString()}${
           unitNameInSkillMap ? ` (${autoSkillIndex})` : " (not in skill map)"

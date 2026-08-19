@@ -13,6 +13,9 @@ import {
   parseArgument,
   getNameByTSKBattleNote,
   dumpObject,
+  saveJson,
+  convertValue,
+  getAutoUseSkillIndex,
 } from "./utils";
 import { TSKBattleLog } from "./TSKBattleLog";
 
@@ -27,6 +30,59 @@ function onLeaveMethod(
 ) {
   if (method.name == "CaluculationNormalDamage") {
     enter_CaluculationNormalDamage = false;
+  }
+  if (method.name == "GetUnitListRepository") {
+    log("GetUnitListRepository returnType:", method.returnType.name);
+    log(`GetUnitListRepository return: ${retval}`);
+    // log(
+    //   hexdump(retval, {
+    //     offset: 0,
+    //     length: 0x40,
+    //     header: true,
+    //     ansi: false,
+    //   })
+    // );
+    const result = retval.add(8).readPointer();
+
+    log("UniTask.result =", result);
+    if (result.isNull()) {
+      log("UniTask.result is null, skip");
+      return;
+    }
+    // try {
+    //   const obj = new Il2Cpp.Object(retval);
+    //   log("retval class:", obj.class.name);
+    // } catch (e) {
+    //   log("retval is not Il2Cpp.Object:", e);
+    // }
+    const TeamUnitListRepository = new Il2Cpp.Object(result);
+    // dumpObject(TeamUnitListRepository);
+    const TeamUnitListEntity = TeamUnitListRepository.field("result")
+      .value as Il2Cpp.Object;
+    // dumpObject(TeamUnitListEntity);
+    const unit_list = TeamUnitListEntity.field("unit_list")
+      .value as Il2Cpp.Array<Il2Cpp.Object>;
+    log(`unit_list length: ${unit_list.length}`);
+    const units: Record<string, any>[] = [];
+    for (let i = 0; i < unit_list.length; i++) {
+      const UnitEntity = unit_list.get(i);
+      const unit: Record<string, any> = {};
+      for (const field of UnitEntity.class.fields) {
+        try {
+          const value = UnitEntity.field(field.name).value;
+          unit[field.name] = convertValue(value);
+        } catch (e) {
+          unit[field.name] = `<error>: ${e}`;
+        }
+      }
+      units.push(unit);
+    }
+    saveJson("unit_list.json", units);
+    log(`unit_list saved to unit_list.json`);
+    const sister_unit_list = TeamUnitListEntity.field("sister_unit_list")
+      .value as Il2Cpp.Array<Il2Cpp.Object>;
+    log(`sister_unit_list length: ${sister_unit_list.length}`);
+    return;
   }
   log(`${method.name} return: ${retval}\n`);
 }
@@ -64,8 +120,8 @@ function handleArgs(
     const team = new Il2Cpp.Object(teamPtr);
     const teamType = team.handle.add(0x28).readS32();
     log(`attack teamType=${TeamType[teamType]}`);
-    debug && logSkillEffectList(attack);
-    debug && logSkillEffectList(defence);
+    logSkillEffectList(attack);
+    logSkillEffectList(defence);
 
     log(
       `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
@@ -187,7 +243,7 @@ function handleArgs(
     const unitData = unit.field("<UnitData>k__BackingField")
       .value as Il2Cpp.Object;
 
-    var unitName = (
+    const unitName = (
       unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String
     ).content;
     const characterName = (
@@ -201,8 +257,8 @@ function handleArgs(
       `${unitName} (${characterName}): hp=${hp} attack=${attack} critical=${critical}`
     );
 
-    if (unitName && skillMap.has(unitName)) {
-      const skillId = skillMap.get(unitName);
+    const skillId = getAutoUseSkillIndex(unitName ?? "", characterName ?? "");
+    if (skillId != -1) {
       log(`set ${unitName} skillId=${skillId}`);
       if (skillId == 0) {
         selectPattern.field("skill_rate_1").value = 0;
@@ -376,6 +432,11 @@ Il2Cpp.perform(() => {
   // traceMethodByName("TSKBattleTeam", "StartSkillDamage");
   // traceMethodByName("TSKBattleCalculationManager", "CaluculationUnisonDamage");
 
+  // todo:
+  // traceMethodByName("TeamCharaListPresenter", "GetUnitListRepository");
+
+  // const TeamCharaListPresenter = image.class("TeamCharaListPresenter");
+  // log(TeamCharaListPresenter);
   // const PlayDamage = image.class("DamageText").method("PlayDamage");
   // Il2Cpp.trace(false).methods(PlayDamage).and().attach();
   // hookMethodReturn(
