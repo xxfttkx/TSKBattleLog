@@ -475,7 +475,9 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         const compatibility = args[0];
         log(
-          `AttributeOffset = ${ret} (compatibility=${AbilityCompatibility[compatibility]})`
+          `AttributeOffset = ${ret.toFixed(2)} (compatibility=${
+            AbilityCompatibility[compatibility]
+          })`
         );
       }
     }
@@ -501,7 +503,7 @@ Il2Cpp.perform(() => {
     ["pointer", "pointer"],
     (ret, args) => {
       if (enter_CaluculationNormalDamage) {
-        log(`DownOffset = ${ret}`);
+        log(`DownOffset = ${ret.toFixed(2)}`);
       }
     }
   );

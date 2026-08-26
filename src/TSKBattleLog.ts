@@ -70,22 +70,27 @@ export class TSKBattleLog {
     isCritical: string = "Unknown"
   ): void {
     let note = this.notes.find((n) => n.address === address);
-    const damageBigInt = BigInt(damage);
-    this.damageTotal += damageBigInt;
-    const logMessage = `[TSKBattleLog] addDamageNote[${
-      note?.getName() ?? address
-    }]: damage=${damageBigInt}, critical = ${isCritical}, damageType=${damageType}, damageTotal=${
-      this.damageTotal
-    }`;
-    log(logMessage);
-    this.logs.push(logMessage);
     if (!note) {
       log(
         `[TSKBattleLog] addDamageNote: note not found for address ${address}`
       );
-
       return;
     }
+    const damageBigInt = BigInt(damage);
+    this.damageTotal += damageBigInt;
+    let logMessage = "";
+    if (damageType === DamageType.Unison) {
+      logMessage = `[TSKBattleLog] Unison Attack: damage=${damageBigInt} damageTotal=${this.damageTotal}`;
+    } else {
+      logMessage = `[TSKBattleLog] addDamageNote[${
+        note?.getName() ?? address
+      }]: damage=${damageBigInt}, critical = ${isCritical}, damageType=${damageType}, damageTotal=${
+        this.damageTotal
+      }`;
+    }
+    log(logMessage);
+    this.logs.push(logMessage);
+
     if (damageType === DamageType.Unison) {
       this.unisonDamageTotal += damageBigInt;
       return;
