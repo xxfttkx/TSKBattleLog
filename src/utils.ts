@@ -5,7 +5,8 @@ function log(...args: any[]) {
   const time =
     `${now.getHours().toString().padStart(2, "0")}:` +
     `${now.getMinutes().toString().padStart(2, "0")}:` +
-    `${now.getSeconds().toString().padStart(2, "0")}`;
+    `${now.getSeconds().toString().padStart(2, "0")}.` +
+    `${now.getMilliseconds().toString().padStart(3, "0")}`;
 
   console.log(`[${time}]`, ...args);
 }
@@ -36,7 +37,7 @@ function dumpArgs(method: Il2Cpp.Method, args: InvocationArguments) {
   // 实例方法 args[0] 是 this
   let index = method.isStatic ? 0 : 1;
   log(
-    `dumpArgs: method=${method.name}, isStatic=${method.isStatic}, method.parameterCount=${method.parameterCount}`
+    `dumpArgs: method=${method.name}, isStatic=${method.isStatic}, method.parameterCount=${method.parameterCount}`,
   );
   for (const p of method.parameters) {
     const arg = args[index++];
