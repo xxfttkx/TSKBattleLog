@@ -6,6 +6,7 @@ import {
   AbilityCompatibility,
   SkillType,
   Timing,
+  BattleMode,
 } from "./common";
 import {
   log,
@@ -26,7 +27,7 @@ var debug = false;
 function onLeaveMethod(
   cls: Il2Cpp.Class,
   method: Il2Cpp.Method,
-  retval: InvocationReturnValue
+  retval: InvocationReturnValue,
 ) {
   if (method.name == "CaluculationNormalDamage") {
     enter_CaluculationNormalDamage = false;
@@ -34,14 +35,7 @@ function onLeaveMethod(
   if (method.name == "GetUnitListRepository") {
     log("GetUnitListRepository returnType:", method.returnType.name);
     log(`GetUnitListRepository return: ${retval}`);
-    // log(
-    //   hexdump(retval, {
-    //     offset: 0,
-    //     length: 0x40,
-    //     header: true,
-    //     ansi: false,
-    //   })
-    // );
+
     const result = retval.add(8).readPointer();
 
     log("UniTask.result =", result);
@@ -87,261 +81,215 @@ function onLeaveMethod(
   log(`${method.name} return: ${retval}\n`);
 }
 
-function handleArgs(
+type MethodHandler = (
   cls: Il2Cpp.Class,
   method: Il2Cpp.Method,
-  args: InvocationArguments
+  args: InvocationArguments,
+) => void;
+
+function handleCaluculationNormalDamage(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
 ) {
-  if (method.name == "CaluculationNormalDamage") {
-    enter_CaluculationNormalDamage = true;
-    const attack = new Il2Cpp.Object(args[0]); //TSKBattleNote
-    const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
-    const beforeRushCount = args[2].toInt32();
-    const rushCount = args[3].toInt32();
-    const skillValue = parseArgument(args[4], "float") as number;
-    const kind = AttackType[parseArgument(args[8], "enum") as number];
-    const criticalUp = parseArgument(args[9], "int");
-    const targetCount = parseArgument(args[10], "int");
-    const multipleCount = parseArgument(args[11], "int");
-    // dumpArgs(method, args);
+  enter_CaluculationNormalDamage = true;
+  const attack = new Il2Cpp.Object(args[0]); //TSKBattleNote
+  const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
+  const beforeRushCount = args[2].toInt32();
+  const rushCount = args[3].toInt32();
+  const skillValue = parseArgument(args[4], "float") as number;
+  const kind = AttackType[parseArgument(args[8], "enum") as number];
+  const criticalUp = parseArgument(args[9], "int");
+  const targetCount = parseArgument(args[10], "int");
+  const multipleCount = parseArgument(args[11], "int");
 
-    const baseAttack = attack.method("GetBaseAttack").invoke() as number;
-    const atk = attack.method("GetAttack").invoke(false) as number;
-    const crt = attack.method("GetCritical").invoke() as number;
+  const baseAttack = attack.method("GetBaseAttack").invoke() as number;
+  const atk = attack.method("GetAttack").invoke(false) as number;
+  const crt = attack.method("GetCritical").invoke() as number;
 
-    log(
-      `[CaluculationNormalDamage]: beforeRushCount=${beforeRushCount} rushCount=${rushCount} skillValue=${skillValue}`
-    );
-    log(
-      `[CaluculationNormalDamage]: kind=${kind} criticalUp=${criticalUp} targetCount=${targetCount} multipleCount=${multipleCount}`
-    );
+  log(
+    `[CaluculationNormalDamage]: beforeRushCount=${beforeRushCount} rushCount=${rushCount} skillValue=${skillValue}`,
+  );
+  log(
+    `[CaluculationNormalDamage]: kind=${kind} criticalUp=${criticalUp} targetCount=${targetCount} multipleCount=${multipleCount}`,
+  );
 
-    const teamPtr = attack.handle.add(0x28).readPointer();
-    const team = new Il2Cpp.Object(teamPtr);
-    const teamType = team.handle.add(0x28).readS32();
-    log(`attack teamType=${TeamType[teamType]}`);
-    logSkillEffectList(attack);
-    logSkillEffectList(defence);
+  const teamPtr = attack.handle.add(0x28).readPointer();
+  const team = new Il2Cpp.Object(teamPtr);
+  const teamType = team.handle.add(0x28).readS32();
+  log(`attack teamType=${TeamType[teamType]}`);
+  logSkillEffectList(attack);
+  logSkillEffectList(defence);
 
-    log(
-      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
-    );
-    log(
-      `${getNameByTSKBattleNote(attack)}: ATK倍率=${(atk / baseAttack).toFixed(
-        2
-      )} attack=${atk}(ignore charge) skillValue=${skillValue.toFixed(2)}`
-    );
-    return;
-  }
-  if (method.name == "GetAbilityCompatibility") {
-    // dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "CaluculationUnisonDamage") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "Execute") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "SetSkillDamageValue") {
-    const value = args[1].toString();
-    const attackAddress = args[4].toString();
-    const isCritical = args[8].toInt32() != 0 ? "True" : "False";
-    log(`SetSkillDamageValue: value=${value} attackAddress=${attackAddress}`);
-    tskBattleLog.addDamageNote(attackAddress, value, "Skill", isCritical);
-    return;
-  }
-  if (method.name == "SetSkillMultiDamageValue") {
-    // const arr = new Il2Cpp.Array(args[1]);
-    // const count = arr.length;
+  log(
+    `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`,
+  );
+  log(
+    `${getNameByTSKBattleNote(attack)}: ATK倍率=${(atk / baseAttack).toFixed(
+      2,
+    )} attack=${atk}(ignore charge) skillValue=${skillValue.toFixed(2)}`,
+  );
+}
 
-    // var damage = BigInt(0);
-    // for (let i = 0; i < count; i++) {
-    //   damage += BigInt(arr.get(i).toString());
-    // }
-    // const value = damage.toString();
-    // const attack = new Il2Cpp.Object(args[0]);
-    // const attackAddress = attack.handle.toString();
-    // // const isCritical = args[8].toInt32() != 0;
-    // log(
-    //   `SetSkillMultiDamageValue: value=${value} attackAddress=${attackAddress}`
-    // );
-    // tskBattleLog.addDamageNote(attackAddress, value, "Skill");
-    return;
-  }
-  if (method.name == "SetDamageValue") {
-    const value = args[1].toString();
-    const attackAddress = args[5].toString();
-    const isCritical = args[4].toInt32() != 0 ? "True" : "False";
-    log(`SetDamageValue: value=${value} attackAddress=${attackAddress}`);
-    tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
-    return;
-  }
-  if (method.name == "SetUnisonDamageValue") {
-    const value = args[1].toString();
-    const attackAddress = args[4].toString();
-    log(`SetUnisonDamageValue: value=${value} attackAddress=${attackAddress}`);
-    tskBattleLog.addDamageNote(attackAddress, value, "Unison");
-    return;
-  }
-  if (method.name == "SetSkillEffect") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "ExecuteWholeMulti") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "SetMultiDanameTextView") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "StartSkillDamage") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "SetDamageNormal") {
-    const attack = new Il2Cpp.Object(args[1]); //TSKBattleNote
-    const target = new Il2Cpp.Object(args[2]);
-    log(
-      `SetDamageNormal: ${getNameByTSKBattleNote(
-        attack
-      )} -> ${getNameByTSKBattleNote(target)}`
-    );
-  }
-  if (method.name == "SetDamage") {
-    dumpArgs(method, args);
-    return;
-  }
-  if (method.name == "PlayDamage") {
-    dumpArgs(method, args);
-    return;
-    const damageValue = parseInt(args[1].toString(), 16);
-    const rate = parseInt(args[2].toString(), 16);
-    const isCritical = parseInt(args[3].toString(), 16);
-    const isDamageOverTime = parseInt(args[4].toString(), 16);
-    const isIndividualDamage = parseInt(args[5].toString(), 16);
-    const isInvalid = parseInt(args[6].toString(), 16);
-    log(
-      `PlayDamage damageValue = ${damageValue}, rate = ${rate}, isCritical = ${isCritical}, isDamageOverTime = ${isDamageOverTime}, isIndividualDamage = ${isIndividualDamage}, isInvalid = ${isInvalid}`
-    );
-  }
-  if (method.name == "LotterySkill") {
-    // args[2] = TSKBattleNote
-    const unit = new Il2Cpp.Object(args[2]);
-    const baseAttack = unit.method("GetBaseAttack").invoke() as number;
-    const atk = unit.method("GetAttack").invoke(false) as number;
-    const crt = unit.method("GetCritical").invoke() as number;
-    log(
-      `LotterySkill: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`
-    );
+function handleSetSkillDamageValue(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const value = args[1].toString();
+  const attackAddress = args[4].toString();
+  const isCritical = args[8].toInt32() != 0 ? "True" : "False";
+  log(`SetSkillDamageValue: value=${value} attackAddress=${attackAddress}`);
+  tskBattleLog.addDamageNote(attackAddress, value, "Skill", isCritical);
+}
 
-    const selectPattern = new Il2Cpp.Object(args[1]);
+function handleSetDamageValue(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const value = args[1].toString();
+  const attackAddress = args[5].toString();
+  const isCritical = args[4].toInt32() != 0 ? "True" : "False";
+  log(`SetDamageValue: value=${value} attackAddress=${attackAddress}`);
+  tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
+}
 
-    const unitData = unit.field("<UnitData>k__BackingField")
-      .value as Il2Cpp.Object;
+function handleSetUnisonDamageValue(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const value = args[1].toString();
+  const attackAddress = args[4].toString();
+  log(`SetUnisonDamageValue: value=${value} attackAddress=${attackAddress}`);
+  tskBattleLog.addDamageNote(attackAddress, value, "Unison");
+}
 
-    const unitName = (
-      unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String
-    ).content;
-    const characterName = (
-      unitData.field("<CharacterName>k__BackingField").value as Il2Cpp.String
-    ).content;
-    const hp = unitData.field("<HP>k__BackingField").value;
-    const attack = unitData.field("<Attack>k__BackingField").value;
-    const critical = unitData.field("<Critical>k__BackingField").value;
+function handleSetDamageNormal(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const attack = new Il2Cpp.Object(args[1]); //TSKBattleNote
+  const target = new Il2Cpp.Object(args[2]);
+  log(
+    `SetDamageNormal: ${getNameByTSKBattleNote(
+      attack,
+    )} -> ${getNameByTSKBattleNote(target)}`,
+  );
+}
 
-    log(
-      `${unitName} (${characterName}): hp=${hp} attack=${attack} critical=${critical}`
-    );
+function handleLotterySkill(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  // args[2] = TSKBattleNote
+  const unit = new Il2Cpp.Object(args[2]);
+  const baseAttack = unit.method("GetBaseAttack").invoke() as number;
+  const atk = unit.method("GetAttack").invoke(false) as number;
+  const crt = unit.method("GetCritical").invoke() as number;
+  log(
+    `LotterySkill: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`,
+  );
 
-    const skillId = getAutoUseSkillIndex(unitName ?? "", characterName ?? "");
-    if (skillId != -1) {
-      log(`set ${unitName} skillId=${skillId}`);
-      if (skillId == 0) {
-        selectPattern.field("skill_rate_1").value = 0;
-        selectPattern.field("skill_rate_2").value = 0;
-      }
-      if (skillId == 1) {
-        selectPattern.field("skill_rate_1").value = 100;
-        selectPattern.field("skill_rate_2").value = 0;
-      }
-      if (skillId == 2) {
-        selectPattern.field("skill_rate_1").value = 0;
-        selectPattern.field("skill_rate_2").value = 100;
-      }
-      if (skillId == 3) {
-        selectPattern.field("skill_rate_1").value = 50;
-        selectPattern.field("skill_rate_2").value = 50;
-      }
-    } else {
-      log(
-        `${unitName} ${characterName} not found in skillMap: skill_rate_1 = ${
-          selectPattern.field("skill_rate_1").value
-        }  skill_rate_2 = ${selectPattern.field("skill_rate_2").value}`
-      );
+  const selectPattern = new Il2Cpp.Object(args[1]);
+
+  const unitData = unit.field("<UnitData>k__BackingField")
+    .value as Il2Cpp.Object;
+
+  const unitName = (
+    unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String
+  ).content;
+  const characterName = (
+    unitData.field("<CharacterName>k__BackingField").value as Il2Cpp.String
+  ).content;
+  const hp = unitData.field("<HP>k__BackingField").value;
+  const attack = unitData.field("<Attack>k__BackingField").value;
+  const critical = unitData.field("<Critical>k__BackingField").value;
+
+  log(
+    `${unitName} (${characterName}): hp=${hp} attack=${attack} critical=${critical}`,
+  );
+
+  const skillId = getAutoUseSkillIndex(unitName ?? "", characterName ?? "");
+  if (skillId != -1) {
+    log(`set ${unitName} skillId=${skillId}`);
+    if (skillId == 0) {
+      selectPattern.field("skill_rate_1").value = 0;
+      selectPattern.field("skill_rate_2").value = 0;
     }
-  }
-  if (method.name == "LotterySkillAction") {
-    const nowTurnCount = parseInt(args[5].toString(), 16);
-    log(`LotterySkillAction: nowTurnCount = ${nowTurnCount}`);
-    return;
-    for (var i = 0; i < 7; i++) {
-      if (args[i] != null) {
-        const arg = new Il2Cpp.Object(args[i]);
-        if (arg) {
-          log(`arg[${i}] = ${arg.class.name}`);
-          dumpObject(arg);
-        }
-      }
+    if (skillId == 1) {
+      selectPattern.field("skill_rate_1").value = 100;
+      selectPattern.field("skill_rate_2").value = 0;
     }
-  }
-  if (method.name == "InitializeResult") {
-    tskBattleLog.onEndBattle();
-  }
-  if (method.name == "Initialize") {
-    const hp = parseInt(args[1].toString(), 16);
-    const maxHp = parseInt(args[2].toString(), 16);
-    const stun = parseInt(args[3].toString(), 16);
-    const notesList = new Il2Cpp.Object(args[4]);
-
-    const notes = notesList.field("_items")
-      .value as Il2Cpp.Array<Il2Cpp.Object>;
-    const notesSize = notesList.field("_size").value as number;
-    const type = parseInt(args[5].toString(), 16);
-    const mode = parseInt(args[6].toString(), 16);
-    const overHealRate = parseInt(args[7].toString(), 16);
-    enum BattleMode {
-      None = 0,
-      Normal = 1,
-      Boss = 2,
-      OnlyBoss = 3,
-      DamageAttack = 4,
-      DefeatAttack = 5,
-      DamageChallengeAtMode = 6,
-      DamageChallenge = 7,
+    if (skillId == 2) {
+      selectPattern.field("skill_rate_1").value = 0;
+      selectPattern.field("skill_rate_2").value = 100;
     }
-    // 直接使用枚举的反向映射
-    const modeName = BattleMode[mode]; // "DamageChallengeAtMode"
-    const teamType = type == 0 ? "Player" : type == 1 ? "Enemy" : "Unknown";
-    if (teamType === "Unknown") {
-      log(`Unknown team type: ${type}`);
+    if (skillId == 3) {
+      selectPattern.field("skill_rate_1").value = 50;
+      selectPattern.field("skill_rate_2").value = 50;
     }
-
-    // dumpObject(type);
+  } else {
     log(
-      `${teamType} Initialize: hp=${hp} maxHp=${maxHp} stun=${stun} notes.length=${notesSize} mode=${modeName} overHealRate=${overHealRate}`
+      `${unitName} ${characterName} not found in skillMap: skill_rate_1 = ${
+        selectPattern.field("skill_rate_1").value
+      }  skill_rate_2 = ${selectPattern.field("skill_rate_2").value}`,
     );
-
-    if (teamType === "Player" || teamType === "Unknown") {
-      tskBattleLog.init(notes);
-    }
   }
 }
 
-function traceMethod(cls: Il2Cpp.Class, method: Il2Cpp.Method) {
+function handleLotterySkillAction(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const nowTurnCount = parseInt(args[5].toString(), 16);
+  log(`LotterySkillAction: nowTurnCount = ${nowTurnCount}`);
+}
+
+function handleInitialize(
+  _cls: Il2Cpp.Class,
+  _method: Il2Cpp.Method,
+  args: InvocationArguments,
+) {
+  const hp = parseInt(args[1].toString(), 16);
+  const maxHp = parseInt(args[2].toString(), 16);
+  const stun = parseInt(args[3].toString(), 16);
+  const notesList = new Il2Cpp.Object(args[4]);
+
+  const notes = notesList.field("_items").value as Il2Cpp.Array<Il2Cpp.Object>;
+  const notesSize = notesList.field("_size").value as number;
+  const type = parseInt(args[5].toString(), 16);
+  const mode = parseInt(args[6].toString(), 16);
+  const overHealRate = parseInt(args[7].toString(), 16);
+  // 直接使用枚举的反向映射
+  const modeName = BattleMode[mode]; // "DamageChallengeAtMode"
+  const teamType = type == 0 ? "Player" : type == 1 ? "Enemy" : "Unknown";
+  if (teamType === "Unknown") {
+    log(`Unknown team type: ${type}`);
+  }
+
+  log(
+    `${teamType} Initialize: hp=${hp} maxHp=${maxHp} stun=${stun} notes.length=${notesSize} mode=${modeName} overHealRate=${overHealRate}`,
+  );
+
+  if (teamType === "Player" || teamType === "Unknown") {
+    tskBattleLog.init(notes);
+  }
+}
+
+// dumpArgs 类方法的统一处理器
+const dumpArgsHandler: MethodHandler = (_cls, method, args) =>
+  dumpArgs(method, args);
+
+function traceMethod(
+  cls: Il2Cpp.Class,
+  method: Il2Cpp.Method,
+  handler?: MethodHandler,
+) {
   if (method.virtualAddress.isNull()) {
     return;
   }
@@ -351,7 +299,7 @@ function traceMethod(cls: Il2Cpp.Class, method: Il2Cpp.Method) {
   Interceptor.attach(method.virtualAddress, {
     onEnter(args) {
       log(`enter ${cls.name}.${method.name}`);
-      handleArgs(cls, method, args);
+      handler?.(cls, method, args);
       if (method.name == "PlayDamage") {
         const base = Process.getModuleByName("GameAssembly.dll").base;
         const module = Process.getModuleByName("GameAssembly.dll");
@@ -368,8 +316,6 @@ function traceMethod(cls: Il2Cpp.Class, method: Il2Cpp.Method) {
     },
     onLeave(retval) {
       onLeaveMethod(cls, method, retval);
-      // log(method.returnType.name);
-      // log(method.virtualAddress);
     },
   });
 }
@@ -384,7 +330,11 @@ Il2Cpp.perform(() => {
 
   const image = Il2Cpp.domain.assembly("Assembly-CSharp").image;
 
-  function traceMethodByName(className: string, methodName: string) {
+  function traceMethodByName(
+    className: string,
+    methodName: string,
+    handler?: MethodHandler,
+  ) {
     const cls = image.class(className);
     if (!cls) {
       log(`Class ${className} not found`);
@@ -395,14 +345,14 @@ Il2Cpp.perform(() => {
       log(`Method ${methodName} not found in class ${className}`);
       return;
     }
-    traceMethod(cls, method);
+    traceMethod(cls, method, handler);
   }
   const TSKBattleMain = image.class("TSKBattleMain");
   const QTEResutl = TSKBattleMain.method("QTEResutl");
   const QTEResutlOriginal = new NativeFunction(
     QTEResutl.virtualAddress,
     "void",
-    ["pointer", "int"]
+    ["pointer", "int"],
   ) as any;
 
   QTEResutl.implementation = function (timing: any) {
@@ -412,25 +362,39 @@ Il2Cpp.perform(() => {
     log(`QTEResutl modified timing to = ${Timing[newTiming]}(${newTiming})`);
     return QTEResutlOriginal(this.handle, newTiming);
   };
-  traceMethodByName("TSKBattleAI", "LotterySkill");
-  traceMethodByName("TSKBattleAI", "LotterySkillAction");
-  traceMethodByName("TSKBattleTeam", "Initialize");
-  traceMethodByName("TSKBattleManager", "InitializeResult");
-  traceMethodByName("TSKBattleAttack", "SetDamageNormal");
-  traceMethodByName("TSKBattleNote", "SetDamageValue");
-  traceMethodByName("TSKBattleCalculationManager", "CaluculationNormalDamage");
-  // traceMethodByName("TSKBattleUtility", "GetAbilityCompatibility");
-  // traceMethodByName("TSKBattleNote", "SetDamage");
-  // traceMethodByName("DamageText", "PlayDamage");
-  // traceMethodByName("TSKBattleTeam", "SetMultiDanameTextView");
-  // traceMethodByName("TSKBattleSkillManager", "Execute");
-  // traceMethodByName("TSKBattleSkillManager", "ExecuteWholeMulti");
-  traceMethodByName("TSKBattleNote", "SetSkillDamageValue");
+  traceMethodByName("TSKBattleAI", "LotterySkill", handleLotterySkill);
+  traceMethodByName(
+    "TSKBattleAI",
+    "LotterySkillAction",
+    handleLotterySkillAction,
+  );
+  traceMethodByName("TSKBattleTeam", "Initialize", handleInitialize);
+  traceMethodByName("TSKBattleManager", "InitializeResult", () =>
+    tskBattleLog.onEndBattle(),
+  );
+  traceMethodByName(
+    "TSKBattleAttack",
+    "SetDamageNormal",
+    handleSetDamageNormal,
+  );
+  traceMethodByName("TSKBattleNote", "SetDamageValue", handleSetDamageValue);
+  traceMethodByName(
+    "TSKBattleCalculationManager",
+    "CaluculationNormalDamage",
+    handleCaluculationNormalDamage,
+  );
+
+  traceMethodByName(
+    "TSKBattleNote",
+    "SetSkillDamageValue",
+    handleSetSkillDamageValue,
+  );
   // traceMethodByName("TSKBattleNote", "SetSkillMultiDamageValue");
-  traceMethodByName("TSKBattleNote", "SetUnisonDamageValue");
-  // traceMethodByName("TSKBattleSkillManager", "SetSkillEffect");
-  // traceMethodByName("TSKBattleTeam", "StartSkillDamage");
-  // traceMethodByName("TSKBattleCalculationManager", "CaluculationUnisonDamage");
+  traceMethodByName(
+    "TSKBattleNote",
+    "SetUnisonDamageValue",
+    handleSetUnisonDamageValue,
+  );
 
   // todo:
   // traceMethodByName("TeamCharaListPresenter", "GetUnitListRepository");
@@ -455,7 +419,7 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         log("FluctuationOffset =", ret.toFixed(2));
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleCalculationManager").method("RushOffset"),
@@ -465,7 +429,7 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         log("RushOffset =", ret.toFixed(2));
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleCalculationManager").method("AttributeOffset"),
@@ -477,10 +441,10 @@ Il2Cpp.perform(() => {
         log(
           `AttributeOffset = ${ret.toFixed(2)} (compatibility=${
             AbilityCompatibility[compatibility]
-          })`
+          })`,
         );
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleCalculationManager").method("CriticalOffset"),
@@ -492,10 +456,10 @@ Il2Cpp.perform(() => {
         log(
           `CriticalOffset = ${ret.toFixed(2)} (isCritical=${
             isCritilal == 1 ? "true" : "false"
-          })`
+          })`,
         );
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleCalculationManager").method("DownOffset"),
@@ -505,7 +469,7 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         log(`DownOffset = ${ret.toFixed(2)}`);
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleNote").method("GetDamageRateValue"),
@@ -518,10 +482,10 @@ Il2Cpp.perform(() => {
         log(
           `GetDamageRateValue = ${damage} -> ${ret} (易伤: ${(
             ret / damageNum
-          ).toFixed(2)})`
+          ).toFixed(2)})`,
         );
       }
-    }
+    },
   );
   hookMethodReturn(
     image.class("TSKBattleNote").method("GetPassiveDamageRate"),
@@ -531,13 +495,9 @@ Il2Cpp.perform(() => {
       if (enter_CaluculationNormalDamage) {
         log(`GetPassiveDamageRate = ${ret}`);
       }
-    }
+    },
   );
-  // traceMethodByName("TSKBattleCalculationManager", "FluctuationOffset");
-  // traceMethodByName("TSKBattleCalculationManager", "RushOffset");
-  // traceMethodByName("TSKBattleNote", "GetAttack");
-  // traceMethodByName("TSKBattleCalculationManager", "CriticalOffset");
-  // traceMethodByName("TSKBattleCalculationManager", "DownOffset");
+
   type MethodInfo = {
     start: NativePointer;
     method: Il2Cpp.Method;
@@ -589,25 +549,13 @@ Il2Cpp.perform(() => {
         log(`${"  ".repeat(i - 1)}└─ ${resolveMethod(frames[i])}`);
       }
     }
-    // const PlayDamage = image
-    //   .class("TSKBattleNote")
-    //   .method("SetSkillDamageValue");
-    // Interceptor.attach(PlayDamage.virtualAddress, {
-    //   onEnter(args) {
-    //     log(resolveMethod(this.returnAddress));
-    //     // printCaller(this.context, 5);
-    //   },
-    //   onLeave(retval) {
-    //     log(`return: ${retval}\n`);
-    //   },
-    // });
   });
 });
 function hookMethodReturn(
   method: Il2Cpp.Method,
   returnType: NativeFunctionReturnType,
   argTypes: NativeFunctionArgumentType[],
-  handler?: (ret: any, args: any[]) => any
+  handler?: (ret: any, args: any[]) => any,
 ) {
   if (!method) {
     log("[hookMethodReturn] method is undefined");
@@ -616,7 +564,7 @@ function hookMethodReturn(
   const original = new NativeFunction(
     method.virtualAddress,
     returnType,
-    argTypes
+    argTypes,
   ) as any;
   const isStatic = method.isStatic;
   // args 中不含this
@@ -626,26 +574,11 @@ function hookMethodReturn(
       enter_CaluculationNormalDamage &&
       log(
         `${method.name} args:`,
-        args.map((x) => typeof x + ":" + x)
+        args.map((x) => typeof x + ":" + x),
       );
-    // if (method.name == "GetDamageRateValue") {
-    //   args.forEach((arg, i) => {
-    //     log("arg", i);
-    //     log("typeof:", typeof arg);
-    //     log("constructor:", arg?.constructor?.name);
-
-    //     if (arg instanceof Il2Cpp.Object) {
-    //       log("Object class:", arg.class.name);
-    //     }
-
-    //     if (arg instanceof Il2Cpp.ValueType) {
-    //       log("ValueType toString:", arg.toString());
-    //     }
-    //   });
-    // }
     if (expectedArgsNum !== args.length) {
       log(
-        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`
+        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`,
       );
       // 走原 bridge implementation
       return method.invoke(...args);
@@ -655,7 +588,7 @@ function hookMethodReturn(
       enter_CaluculationNormalDamage &&
       log(
         `${method.name} nativeArgs:`,
-        nativeArgs.map((x) => `${typeof x}:${x}`)
+        nativeArgs.map((x) => `${typeof x}:${x}`),
       );
     var ret: any;
     if (method.isStatic) {
@@ -727,7 +660,7 @@ function logSkillEffectList(unit: Il2Cpp.Object) {
 
     // if (time > 9000) continue;
     log(
-      `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue} value2=${value2} value3=${value3} value4=${value4} value5=${value5}`
+      `effect ${i}: type=${type} time=${time} value=${value} effectValue=${effectValue} value2=${value2} value3=${value3} value4=${value4} value5=${value5}`,
     );
     valueMap.set(type, (valueMap.get(type) ?? 0) + value);
     effectValueMap.set(type, (effectValueMap.get(type) ?? 0) + effectValue);

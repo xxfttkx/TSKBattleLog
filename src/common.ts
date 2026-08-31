@@ -395,6 +395,17 @@ enum Timing {
   PREFECT = 3,
 }
 
+enum BattleMode {
+  None = 0,
+  Normal = 1,
+  Boss = 2,
+  OnlyBoss = 3,
+  DamageAttack = 4,
+  DefeatAttack = 5,
+  DamageChallengeAtMode = 6,
+  DamageChallenge = 7,
+}
+
 export {
   skillMap,
   TeamType,
@@ -402,4 +413,5 @@ export {
   AttackType,
   SkillType,
   Timing,
+  BattleMode,
 };
