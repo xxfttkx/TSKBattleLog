@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
+    "types": ["frida-gum"],
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

@@ -1,5 +1,36 @@
 import { skillMap } from "./common";
 
+// ===== 宿主通信：向外部 control.py 宿主推送事件 =====
+type HostMessageType = "log" | "modList" | "modState";
+
+function sendHost(type: HostMessageType, payload: any) {
+  try {
+    // Frida runtime 下全局 `send` 可用
+    (globalThis as any).send({ type, payload });
+  } catch (_) {
+    // 非宿主模式（比如直接 frida -l）忽略推送，不影响本地输出
+  }
+}
+
+function formatArgs(args: any[]): string {
+  return args
+    .map((x) => {
+      if (
+        typeof x === "object" &&
+        x !== null &&
+        !(x instanceof Il2Cpp.Object)
+      ) {
+        try {
+          return JSON.stringify(x);
+        } catch {
+          return String(x);
+        }
+      }
+      return String(x);
+    })
+    .join(" ");
+}
+
 function log(...args: any[]) {
   const now = new Date();
   const time =
@@ -8,7 +39,9 @@ function log(...args: any[]) {
     `${now.getSeconds().toString().padStart(2, "0")}.` +
     `${now.getMilliseconds().toString().padStart(3, "0")}`;
 
+  const message = formatArgs(args);
   console.log(`[${time}]`, ...args);
+  sendHost("log", { time, message });
 }
 
 function dumpArray(ptr: NativePointer, type: string): string {
@@ -165,6 +198,92 @@ function getAutoUseSkillIndex(unitName: string, characterName: string): number {
   return skillMap.get(name) ?? skillMap.get(unitName) ?? -1;
 }
 
+// hookMethodReturn 的详细日志开关
+let debug = false;
+
+/**
+ * 替换 method.implementation，用 NativeFunction 调用原实现并拦截返回值。
+ * verbose: 可选的详细日志开关（配合 debug 使用）
+ */
+function hookMethodReturn(
+  method: Il2Cpp.Method,
+  returnType: NativeFunctionReturnType,
+  argTypes: NativeFunctionArgumentType[],
+  handler?: (ret: any, args: any[]) => any,
+  verbose?: () => boolean,
+) {
+  if (!method) {
+    log("[hookMethodReturn] method is undefined");
+    return;
+  }
+  const original = new NativeFunction(
+    method.virtualAddress,
+    returnType,
+    argTypes,
+  ) as any;
+  const isStatic = method.isStatic;
+  // args 中不含this
+  method.implementation = function (...args: any[]) {
+    const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
+    debug &&
+      verbose?.() &&
+      log(
+        `${method.name} args:`,
+        args.map((x) => typeof x + ":" + x),
+      );
+    if (expectedArgsNum !== args.length) {
+      log(
+        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`,
+      );
+      // 走原 bridge implementation
+      return method.invoke(...args);
+    }
+    const nativeArgs = args.map(convertArg);
+    debug &&
+      verbose?.() &&
+      log(
+        `${method.name} nativeArgs:`,
+        nativeArgs.map((x) => `${typeof x}:${x}`),
+      );
+    var ret: any;
+    if (method.isStatic) {
+      ret = original(...nativeArgs);
+    } else {
+      ret = original(this.handle, ...nativeArgs);
+    }
+
+    const result = handler?.(ret, nativeArgs);
+
+    return (result ?? ret) as any;
+  };
+}
+
+function convertArg(arg: any): any {
+  // bool
+  if (typeof arg === "boolean") {
+    return arg ? 1 : 0;
+  }
+  // Il2Cpp.Object
+  if (arg instanceof Il2Cpp.Object) {
+    return arg.handle;
+  }
+
+  // ValueType (enum / struct)
+  if (arg instanceof Il2Cpp.ValueType) {
+    return arg.handle.readS32();
+  }
+
+  // frida-il2cpp-bridge Int64 / UInt64
+  if (
+    arg?.constructor?.name === "Int64" ||
+    arg?.constructor?.name === "UInt64"
+  ) {
+    return BigInt(arg.toString());
+  }
+
+  return arg;
+}
+
 export {
   log,
   dumpArgs,
@@ -174,4 +293,7 @@ export {
   saveJson,
   convertValue,
   getAutoUseSkillIndex,
+  hookMethodReturn,
+  convertArg,
+  sendHost,
 };
