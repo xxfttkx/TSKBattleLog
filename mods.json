@@ -1,0 +1,7 @@
+{
+    "battle-log": true,
+    "qte-perfect": true,
+    "auto-skill": true,
+    "damage-calc-trace": true,
+    "unit-list-dump": false
+}

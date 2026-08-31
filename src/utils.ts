@@ -165,6 +165,92 @@ function getAutoUseSkillIndex(unitName: string, characterName: string): number {
   return skillMap.get(name) ?? skillMap.get(unitName) ?? -1;
 }
 
+// hookMethodReturn 的详细日志开关
+let debug = false;
+
+/**
+ * 替换 method.implementation，用 NativeFunction 调用原实现并拦截返回值。
+ * verbose: 可选的详细日志开关（配合 debug 使用）
+ */
+function hookMethodReturn(
+  method: Il2Cpp.Method,
+  returnType: NativeFunctionReturnType,
+  argTypes: NativeFunctionArgumentType[],
+  handler?: (ret: any, args: any[]) => any,
+  verbose?: () => boolean,
+) {
+  if (!method) {
+    log("[hookMethodReturn] method is undefined");
+    return;
+  }
+  const original = new NativeFunction(
+    method.virtualAddress,
+    returnType,
+    argTypes,
+  ) as any;
+  const isStatic = method.isStatic;
+  // args 中不含this
+  method.implementation = function (...args: any[]) {
+    const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
+    debug &&
+      verbose?.() &&
+      log(
+        `${method.name} args:`,
+        args.map((x) => typeof x + ":" + x),
+      );
+    if (expectedArgsNum !== args.length) {
+      log(
+        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`,
+      );
+      // 走原 bridge implementation
+      return method.invoke(...args);
+    }
+    const nativeArgs = args.map(convertArg);
+    debug &&
+      verbose?.() &&
+      log(
+        `${method.name} nativeArgs:`,
+        nativeArgs.map((x) => `${typeof x}:${x}`),
+      );
+    var ret: any;
+    if (method.isStatic) {
+      ret = original(...nativeArgs);
+    } else {
+      ret = original(this.handle, ...nativeArgs);
+    }
+
+    const result = handler?.(ret, nativeArgs);
+
+    return (result ?? ret) as any;
+  };
+}
+
+function convertArg(arg: any): any {
+  // bool
+  if (typeof arg === "boolean") {
+    return arg ? 1 : 0;
+  }
+  // Il2Cpp.Object
+  if (arg instanceof Il2Cpp.Object) {
+    return arg.handle;
+  }
+
+  // ValueType (enum / struct)
+  if (arg instanceof Il2Cpp.ValueType) {
+    return arg.handle.readS32();
+  }
+
+  // frida-il2cpp-bridge Int64 / UInt64
+  if (
+    arg?.constructor?.name === "Int64" ||
+    arg?.constructor?.name === "UInt64"
+  ) {
+    return BigInt(arg.toString());
+  }
+
+  return arg;
+}
+
 export {
   log,
   dumpArgs,
@@ -174,4 +260,6 @@ export {
   saveJson,
   convertValue,
   getAutoUseSkillIndex,
+  hookMethodReturn,
+  convertArg,
 };
