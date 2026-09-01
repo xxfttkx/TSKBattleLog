@@ -62,9 +62,7 @@ Il2Cpp.perform(() => {
       const mod = mods.find((m) => m.name === data.name);
       if (mod) {
         mod.enabled = !!data.enabled;
-        log(
-          `[loader] ${mod.enabled ? "enable" : "disable"} mod: ${mod.name}`,
-        );
+        log(`[loader] ${mod.enabled ? "enable" : "disable"} mod: ${mod.name}`);
         publishModState(mod.name, mod.enabled);
       }
     },

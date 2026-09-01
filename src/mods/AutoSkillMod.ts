@@ -9,7 +9,13 @@ export class AutoSkillMod implements Mod {
   enabled = true;
 
   onLoad(image: Il2Cpp.Image): void {
-    traceMethodByName(image, "TSKBattleAI", "LotterySkill", this, this.handleLotterySkill);
+    traceMethodByName(
+      image,
+      "TSKBattleAI",
+      "LotterySkill",
+      this,
+      this.handleLotterySkill,
+    );
   }
 
   private handleLotterySkill: MethodEnterHandler = (_cls, _method, args) => {

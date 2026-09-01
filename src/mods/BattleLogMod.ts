@@ -18,14 +18,44 @@ export class BattleLogMod implements Mod {
   private tskBattleLog = new TSKBattleLog();
 
   onLoad(image: Il2Cpp.Image): void {
-    traceMethodByName(image, "TSKBattleTeam", "Initialize", this, this.handleInitialize);
+    traceMethodByName(
+      image,
+      "TSKBattleTeam",
+      "Initialize",
+      this,
+      this.handleInitialize,
+    );
     traceMethodByName(image, "TSKBattleManager", "InitializeResult", this, () =>
       this.tskBattleLog.onEndBattle(),
     );
-    traceMethodByName(image, "TSKBattleAttack", "SetDamageNormal", this, this.handleSetDamageNormal);
-    traceMethodByName(image, "TSKBattleNote", "SetDamageValue", this, this.handleSetDamageValue);
-    traceMethodByName(image, "TSKBattleNote", "SetSkillDamageValue", this, this.handleSetSkillDamageValue);
-    traceMethodByName(image, "TSKBattleNote", "SetUnisonDamageValue", this, this.handleSetUnisonDamageValue);
+    traceMethodByName(
+      image,
+      "TSKBattleAttack",
+      "SetDamageNormal",
+      this,
+      this.handleSetDamageNormal,
+    );
+    traceMethodByName(
+      image,
+      "TSKBattleNote",
+      "SetDamageValue",
+      this,
+      this.handleSetDamageValue,
+    );
+    traceMethodByName(
+      image,
+      "TSKBattleNote",
+      "SetSkillDamageValue",
+      this,
+      this.handleSetSkillDamageValue,
+    );
+    traceMethodByName(
+      image,
+      "TSKBattleNote",
+      "SetUnisonDamageValue",
+      this,
+      this.handleSetUnisonDamageValue,
+    );
 
     // 需要 dump 参数时取消注释：
     // traceMethodByName(image, "TSKBattleNote", "SetDamage", dumpArgsHandler);
@@ -43,7 +73,8 @@ export class BattleLogMod implements Mod {
     const stun = parseInt(args[3].toString(), 16);
     const notesList = new Il2Cpp.Object(args[4]);
 
-    const notes = notesList.field("_items").value as Il2Cpp.Array<Il2Cpp.Object>;
+    const notes = notesList.field("_items")
+      .value as Il2Cpp.Array<Il2Cpp.Object>;
     const notesSize = notesList.field("_size").value as number;
     const type = parseInt(args[5].toString(), 16);
     const mode = parseInt(args[6].toString(), 16);
@@ -64,7 +95,11 @@ export class BattleLogMod implements Mod {
     }
   };
 
-  private handleSetSkillDamageValue: MethodEnterHandler = (_cls, _method, args) => {
+  private handleSetSkillDamageValue: MethodEnterHandler = (
+    _cls,
+    _method,
+    args,
+  ) => {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
     const isCritical = args[8].toInt32() != 0 ? "True" : "False";
@@ -80,7 +115,11 @@ export class BattleLogMod implements Mod {
     this.tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
   };
 
-  private handleSetUnisonDamageValue: MethodEnterHandler = (_cls, _method, args) => {
+  private handleSetUnisonDamageValue: MethodEnterHandler = (
+    _cls,
+    _method,
+    args,
+  ) => {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
     log(`SetUnisonDamageValue: value=${value} attackAddress=${attackAddress}`);

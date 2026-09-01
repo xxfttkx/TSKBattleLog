@@ -17,7 +17,8 @@ import {
 export class DamageCalcTraceMod implements Mod {
   name = "damage-calc-trace";
   category = "调试" as const;
-  description = "打印 CaluculationNormalDamage 的所有参数和各 Offset 系数（日志量大，战斗后查看）";
+  description =
+    "打印 CaluculationNormalDamage 的所有参数和各 Offset 系数（日志量大，战斗后查看）";
   enabled = true;
 
   /** CaluculationNormalDamage 执行期间的守卫标志，限定 Offset 系列日志只在计算期间输出 */
