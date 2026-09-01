@@ -12,6 +12,12 @@ import {
   MethodLeaveHandler,
   traceMethodByName,
 } from "../mod";
+import {
+  buildMethodIndex,
+  printCaller,
+  resolveMethod,
+  isMethodIndexBuilt,
+} from "../debug/MethodResolver";
 
 /** 伤害公式分析（调试工具）：CaluculationNormalDamage 期间输出各系数偏移 */
 export class DamageCalcTraceMod implements Mod {
@@ -25,6 +31,12 @@ export class DamageCalcTraceMod implements Mod {
   private enterCalc = false;
 
   onLoad(image: Il2Cpp.Image): void {
+    // 只在打开这个调试 mod 时才构建全量 IL2CPP 方法索引，避免普通场景下的启动开销。
+    // resolveMethod / printCaller 在需要分析调用来源时直接调用即可。
+    buildMethodIndex();
+    void resolveMethod; // 预占引用，避免 unused import
+    void printCaller;
+    void isMethodIndexBuilt;
     traceMethodByName(
       image,
       "TSKBattleCalculationManager",

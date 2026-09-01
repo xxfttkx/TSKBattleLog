@@ -229,7 +229,7 @@ class App(tk.Tk):
             command=self._toggle_topmost,
         ).pack(side="left")
 
-        # 启动注入按钮（点击后禁用并切换为「已启动」状态；若用户要重新选，关面板再开）
+        # 启动注入按钮（点击后切到日志页；注入完成后按钮置为"✓ 已注入"）
         self.start_btn = ttk.Button(
             toolbar, text="▶ 启动注入", command=self._on_click_start,
         )
@@ -250,36 +250,37 @@ class App(tk.Tk):
         ttk.Label(toolbar, textvariable=self.status_var,
                   foreground="#555").pack(side="left", padx=16)
 
-        # 主体：左（mod 面板） + 右（日志面板）
-        body = ttk.PanedWindow(self, orient="horizontal")
-        body.pack(side="top", fill="both", expand=True, padx=8, pady=(0, 8))
+        # 主体：Notebook 两页切换（MODs / Logs），不同时显示
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(side="top", fill="both", expand=True, padx=8, pady=(0, 8))
 
-        # ---- 左侧 mod 面板 ----
-        left = ttk.Frame(body, padding=(6, 4))
-        body.add(left, weight=1)
+        # ---- Tab 1：MOD 选择 ----
+        mods_tab = ttk.Frame(self.notebook, padding=(10, 8))
+        self.notebook.add(mods_tab, text="MODs")
 
         ttk.Label(
-            left,
-            text="MOD 选择（勾选后立即生效，并写入 mods.json 下次沿用）",
+            mods_tab,
+            text="先勾选所需 mod，再点击上方「▶ 启动注入」",
             font=("", 10, "bold"),
-        ).pack(anchor="w", pady=(0, 6))
+        ).pack(anchor="w", pady=(0, 8))
 
-        # 用分类分组容器
         self.category_frames: dict[str, ttk.LabelFrame] = {}
         for cat in ("观察", "修改", "调试"):
-            lf = ttk.LabelFrame(left, text=cat, padding=(8, 6))
+            lf = ttk.LabelFrame(mods_tab, text=cat, padding=(10, 6))
             lf.pack(fill="x", pady=4)
             self.category_frames[cat] = lf
 
-        # ---- 右侧日志面板 ----
-        right = ttk.Frame(body)
-        body.add(right, weight=3)
+        # ---- Tab 2：运行日志 ----
+        logs_tab = ttk.Frame(self.notebook)
+        self.notebook.add(logs_tab, text="Logs")
 
-        ttk.Label(right, text="运行日志",
-                  font=("", 10, "bold")).pack(anchor="w", pady=(0, 4))
+        log_header = ttk.Frame(logs_tab)
+        log_header.pack(anchor="w", fill="x", pady=(8, 4), padx=8)
+        ttk.Label(log_header, text="运行日志",
+                  font=("", 10, "bold")).pack(side="left")
 
         self.log_text = scrolledtext.ScrolledText(
-            right,
+            logs_tab,
             wrap="none",
             font=("Consolas", 9),
             undo=False,
@@ -287,7 +288,7 @@ class App(tk.Tk):
             fg="#e6e6e6",
             insertbackground="#eee",
         )
-        self.log_text.pack(side="top", fill="both", expand=True)
+        self.log_text.pack(side="top", fill="both", expand=True, padx=8, pady=(0, 8))
         # 彩色 tag
         self.log_text.tag_configure("t", foreground="#888888")   # 时间戳
         self.log_text.tag_configure("m", foreground="#e6e6e6")   # 消息
@@ -384,11 +385,13 @@ class App(tk.Tk):
         if self._started:
             return
         self._started = True
-        self.start_btn.configure(state="disabled", text="已启动 (等待进程...)")
+        self.start_btn.configure(state="disabled", text="启动中（等待进程...）")
         self.status_var.set("等待游戏进程...")
         # 勾选变更先写一次 mods.json（作为 agent 加载初始值）
         self._save_mods_json()
         self.bridge.start()
+        # 立即切到 Logs 页，避免用户注入期间还在改勾选
+        self.notebook.select(1)
 
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         enabled = bool(var.get())
@@ -450,7 +453,9 @@ class App(tk.Tk):
                 category=m.get("category", "观察"),
                 description=m.get("description", ""),
             )
-        self.status_var.set(f"已连接，共 {len(mods)} 个 mod")
+        self.status_var.set(
+            f"已加载 {sum(1 for m in mods if m.get('enabled'))}/{len(mods)} 个 mod"
+        )
 
     def _apply_mod_state(self, name: str, enabled: bool):
         if name in self.mod_vars:
