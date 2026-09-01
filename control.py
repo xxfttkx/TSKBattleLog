@@ -130,6 +130,7 @@ class FridaBridge:
             self.ui_queue.put(("error", f"加载 agent.js 失败: {e}"))
             return
         self._log_internal("[bridge] 注入完成")
+        self.ui_queue.put(("connected", True))
 
     def _on_script_message(self, message, data):
         if message["type"] == "send":
@@ -172,13 +173,11 @@ class App(tk.Tk):
         self.bridge = FridaBridge(self.ui_queue)
         self.mod_vars: dict[str, tk.BooleanVar] = {}
         self.mod_rows: dict[str, dict] = {}  # 存 label 等引用，便于刷新状态
+        self._started = False  # 是否已点击过「启动注入」
 
         self._build_ui()
         self._load_mods_json_defaults()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-
-        # 启动 Frida 会话线程
-        self.bridge.start()
 
         # UI 事件轮询（Frida 消息→主线程）
         self.after(80, self._poll_queue)
@@ -195,6 +194,12 @@ class App(tk.Tk):
             toolbar, text="窗口置顶", variable=self.topmost_var,
             command=self._toggle_topmost,
         ).pack(side="left")
+
+        # 启动注入按钮（点击后禁用并切换为「已启动」状态；若用户要重新选，关面板再开）
+        self.start_btn = ttk.Button(
+            toolbar, text="▶ 启动注入", command=self._on_click_start,
+        )
+        self.start_btn.pack(side="left", padx=(12, 4))
 
         ttk.Button(toolbar, text="清空日志", command=self._clear_log).pack(
             side="right", padx=4
@@ -324,9 +329,22 @@ class App(tk.Tk):
         self._always_top = bool(self.topmost_var.get())
         self.attributes("-topmost", self._always_top)
 
+    def _on_click_start(self):
+        if self._started:
+            return
+        self._started = True
+        self.start_btn.configure(state="disabled", text="已启动 (等待进程...)")
+        self.status_var.set("等待游戏进程...")
+        # 勾选变更先写一次 mods.json（作为 agent 加载初始值）
+        self._save_mods_json()
+        self.bridge.start()
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         enabled = bool(var.get())
-        self.bridge.toggle_mod(name, enabled)
+        # 只有 bridge.script 已就绪才实时推送给 agent；否则仅保存到 mods.json
+        # 作为启动注入时的初始值。
+        if self.bridge.script is not None:
+            self.bridge.toggle_mod(name, enabled)
         self._save_mods_json()
 
     def _clear_log(self):
@@ -367,6 +385,8 @@ class App(tk.Tk):
                                      f"{int(time.time()*1000)%1000:03d}",
                                      data, error=True)
                     messagebox.showerror("错误", data)
+                elif kind == "connected":
+                    self.start_btn.configure(state="disabled", text="✓ 已注入")
         except queue.Empty:
             pass
         self.after(80, self._poll_queue)

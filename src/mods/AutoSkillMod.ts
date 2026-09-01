@@ -42,14 +42,12 @@ export class AutoSkillMod implements Mod {
     const hp = unitData.field("<HP>k__BackingField").value;
     const attack = unitData.field("<Attack>k__BackingField").value;
     const critical = unitData.field("<Critical>k__BackingField").value;
-
-    log(
-      `${unitName} (${characterName}): hp=${hp} attack=${attack} critical=${critical}`,
-    );
+    const name = `[${unitName}] ${characterName}`;
+    log(`${name}: hp=${hp} attack=${attack} critical=${critical}`);
 
     const skillId = getAutoUseSkillIndex(unitName ?? "", characterName ?? "");
     if (skillId != -1) {
-      log(`set ${unitName} skillId=${skillId}`);
+      log(`set ${name} skillId=${skillId}`);
       if (skillId == 0) {
         selectPattern.field("skill_rate_1").value = 0;
         selectPattern.field("skill_rate_2").value = 0;
