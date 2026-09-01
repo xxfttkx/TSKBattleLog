@@ -13,6 +13,7 @@ FridaTest 控制面板（悬浮窗）
 import json
 import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -22,11 +23,44 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 
 ROOT_DIR = Path(__file__).resolve().parent
+MODS_DIR = ROOT_DIR / "src" / "mods"
 MODS_JSON = ROOT_DIR / "mods.json"
 AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 LOG_DIR = ROOT_DIR / "logs"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
+
+
+# ---------- mod 元数据 ----------
+# 从 src/mods/*.ts 中正则提取 Mod 类的 name/category/description 字面量，
+# 让 control.py 在未启动注入前也能拿到正确的元信息展示。
+
+_CLASS_FIELD_RE = re.compile(
+    r'''^\s*(name|category|description)\s*=\s*(["'])(.*?)\2''',
+)
+
+
+def _parse_mod_manifest() -> list[dict]:
+    if not MODS_DIR.is_dir():
+        return []
+    result: list[dict] = []
+    for path in sorted(MODS_DIR.glob("*.ts")):
+        try:
+            src = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        fields: dict = {}
+        for line in src.splitlines():
+            m = _CLASS_FIELD_RE.match(line)
+            if m:
+                fields[m.group(1)] = m.group(3)
+        if "name" in fields:
+            result.append({
+                "name": fields["name"],
+                "category": fields.get("category", "观察"),
+                "description": fields.get("description", ""),
+            })
+    return result
 
 
 # ---------- 通信协议 ----------
@@ -271,17 +305,30 @@ class App(tk.Tk):
     # ---- 初始化 / 保存 mods.json ----
 
     def _load_mods_json_defaults(self):
-        """启动时先按 mods.json 渲染初始复选框（等收到 agent 的 modList 再校正）"""
-        if not MODS_JSON.exists():
+        """启动时按 mods.json + src/mods/*.ts 元数据渲染初始复选框。
+        元数据来自源码解析（无需等 agent 注入就有正确 desc/category），
+        勾选状态来自 mods.json（缺省则用 enabled）。"""
+        cfg: dict = {}
+        if MODS_JSON.exists():
+            try:
+                cfg = json.loads(MODS_JSON.read_text(encoding="utf-8"))
+            except Exception:
+                cfg = {}
+        manifest = _parse_mod_manifest()
+        if not manifest:
+            # 拿不到源码时退回按 mods.json 盲渲染
+            for name, enabled in cfg.items():
+                self._upsert_mod_row(name, enabled=bool(enabled),
+                                     category="观察", description="")
             return
-        try:
-            cfg = json.loads(MODS_JSON.read_text(encoding="utf-8"))
-        except Exception:
-            return
-        # 先按配置渲染占位，等 agent 上报 modList 再替换为正式 UI
-        for name, enabled in cfg.items():
-            self._upsert_mod_row(name, enabled=bool(enabled),
-                                 category="观察", description="(等待 agent 上报信息...)")
+        for meta in manifest:
+            enabled = cfg[meta["name"]] if meta["name"] in cfg else True
+            self._upsert_mod_row(
+                meta["name"],
+                enabled=bool(enabled),
+                category=meta.get("category", "观察"),
+                description=meta.get("description", ""),
+            )
 
     def _upsert_mod_row(self, name: str, *, enabled: bool, category: str,
                         description: str):
@@ -289,10 +336,14 @@ class App(tk.Tk):
         parent = self.category_frames[category]
 
         if name in self.mod_vars:
-            # 已有行：仅同步状态
-            self.mod_vars[name].set(enabled)
             info = self.mod_rows[name]
+            # 勾选/描述同步
+            self.mod_vars[name].set(enabled)
             info["description"].configure(text=description or "")
+            # 分组变化：拆出来挂到新分组
+            if info["row"].master is not parent:
+                info["row"].pack_forget()
+                info["row"].pack(in_=parent, fill="x", pady=1)
             return
 
         var = tk.BooleanVar(value=enabled)

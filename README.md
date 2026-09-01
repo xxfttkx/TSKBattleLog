@@ -12,31 +12,39 @@ TSKBattleLog captures and analyzes battle events from the game runtime, includin
 - Unison damage tracking
 - Combat state analysis
 - Configurable auto-battle skill selection via `char_skill.json`
+- Runtime mod toggling with a floating control panel
+- Millisecond-precision runtime log viewer
 
 ## Example Output
 
-After a battle, TSKBattleLog can generate a damage summary from captured battle events:
+After a battle, TSKBattleLog generates a damage summary from captured battle events:
 
 ```text
-[00:10:27] enter TSKBattleManager.InitializeResult
-[00:10:27] [TSKBattleLog] onEndBattle: total damage=34096197125
-[00:10:27] [TSKBattleLog] 初日の出を迎えて (フィオナ) damage:1542869178(5%)
-[00:10:27] [TSKBattleLog] バニーサンタ (蘭美) damage:8171700221(24%)
-[00:10:27] [TSKBattleLog] 霹靂の射手 (梨緒) damage:11016266663(32%)
-[00:10:27] [TSKBattleLog] 夏色マジカル☆ (リーリア) damage:289089448(1%)
-[00:10:27] [TSKBattleLog] 星を見るもの (フィオナ《魔王》) damage:10674388148(31%)
-[00:10:27] return: 0x7ffcd60e2bd0
+[13:59:55.017] enter TSKBattleManager.InitializeResult
+[13:59:55.018] [TSKBattleLog] onEndBattle: total damage=8865136
+[13:59:55.018] [TSKBattleLog] [バニーサンタ] 蘭美 damage:113626(1%)
+[13:59:55.018] [TSKBattleLog] [初日の出を迎えて] フィオナ damage:50699(1%)
+[13:59:55.018] [TSKBattleLog] [炎宿せし宝石] ルルゥ damage:3903(0%)
+[13:59:55.018] [TSKBattleLog] [霹靂の射手] 梨緒 damage:431585(5%)
+[13:59:55.018] [TSKBattleLog] [星を見るもの] フィオナ《魔王》 damage:8104144(91%)
+[13:59:55.019] [TSKBattleLog] unison damage=161179(2%)
+[13:59:55.065] InitializeResult return: 0x1c853b5e000
 ```
 
 ## Technical Notes
 
-TSKBattleLog uses Frida and frida-il2cpp-bridge to hook IL2CPP methods at runtime and reconstruct battle events.
+TSKBattleLog uses Frida and `frida-il2cpp-bridge` to hook IL2CPP methods at runtime and reconstruct battle events.
 
 The project observes game runtime behavior by tracing relevant methods and converting internal battle data into readable logs.
 
+Mods are organized into three categories:
+- **Observer**: read-only logging / data export, no runtime state change
+- **Modifier**: alters in-game behaviour (e.g. QTE result, skill selection)
+- **Debug**: verbose low-level trace for analysis (high log volume)
+
 ## Installation
 
-Install dependencies:
+Install Node dependencies:
 
 ```bash
 npm install
@@ -44,34 +52,34 @@ npm install
 
 ## Usage
 
-两种运行方式（任选其一）：
+Choose either entry point below.
 
-### 方式 A：悬浮窗控制面板（**推荐**）
+### Method A: Floating control panel (recommended)
 
-用 Tkinter + frida-python 做的置顶小窗口，可在运行时开关任意 mod、实时查看和导出日志。
+A Tkinter always-on-top window powered by `frida-python`. It lets you pick which mods to load before injection, toggle any mod at runtime, and view/export logs in real time.
 
-安装一次性依赖（仅首次）：
+One-time dependency install:
 
 ```powershell
 pip install frida frida-tools
 ```
 
-启动：
+Launch:
 
 ```powershell
 .\control.ps1
 ```
 
-启动后会先 `npm run build` 编译最新的 agent.js，然后弹出悬浮窗。**先开游戏、后开面板**也能自动等待并注入。
+The script runs `npm run build` first, then opens the panel. Tick the mods you want, start the game (or start the game first, either order works), then press **▶ Start Injection**.
 
-悬浮窗功能：
+Panel features:
 
-- 左上角可切换「窗口置顶」
-- 左侧按**观察 / 修改 / 调试**三类分组显示 mod，勾选后**立即生效**并自动写入 `mods.json` 下次沿用
-- 右侧是实时日志面板，带「清空日志」「复制到剪贴板」「保存到 logs/」按钮
-- 日志上限 5000 行，超出自动裁剪最旧内容
+- **Always-on-top** toggle (top-left corner)
+- **Mod list** grouped by Observer / Modifier / Debug. Tick/untick to apply immediately; selection is persisted to `mods.json` for the next launch.
+- **Log viewer** (right pane) with Clear / Copy to clipboard / Save as log file buttons.
+- Ring buffer keeps the last 5000 lines; older lines are dropped automatically.
 
-### 方式 B：传统注入（仅控制台）
+### Method B: Headless injection (console only)
 
 Start the game, then run the provided PowerShell script:
 
@@ -92,9 +100,9 @@ logs/
 └── 20260716_001234.log
 ```
 
-## Mod 开关配置（`mods.json`）
+## Mod configuration (`mods.json`)
 
-所有功能按 mod 拆分，在 `mods.json` 中配置默认启用状态。方式 A 中勾选/取消会自动回写到此文件。
+Every feature lives in its own mod under `src/mods/`. `mods.json` defines the default enabled state for each mod. Ticking/unticking through Method A writes back to this file automatically.
 
 ```json
 {
@@ -106,41 +114,41 @@ logs/
 }
 ```
 
-| key | 分类 | 说明 |
-|-----|------|------|
-| `battle-log` | 观察 | 战斗伤害统计（战斗结束输出排名） |
-| `qte-perfect` | 修改 | QTE 强制 PERFECT |
-| `auto-skill` | 修改 | auto 时按 `char_skill.json` 自动选择 EX1/EX2 |
-| `damage-calc-trace` | 调试 | 打印 CaluculationNormalDamage 参数与各 Offset 系数（日志量大） |
-| `unit-list-dump` | 观察 | 筛选编队界面时导出单位属性到游戏目录下的 `unit_list.json`（默认关） |
+| Key                 | Category   | Description                                                                           |
+|---------------------|------------|---------------------------------------------------------------------------------------|
+| `battle-log`        | Observer   | Post-battle per-unit damage ranking (read-only)                                       |
+| `qte-perfect`       | Modifier   | Forces every QTE result to PERFECT                                                    |
+| `auto-skill`        | Modifier   | Auto-picks EX1 / EX2 / off during auto-mode based on `char_skill.json`                |
+| `damage-calc-trace` | Debug      | Prints `CaluculationNormalDamage` args and every Offset coefficient — very verbose    |
+| `unit-list-dump`    | Observer   | Exports every unit's attributes to `unit_list.json` when the party editor is opened   |
 
-## Configuration
+## Skill configuration
 
-`char_skill.json` can be used to configure skill selection rules during auto battle.
+`char_skill.json` controls the priority used by the `auto-skill` mod.
 
 Example:
 
 ```json
 {
-    "星を見るもの":2,
-    "バニーサンタ":1,
-    "夏色マジカル☆":0
+    "星を見るもの": 2,
+    "バニーサンタ": 1,
+    "夏色マジカル☆": 0
 }
 ```
 
-Configuration values:
+Values:
 
-- `2`: Automatically use EX2 if the current EX gauge is enough to pay the EX2 skill cost.
-- `1`: Automatically use EX1 if the current EX gauge is enough to pay the EX1 skill cost.
-- `0`: Never use any EX skill automatically.
+- `2`: Prefer EX2; auto-cast it whenever the EX gauge covers the EX2 cost.
+- `1`: Prefer EX1; auto-cast it whenever the EX gauge covers the EX1 cost.
+- `0`: Never auto-cast any EX skill for this unit.
 
-The configuration controls the skill priority used by the auto-battle system.
+The fallback lookup order is `[UnitName] CharacterName` → `UnitName` so a single entry can cover all variants of a unit when no exact override exists.
 
 ## Disclaimer
 
 This project is intended for research, analysis, and personal customization purposes.
 
-Some features involve modifying battle-related data and may affect game behavior. Use at your own risk.
+Some features modify battle-related state and may affect game behaviour. Use at your own risk.
 
 ## Credits
 

@@ -12,7 +12,7 @@ import {
 export class BattleLogMod implements Mod {
   name = "battle-log";
   category = "观察" as const;
-  description = "战斗结束时输出各单位伤害排名（不修改游戏数据）";
+  description = "战斗中与结束时输出各单位伤害";
   enabled = true;
 
   private tskBattleLog = new TSKBattleLog();
