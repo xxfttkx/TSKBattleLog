@@ -193,6 +193,66 @@ function convertValue(value: any): any {
   return value;
 }
 
+/**
+ * 递归展平 Il2Cpp.Object 为纯 JSON 结构。
+ * - 带 maxDepth 防止无限递归（默认 2 层）
+ * - 用 handle 地址做循环引用检测
+ * - 每个字段读取都有 try/catch，单字段失败不会炸整个 dump
+ *
+ * 用于 UnitListDump 等导出场景，不用于常规运行时 hook。
+ */
+function dumpIl2CppObject(
+  value: any,
+  maxDepth = 2,
+  visited: Set<string> = new Set(),
+): any {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (value instanceof Il2Cpp.String) {
+    return value.content;
+  }
+
+  if (value instanceof Il2Cpp.Array) {
+    const arr: any[] = [];
+    for (let i = 0; i < value.length; i++) {
+      try {
+        arr.push(dumpIl2CppObject(value.get(i), maxDepth, visited));
+      } catch (e) {
+        arr.push(`<error>: ${e}`);
+      }
+    }
+    return arr;
+  }
+
+  if (value instanceof Il2Cpp.Object) {
+    const handleKey = value.handle.toString();
+    if (visited.has(handleKey)) {
+      return "<circular>";
+    }
+    if (maxDepth <= 0) {
+      return value.class.type.name;
+    }
+    visited.add(handleKey);
+    const result: Record<string, any> = {};
+    result["class_name"] = value.class.type.name;
+    for (const field of value.class.fields) {
+      try {
+        const fv = value.field(field.name).value;
+        result[field.name] = dumpIl2CppObject(fv, maxDepth - 1, visited);
+      } catch (e) {
+        result[field.name] = `<error>: ${e}`;
+      }
+    }
+    visited.delete(handleKey);
+    return result;
+  }
+
+  // number / boolean / 基本类型
+  return value;
+}
+
 function getAutoUseSkillIndex(unitName: string, characterName: string): number {
   const name = `[${unitName}] ${characterName}`;
   return skillMap.get(name) ?? skillMap.get(unitName) ?? -1;
@@ -292,6 +352,7 @@ export {
   dumpObject,
   saveJson,
   convertValue,
+  dumpIl2CppObject,
   getAutoUseSkillIndex,
   hookMethodReturn,
   convertArg,

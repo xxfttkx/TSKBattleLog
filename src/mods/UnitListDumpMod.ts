@@ -1,4 +1,4 @@
-import { log, saveJson, convertValue } from "../utils";
+import { log, saveJson, dumpIl2CppObject } from "../utils";
 import { Mod, MethodLeaveHandler, traceMethodByName } from "../mod";
 
 /** 导出编队单位数据到 unit_list.json（观察型，默认关闭） */
@@ -41,17 +41,9 @@ export class UnitListDumpMod implements Mod {
     log(`unit_list length: ${unit_list.length}`);
     const units: Record<string, any>[] = [];
     for (let i = 0; i < unit_list.length; i++) {
-      const UnitEntity = unit_list.get(i);
-      const unit: Record<string, any> = {};
-      for (const field of UnitEntity.class.fields) {
-        try {
-          const value = UnitEntity.field(field.name).value;
-          unit[field.name] = convertValue(value);
-        } catch (e) {
-          unit[field.name] = `<error>: ${e}`;
-        }
-      }
-      units.push(unit);
+      // 深度 3：UnitEntity 本身占一层，其字段（如 status_data）再展开两层，
+      // 与逐字段 dumpIl2CppObject(field, 2) 的展开深度一致
+      units.push(dumpIl2CppObject(unit_list.get(i), 3));
     }
     saveJson("unit_list.json", units);
     log(`unit_list saved to unit_list.json`);
