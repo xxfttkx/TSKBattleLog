@@ -3,6 +3,7 @@
   "backtrace": false,
   "battle-log": false,
   "damage-calc-trace": false,
+  "field-watch": true,
   "qte-perfect": true,
   "trace-config": false,
   "unit-list-dump": true

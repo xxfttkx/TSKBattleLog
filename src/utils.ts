@@ -306,10 +306,16 @@ function hookMethodReturn(
         nativeArgs.map((x) => `${typeof x}:${x}`),
       );
     var ret: any;
-    if (method.isStatic) {
-      ret = original(...nativeArgs);
-    } else {
-      ret = original(this.handle, ...nativeArgs);
+    try {
+      if (method.isStatic) {
+        ret = original(...nativeArgs);
+      } else {
+        ret = original(this.handle, ...nativeArgs);
+      }
+    } catch (e) {
+      // convertArg 转换失败或参数类型不匹配时，回退到 bridge 原生调用
+      log(`[${method.name}] original() call failed: ${e}, fallback to invoke`);
+      return method.invoke(...args) as any;
     }
 
     const result = handler?.(ret, nativeArgs);

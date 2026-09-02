@@ -135,16 +135,6 @@ export class DamageCalcTraceMod implements Mod {
       },
       verbose,
     );
-
-    hookMethodReturn(
-      image.class("TSKBattleUtility").method("GetAbilityCompatibility"),
-      "int",
-      ["int", "int", "int"],
-      (ret) => {
-        log("GetAbilityCompatibility =", ret);
-      },
-      verbose,
-    );
   }
 
   private handleCaluculationNormalDamage: MethodEnterHandler = (

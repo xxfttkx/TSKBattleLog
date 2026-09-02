@@ -9,6 +9,7 @@ import { UnitListDumpMod } from "./mods/UnitListDumpMod";
 import { TraceConfigMod } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { TraceEntry } from "./mods/TraceConfigMod";
+import { FieldWatchMod } from "./mods/FieldWatchMod";
 import modsConfig from "../mods.json";
 
 const mods: Mod[] = [
@@ -19,6 +20,7 @@ const mods: Mod[] = [
   new UnitListDumpMod(),
   new TraceConfigMod(),
   new BacktraceMod(),
+  new FieldWatchMod(),
 ];
 
 /**
