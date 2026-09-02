@@ -224,6 +224,7 @@ class App(tk.Tk):
         self.mod_vars: dict[str, tk.BooleanVar] = {}
         self.mod_rows: dict[str, dict] = {}  # 存 label 等引用，便于刷新状态
         self._started = False  # 是否已点击过「启动注入」
+        self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
         self._load_mods_json_defaults()
@@ -261,10 +262,9 @@ class App(tk.Tk):
         ttk.Button(toolbar, text="复制日志", command=self._copy_log).pack(
             side="right", padx=4
         )
-        self.save_btn = ttk.Button(
-            toolbar, text="保存日志", command=self._save_log
-        )
-        self.save_btn.pack(side="right", padx=4)
+        ttk.Button(
+            toolbar, text="打开日志目录", command=self._open_log_dir
+        ).pack(side="right", padx=4)
 
         self.status_var = tk.StringVar(value="未连接")
         ttk.Label(toolbar, textvariable=self.status_var,
@@ -413,6 +413,11 @@ class App(tk.Tk):
             info["checkbox"].configure(state="disabled")
         # 勾选变更先写一次 mods.json（作为 agent 加载初始值）
         self._save_mods_json()
+        # 创建本次会话的自动落盘日志文件
+        LOG_DIR.mkdir(exist_ok=True)
+        log_name = time.strftime("%Y%m%d_%H%M%S") + "_panel.log"
+        self._log_file = open(LOG_DIR / log_name, "w", encoding="utf-8",
+                             buffering=8192)
         self.bridge.start()
         # 立即切到 Logs 页，避免用户注入期间还在改勾选
         self.notebook.select(1)
@@ -438,15 +443,21 @@ class App(tk.Tk):
         self.clipboard_clear()
         self.clipboard_append(content)
 
-    def _save_log(self):
+    def _open_log_dir(self):
         LOG_DIR.mkdir(exist_ok=True)
-        fname = LOG_DIR / (time.strftime("%Y%m%d_%H%M%S") + "_panel.log")
-        content = self.log_text.get("1.0", "end-1c")
-        fname.write_text(content, encoding="utf-8")
-        messagebox.showinfo("已保存", f"日志已保存到:\n{fname}")
+        try:
+            os.startfile(str(LOG_DIR))
+        except Exception as e:
+            messagebox.showerror("打开失败", f"无法打开日志目录:\n{e}")
 
     def _on_close(self):
         self.bridge.stop()
+        if self._log_file:
+            try:
+                self._log_file.flush()
+                self._log_file.close()
+            except Exception:
+                pass
         self.destroy()
 
     # ---- 消息轮询 ----
@@ -517,6 +528,13 @@ class App(tk.Tk):
             self.log_text.see("end")
 
         self.log_text.configure(state="disabled")
+
+        # 同步写入文件（缓冲 8KB，不每行碰磁盘）
+        if self._log_file:
+            try:
+                self._log_file.write(f"[{time_str}] {message}\n")
+            except Exception:
+                pass
 
 
 def main():
