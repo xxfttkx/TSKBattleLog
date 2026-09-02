@@ -58,21 +58,15 @@ Il2Cpp.perform(() => {
     }
   }
 
+  const loadedMods = new Set<string>();
+
   for (const mod of mods) {
     if (mod.enabled) {
       log(`[loader] load mod: ${mod.name}`);
       mod.onLoad(image);
+      loadedMods.add(mod.name);
     } else {
       log(`[loader] skip mod: ${mod.name} (disabled)`);
-    }
-  }
-
-  // 默认关闭的 mod 也执行 onLoad（onLoad 只注册 hook，执行逻辑由 enabled 守卫），
-  // 这样宿主在运行时打开它们也能生效。
-  for (const mod of mods) {
-    if (!mod.enabled) {
-      log(`[loader] defer mod: ${mod.name} (hooks pre-registered)`);
-      mod.onLoad(image);
     }
   }
 
@@ -82,7 +76,14 @@ Il2Cpp.perform(() => {
     const mod = mods.find((m) => m.name === data.name);
     if (mod) {
       mod.enabled = !!data.enabled;
-      log(`[loader] ${mod.enabled ? "enable" : "disable"} mod: ${mod.name}`);
+      // 首次启用时才 onLoad（注册 hook），关闭的 mod 不预注册
+      if (mod.enabled && !loadedMods.has(mod.name)) {
+        log(`[loader] load mod: ${mod.name} (runtime enable)`);
+        mod.onLoad(image);
+        loadedMods.add(mod.name);
+      } else {
+        log(`[loader] ${mod.enabled ? "enable" : "disable"} mod: ${mod.name}`);
+      }
       publishModState(mod.name, mod.enabled);
     }
   });

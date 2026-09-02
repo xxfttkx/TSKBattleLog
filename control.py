@@ -382,7 +382,8 @@ class App(tk.Tk):
         desc_label.pack(side="left", padx=8)
 
         self.mod_vars[name] = var
-        self.mod_rows[name] = {"row": row, "description": desc_label}
+        self.mod_rows[name] = {"row": row, "checkbox": cb,
+                               "description": desc_label}
 
     def _save_mods_json(self):
         data = {n: bool(v.get()) for n, v in self.mod_vars.items()}
@@ -407,6 +408,9 @@ class App(tk.Tk):
         self._started = True
         self.start_btn.configure(state="disabled", text="启动中（等待进程...）")
         self.status_var.set("等待游戏进程...")
+        # 锁定所有 mod 复选框，注入后不允许再改
+        for info in self.mod_rows.values():
+            info["checkbox"].configure(state="disabled")
         # 勾选变更先写一次 mods.json（作为 agent 加载初始值）
         self._save_mods_json()
         self.bridge.start()
