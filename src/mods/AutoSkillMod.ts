@@ -5,7 +5,7 @@ import { Mod, MethodEnterHandler, traceMethodByName } from "../mod";
 export class AutoSkillMod implements Mod {
   name = "auto-skill";
   category = "修改" as const;
-  description = "按 char_skill.json 配置自动选择 EX1/EX2/混合技能";
+  description = "按 char_skill.json 配置自动选择 EX1/EX2";
   enabled = true;
 
   onLoad(image: Il2Cpp.Image): void {
