@@ -25,6 +25,7 @@ from tkinter import ttk, scrolledtext, messagebox
 ROOT_DIR = Path(__file__).resolve().parent
 MODS_DIR = ROOT_DIR / "src" / "mods"
 MODS_JSON = ROOT_DIR / "mods.json"
+TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
 AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 LOG_DIR = ROOT_DIR / "logs"
 PROCESS_NAME = "twinkle_starknightsX.exe"
@@ -69,8 +70,9 @@ def _parse_mod_manifest() -> list[dict]:
 #   type == "modList" : payload = {mods: [{name, description, category, enabled}]}
 #   type == "modState": payload = {name, enabled}
 #
-# Host -> Agent（通过 script.post({"type": "toggle", ...})）
-#   type == "toggle"  : {name, enabled}
+# Host -> Agent（通过 script.post(...)）
+#   type == "toggle"      : {name, enabled}
+#   type == "traceConfig" : trace_config.json 全量内容（trace/backtrace/backtraceDepth）
 
 
 # ============== Frida 会话线程 ==============
@@ -109,6 +111,18 @@ class FridaBridge:
                               "payload": {"name": name, "enabled": enabled}})
         except Exception as e:
             self._log_internal(f"[bridge] toggle {name}={enabled} 失败: {e}")
+
+    def post_trace_config(self):
+        """把 trace_config.json 全量下发给 agent（trace-config / backtrace 两个 mod 消费）"""
+        if self.script is None:
+            self._log_internal("[bridge] 尚未注入，无法下发 traceConfig")
+            return
+        try:
+            cfg = json.loads(TRACE_CONFIG_JSON.read_text(encoding="utf-8"))
+            self.script.post({"type": "traceConfig", "payload": cfg})
+            self._log_internal("[bridge] traceConfig 已下发")
+        except Exception as e:
+            self._log_internal(f"[bridge] 下发 traceConfig 失败: {e}")
 
     # ------- 内部 -------
 
@@ -177,6 +191,8 @@ class FridaBridge:
                 )
             elif msg_type == "modList":
                 self.ui_queue.put(("modList", payload.get("mods", [])))
+                # 收到 modList 说明 agent 侧 recv 已注册完毕，此时下发调试观察点配置
+                self.post_trace_config()
             elif msg_type == "modState":
                 self.ui_queue.put(
                     ("modState", (payload.get("name"), payload.get("enabled")))
@@ -234,6 +250,10 @@ class App(tk.Tk):
             toolbar, text="▶ 启动注入", command=self._on_click_start,
         )
         self.start_btn.pack(side="left", padx=(12, 4))
+
+        ttk.Button(
+            toolbar, text="重载配置", command=self._reload_trace_config
+        ).pack(side="left", padx=4)
 
         ttk.Button(toolbar, text="清空日志", command=self._clear_log).pack(
             side="right", padx=4
@@ -392,6 +412,9 @@ class App(tk.Tk):
         self.bridge.start()
         # 立即切到 Logs 页，避免用户注入期间还在改勾选
         self.notebook.select(1)
+
+    def _reload_trace_config(self):
+        self.bridge.post_trace_config()
 
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         enabled = bool(var.get())

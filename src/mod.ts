@@ -4,6 +4,8 @@ export type MethodEnterHandler = (
   cls: Il2Cpp.Class,
   method: Il2Cpp.Method,
   args: InvocationArguments,
+  /** Interceptor 的 CpuContext，可用于 Thread.backtrace（BacktraceMod 使用） */
+  context: CpuContext,
 ) => void;
 
 export type MethodLeaveHandler = (
@@ -42,6 +44,9 @@ export function guarded<T extends (...args: any[]) => void>(
   }) as T;
 }
 
+/** Interceptor.attach 的返回值，调用 .detach() 可单独摘除某个 hook */
+export type TraceListener = ReturnType<typeof Interceptor.attach>;
+
 export function traceMethodByName(
   image: Il2Cpp.Image,
   className: string,
@@ -49,19 +54,19 @@ export function traceMethodByName(
   mod?: Mod,
   onEnter?: MethodEnterHandler,
   onLeave?: MethodLeaveHandler,
-) {
+): TraceListener | undefined {
   const cls = image.class(className);
   if (!cls) {
     log(`Class ${className} not found`);
-    return;
+    return undefined;
   }
   const method = cls.method(methodName);
   if (!method) {
     log(`Method ${methodName} not found in class ${className}`);
-    return;
+    return undefined;
   }
   if (method.virtualAddress.isNull()) {
-    return;
+    return undefined;
   }
 
   log("Trace:", cls.name, method.name);
@@ -70,14 +75,17 @@ export function traceMethodByName(
   const logEnter = `enter ${cls.name}.${method.name}`;
   const logReturn = (retval: any) => `${method.name} return: ${retval}\n`;
 
-  Interceptor.attach(method.virtualAddress, {
+  return Interceptor.attach(method.virtualAddress, {
     onEnter(args) {
       if (mod === undefined || mod.enabled) {
         log(logEnter);
       }
       if (onEnter) {
+        // InvocationContext 可能直接是 CpuContext 或持有 .context 字段，两者兜底
+        const self = this as any;
+        const ctx: CpuContext = self.context ?? self;
         const guardedEnter = mod ? guarded(mod, onEnter) : onEnter;
-        guardedEnter(cls, method, args);
+        guardedEnter(cls, method, args, ctx);
       }
     },
     onLeave(retval) {

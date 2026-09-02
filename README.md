@@ -12,6 +12,7 @@ TSKBattleLog captures and analyzes battle events from the game runtime, includin
 - Unison damage tracking
 - Combat state analysis
 - Configurable auto-battle skill selection via `char_skill.json`
+- Config-driven debug observation points and IL2CPP backtraces via `trace_config.json`
 - Runtime mod toggling with a floating control panel
 - Millisecond-precision runtime log viewer
 
@@ -106,11 +107,13 @@ Every feature lives in its own mod under `src/mods/`. `mods.json` defines the de
 
 ```json
 {
-    "battle-log": true,
-    "qte-perfect": true,
-    "auto-skill": true,
-    "damage-calc-trace": true,
-    "unit-list-dump": false
+  "auto-skill": true,
+  "backtrace": false,
+  "battle-log": false,
+  "damage-calc-trace": false,
+  "qte-perfect": true,
+  "trace-config": false,
+  "unit-list-dump": true
 }
 ```
 
@@ -121,6 +124,8 @@ Every feature lives in its own mod under `src/mods/`. `mods.json` defines the de
 | `auto-skill`        | Modifier   | Auto-picks EX1 / EX2 / off during auto-mode based on `char_skill.json`                |
 | `damage-calc-trace` | Debug      | Prints `CaluculationNormalDamage` args and every Offset coefficient — very verbose    |
 | `unit-list-dump`    | Observer   | Exports every unit's attributes to `unit_list.json` when the party editor is opened   |
+| `trace-config`      | Debug      | Bulk-registers arg-dump trace points listed in `trace_config.json`                    |
+| `backtrace`         | Debug      | Prints an IL2CPP call stack on entry for methods listed in `trace_config.json`        |
 
 ## Skill configuration
 
@@ -143,6 +148,27 @@ Values:
 - `0`: Never auto-cast any EX skill for this unit.
 
 The fallback lookup order is `[UnitName] CharacterName` → `UnitName` so a single entry can cover all variants of a unit when no exact override exists.
+
+## Debug observation points (`trace_config.json`)
+
+The `trace-config` and `backtrace` mods share `trace_config.json`, so adding new observation points requires **no source edit and no re-injection**:
+
+```json
+{
+  "trace": [
+    { "class": "TSKBattleNote", "method": "SetDamageValue" }
+  ],
+  "backtrace": [
+    { "class": "TSKBattleAI", "method": "LotterySkillAction", "depth": 8 }
+  ],
+  "backtraceDepth": 5
+}
+```
+
+- `trace`: attaches `dumpArgs` to every `class.method` listed.
+- `backtrace`: prints an IL2CPP call stack (addresses resolved through the method address index) each time the method is entered; per-entry `depth` overrides the global `backtraceDepth`.
+- After editing the file, press **重载配置** on the control panel to apply immediately — new points attach and removed points detach at runtime. The file is also read once at injection time.
+- Keep the arrays empty by default: tracing a method that another mod (e.g. `battle-log`) already hooks doubles the log output for that method.
 
 ## Disclaimer
 

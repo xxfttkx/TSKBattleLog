@@ -1,0 +1,6 @@
+{
+  "_hint": "调试观察点配置（trace-config / backtrace 两个 mod 共用）。trace 列表：对 类.方法 注册参数 dump；backtrace 列表：方法进入时打印 IL2CPP 调用栈，depth 可选（默认 backtraceDepth）。修改并保存后，点控制面板『重载配置』即时生效，无需重新注入。默认为空数组，避免与 battle-log / damage-calc-trace 等已有 mod 重复 hook 同一方法造成日志翻倍。",
+  "trace": [],
+  "backtrace": [],
+  "backtraceDepth": 5
+}

@@ -1,7 +1,9 @@
 {
   "auto-skill": true,
+  "backtrace": false,
   "battle-log": false,
   "damage-calc-trace": false,
   "qte-perfect": true,
+  "trace-config": false,
   "unit-list-dump": true
 }
