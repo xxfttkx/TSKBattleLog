@@ -26,6 +26,7 @@ export class BacktraceMod implements Mod {
 
   private image?: Il2Cpp.Image;
   private globalDepth = 5;
+  private lastConfigKey = "";
   /** key=类名.方法名 -> listener + 实际生效深度 */
   private registered = new Map<string, { listener: TraceListener; depth: number }>();
 
@@ -46,6 +47,11 @@ export class BacktraceMod implements Mod {
 
   /** 全量应用配置：新增挂 hook，移除 detach，深度变化则重挂 */
   applyConfig(entries: BacktraceEntry[], globalDepth: number): void {
+    // 去重：配置内容未变时跳过
+    const key = JSON.stringify(entries) + `|${globalDepth}`;
+    if (key === this.lastConfigKey) return;
+    this.lastConfigKey = key;
+
     if (!this.image) {
       log("[backtrace] onLoad 尚未执行，忽略配置下发");
       return;

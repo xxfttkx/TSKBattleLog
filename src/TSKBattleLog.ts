@@ -13,6 +13,7 @@ export class TSKBattleLog {
   logs: string[] = [];
   damageTotal: bigint = BigInt(0);
   unisonDamageTotal: bigint = BigInt(0);
+  turnCount = 0;
 
   constructor() {}
 
@@ -21,6 +22,14 @@ export class TSKBattleLog {
     this.logs = [];
     this.damageTotal = BigInt(0);
     this.unisonDamageTotal = BigInt(0);
+    this.turnCount = 0;
+  }
+
+  onTurnChange(oldVal: number, newVal: number): void {
+    this.turnCount = newVal;
+    const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}`;
+    log(msg);
+    this.logs.push(msg);
   }
 
   init(notes: Il2Cpp.Array<Il2Cpp.Object>): void {
@@ -34,13 +43,13 @@ export class TSKBattleLog {
       this.notes.push(battleNote);
       const autoSkillIndex = getAutoUseSkillIndex(
         battleNote.unitName,
-        battleNote.characterName
+        battleNote.characterName,
       );
       const unitNameInSkillMap = autoSkillIndex != -1;
       log(
         `[TSKBattleLog] add note: ${battleNote.toString()}${
           unitNameInSkillMap ? ` (${autoSkillIndex})` : " (not in skill map)"
-        }`
+        }`,
       );
     }
     log(`[TSKBattleLog] Init complete: notes=${this.notes.length}`);
@@ -67,12 +76,12 @@ export class TSKBattleLog {
     address: string,
     damage: string,
     damageType: string,
-    isCritical: string = "Unknown"
+    isCritical: string = "Unknown",
   ): void {
     let note = this.notes.find((n) => n.address === address);
     if (!note) {
       log(
-        `[TSKBattleLog] addDamageNote: note not found for address ${address}`
+        `[TSKBattleLog] addDamageNote: note not found for address ${address}`,
       );
       return;
     }
@@ -99,7 +108,7 @@ export class TSKBattleLog {
     const value = Number(note.damage) / Number(this.damageTotal);
     const percentage = `${(value * 100).toFixed(0)}%`;
     log(
-      `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`
+      `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`,
     );
   }
 
@@ -108,19 +117,21 @@ export class TSKBattleLog {
   }
 
   onEndBattle(): void {
-    log(`[TSKBattleLog] onEndBattle: total damage=${this.damageTotal}`);
+    log(
+      `[TSKBattleLog] onEndBattle: total damage=${this.damageTotal}, turns=${this.turnCount}`,
+    );
     for (const note of this.notes) {
       const value = Number(note.damage) / Number(this.damageTotal);
       const percentage = `${(value * 100).toFixed(0)}%`;
       log(
-        `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`
+        `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`,
       );
     }
     const unisonValue =
       Number(this.unisonDamageTotal) / Number(this.damageTotal);
     const unisonPercentage = `${(unisonValue * 100).toFixed(0)}%`;
     log(
-      `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`
+      `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`,
     );
   }
 }

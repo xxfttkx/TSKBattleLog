@@ -65,6 +65,47 @@ export class BattleLogMod implements Mod {
     // traceMethodByName(image, "TSKBattleSkillManager", "ExecuteWholeMulti", dumpArgsHandler);
     // traceMethodByName(image, "TSKBattleSkillManager", "SetSkillEffect", dumpArgsHandler);
     // traceMethodByName(image, "TSKBattleTeam", "StartSkillDamage", dumpArgsHandler);
+
+    // 回合计数：hook BattleUpdate，对比 turnCount 变化
+    this.setupTurnCountHook(image);
+  }
+
+  private setupTurnCountHook(image: Il2Cpp.Image): void {
+    const cls = image.class("TSKBattleMain");
+    if (!cls) {
+      log("[battle-log] TSKBattleMain not found, skip turn count");
+      return;
+    }
+
+    let offset: number;
+    try {
+      offset = cls.field("turnCount").offset;
+    } catch {
+      offset = 0x19c;
+      log()
+    }
+
+    const method = cls.method("BattleUpdate");
+    if (!method || method.virtualAddress.isNull()) {
+      log("[battle-log] BattleUpdate not found, skip turn count");
+      return;
+    }
+
+    const self = this;
+    Interceptor.attach(method.virtualAddress, {
+      onEnter(args) {
+        (this as any)._instance = args[0];
+        (this as any)._oldTurn = args[0].add(offset).readS32();
+      },
+      onLeave() {
+        if (!self.enabled) return;
+        const oldVal = (this as any)._oldTurn as number;
+        const newVal = (this as any)._instance.add(offset).readS32();
+        if (newVal !== oldVal) {
+          self.tskBattleLog.onTurnChange(oldVal, newVal);
+        }
+      },
+    });
   }
 
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {

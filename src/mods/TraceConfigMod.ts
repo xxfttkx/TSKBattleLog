@@ -19,6 +19,7 @@ export class TraceConfigMod implements Mod {
 
   private image?: Il2Cpp.Image;
   private listeners = new Map<string, TraceListener>();
+  private lastConfigKey = "";
 
   onLoad(image: Il2Cpp.Image): void {
     this.image = image;
@@ -28,6 +29,11 @@ export class TraceConfigMod implements Mod {
 
   /** 全量应用配置：以 key=类名.方法名 做差量挂载/摘除 */
   applyConfig(entries: TraceEntry[]): void {
+    // 去重：配置内容未变时跳过（避免 onLoad 和宿主下发重复打印）
+    const key = JSON.stringify(entries);
+    if (key === this.lastConfigKey) return;
+    this.lastConfigKey = key;
+
     if (!this.image) {
       log("[trace-config] onLoad 尚未执行，忽略配置下发");
       return;
