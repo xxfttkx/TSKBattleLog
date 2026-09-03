@@ -204,11 +204,21 @@ UI层面的伤害显示与技能执行相关方法。
 ## SetDamageNormal
 normal attack，现在从 CaluculationNormalDamage 中记录
 ```
-    // traceMethodByName(
-    //   image,
-    //   "TSKBattleAttack",
-    //   "SetDamageNormal",
-    //   this,
-    //   this.handleSetDamageNormal,
-    // );
+  traceMethodByName(
+    image,
+    "TSKBattleAttack",
+    "SetDamageNormal",
+    this,
+    this.handleSetDamageNormal,
+  );
+
+  private handleSetDamageNormal: MethodEnterHandler = (_cls, _method, args) => {
+    const attack = new Il2Cpp.Object(args[1]); //TSKBattleNote
+    const target = new Il2Cpp.Object(args[2]);
+    log(
+      `SetDamageNormal: ${getNameByTSKBattleNote(
+        attack,
+      )} -> ${getNameByTSKBattleNote(target)}`,
+    );
+  };
 ```

@@ -219,14 +219,4 @@ export class BattleLogMod implements Mod {
     const attackAddress = args[4].toString();
     this.tskBattleLog.addDamageNote(attackAddress, value, "Unison");
   };
-
-  private handleSetDamageNormal: MethodEnterHandler = (_cls, _method, args) => {
-    const attack = new Il2Cpp.Object(args[1]); //TSKBattleNote
-    const target = new Il2Cpp.Object(args[2]);
-    log(
-      `SetDamageNormal: ${getNameByTSKBattleNote(
-        attack,
-      )} -> ${getNameByTSKBattleNote(target)}`,
-    );
-  };
 }
