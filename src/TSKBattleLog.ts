@@ -35,6 +35,8 @@ export interface SkillGroup {
   skillValue: number;
   turn: number;
   segments: CalcSegment[];
+  /** 是否已输出汇总日志 */
+  printed?: boolean;
 }
 
 export class TSKBattleLog {
@@ -48,6 +50,8 @@ export class TSKBattleLog {
   private calcQueue = new Map<string, CalcSegment[]>();
   /** 已闭合的技能分组（战斗结束时汇总） */
   private skillGroups: SkillGroup[] = [];
+  /** 当前正在输出的攻击者，用于检测攻击者切换并 flush 分组 */
+  private currentAttacker?: string;
 
   constructor() {}
 
@@ -59,9 +63,12 @@ export class TSKBattleLog {
     this.turnCount = 0;
     this.calcQueue.clear();
     this.skillGroups = [];
+    this.currentAttacker = undefined;
   }
 
   onTurnChange(oldVal: number, newVal: number): void {
+    // 回合切换视为上一回合所有动作结束，先输出未 flush 的分组
+    this.flushGroups();
     this.turnCount = newVal;
     const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}`;
     log(msg);
@@ -111,10 +118,17 @@ export class TSKBattleLog {
   /**
    * CaluculationNormalDamage 返回时调用：记录一段伤害细节并入队等待落地关联。
    * 只统计我方（notes 中有对应 address）的攻击。
+   * 攻击者切换时 flush 之前攻击者的分组汇总。
    */
   addCalcSegment(seg: CalcSegment): void {
     const note = this.notes.find((n) => n.address === seg.attackerAddress);
     if (!note) return; // 敌方攻击或未初始化，忽略
+
+    // 攻击者切换：上一个攻击者的动作已结束，输出其分组汇总
+    if (this.currentAttacker !== seg.attackerAddress) {
+      this.flushGroups();
+      this.currentAttacker = seg.attackerAddress;
+    }
 
     const queue = this.calcQueue.get(seg.attackerAddress) ?? [];
     queue.push(seg);
@@ -144,6 +158,23 @@ export class TSKBattleLog {
     group.segments.push(seg);
   }
 
+  /** 输出所有尚未输出的技能分组汇总（每次动作一组） */
+  flushGroups(): void {
+    for (const g of this.skillGroups) {
+      if (g.printed) continue;
+      g.printed = true;
+      const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
+      const crits = g.segments.filter((s) => s.isCritical === "True").length;
+      const hits = g.segments.length;
+      const msg =
+        `[TSKBattleLog] ${g.attackerName} ${g.kind} -> ${g.defenderName}: ` +
+        `${hits} hit${hits > 1 ? "s" : ""}, damage=${total}, crit=${crits}` +
+        `, sv=${g.skillValue.toFixed(2)}, turn=${g.turn}`;
+      log(msg);
+      this.logs.push(msg);
+    }
+  }
+
   /**
    * Set*DamageValue 落地时调用：按攻击者地址取出一段 calc 细节（FIFO，
    * 优先匹配伤害值一致的段），用于回填暴击/伤害类型并丰富日志。
@@ -165,7 +196,7 @@ export class TSKBattleLog {
     damageType: string,
     isCritical: string = "Unknown",
   ): void {
-    let note = this.notes.find((n) => n.address === address);
+    const note = this.notes.find((n) => n.address === address);
     if (!note) {
       log(
         `[TSKBattleLog] addDamageNote: note not found for address ${address}`,
@@ -175,39 +206,23 @@ export class TSKBattleLog {
     const damageBigInt = BigInt(damage);
     this.damageTotal += damageBigInt;
 
-    // 关联 calc 细节（多段/防守方/技能倍率），Unison 等不走 calc 的伤害无此细节
+    // 关联 calc 细节（多段/防守方/技能倍率），暴击回填到段上，
+    // 由 flushGroups 在攻击者切换/回合切换时统一输出
     const seg = this.takeCalcSegment(address, damageBigInt);
     if (seg) {
       seg.isCritical = isCritical;
       seg.damageType = damageType;
     }
-    const segInfo = seg
-      ? ` [${seg.kind}#${seg.multipleCount + 1} -> ${seg.defenderName} sv=${seg.skillValue.toFixed(2)}]`
-      : "";
-
-    let logMessage = "";
-    if (damageType === DamageType.Unison) {
-      logMessage = `[TSKBattleLog] Unison Attack: damage=${damageBigInt} damageTotal=${this.damageTotal}`;
-    } else {
-      logMessage = `[TSKBattleLog] addDamageNote[${
-        note?.getName() ?? address
-      }]: damage=${damageBigInt}, critical = ${isCritical}, damageType=${damageType}, damageTotal=${
-        this.damageTotal
-      }${segInfo}`;
-    }
-    log(logMessage);
-    this.logs.push(logMessage);
 
     if (damageType === DamageType.Unison) {
+      // Unison 不走 CaluculationNormalDamage，无分组，保留逐条日志
       this.unisonDamageTotal += damageBigInt;
+      log(
+        `[TSKBattleLog] Unison Attack: damage=${damageBigInt} damageTotal=${this.damageTotal}`,
+      );
       return;
     }
-    note!.addDamage(damageBigInt);
-    const value = Number(note.damage) / Number(this.damageTotal);
-    const percentage = `${(value * 100).toFixed(0)}%`;
-    log(
-      `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`,
-    );
+    note.addDamage(damageBigInt);
   }
 
   toString(): string {
@@ -215,6 +230,8 @@ export class TSKBattleLog {
   }
 
   onEndBattle(): void {
+    // 兜底：战斗结束时最后攻击者的分组可能还没 flush
+    this.flushGroups();
     log(
       `[TSKBattleLog] onEndBattle: total damage=${this.damageTotal}, turns=${this.turnCount}`,
     );
@@ -231,17 +248,5 @@ export class TSKBattleLog {
     log(
       `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`,
     );
-
-    // 技能分组汇总：多段伤害整合展示
-    for (const g of this.skillGroups) {
-      const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
-      const crits = g.segments.filter((s) => s.isCritical === "True").length;
-      const hits = g.segments.length;
-      log(
-        `[TSKBattleLog] ${g.attackerName} ${g.kind} -> ${g.defenderName}: ${hits} hit${
-          hits > 1 ? "s" : ""
-        }, damage=${total}, crit=${crits}, sv=${g.skillValue.toFixed(2)}, turn=${g.turn}`,
-      );
-    }
   }
 }

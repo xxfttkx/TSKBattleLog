@@ -36,12 +36,15 @@ export class BattleLogMod implements Mod {
       this,
       this.handleSetDamageNormal,
     );
+    // Set*DamageValue：quiet hook，只做累计+暴击回填，日志由 flushGroups 统一输出
     traceMethodByName(
       image,
       "TSKBattleNote",
       "SetDamageValue",
       this,
       this.handleSetDamageValue,
+      undefined,
+      true,
     );
     traceMethodByName(
       image,
@@ -49,6 +52,8 @@ export class BattleLogMod implements Mod {
       "SetSkillDamageValue",
       this,
       this.handleSetSkillDamageValue,
+      undefined,
+      true,
     );
     traceMethodByName(
       image,
@@ -56,6 +61,8 @@ export class BattleLogMod implements Mod {
       "SetUnisonDamageValue",
       this,
       this.handleSetUnisonDamageValue,
+      undefined,
+      true,
     );
 
     // 需要 dump 参数时取消注释：
@@ -200,7 +207,6 @@ export class BattleLogMod implements Mod {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
     const isCritical = args[8].toInt32() != 0 ? "True" : "False";
-    log(`SetSkillDamageValue: value=${value} attackAddress=${attackAddress}`);
     this.tskBattleLog.addDamageNote(attackAddress, value, "Skill", isCritical);
   };
 
@@ -208,7 +214,6 @@ export class BattleLogMod implements Mod {
     const value = args[1].toString();
     const attackAddress = args[5].toString();
     const isCritical = args[4].toInt32() != 0 ? "True" : "False";
-    log(`SetDamageValue: value=${value} attackAddress=${attackAddress}`);
     this.tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
   };
 
@@ -219,7 +224,6 @@ export class BattleLogMod implements Mod {
   ) => {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
-    log(`SetUnisonDamageValue: value=${value} attackAddress=${attackAddress}`);
     this.tskBattleLog.addDamageNote(attackAddress, value, "Unison");
   };
 
