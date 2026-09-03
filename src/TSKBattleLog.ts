@@ -215,10 +215,13 @@ export class TSKBattleLog {
     }
 
     if (damageType === DamageType.Unison) {
-      // Unison 不走 CaluculationNormalDamage，无分组，保留逐条日志
+      // Unison 视为该攻击者动作的收尾：先 flush 挂着的分组，保证
+      // 分组汇总显示在 Unison 之前（与实际动作顺序一致）
+      this.flushGroups();
+      this.currentAttacker = address;
       this.unisonDamageTotal += damageBigInt;
       log(
-        `[TSKBattleLog] Unison Attack: damage=${damageBigInt} damageTotal=${this.damageTotal}`,
+        `[TSKBattleLog] Unison Attack[${note.getName()}]: damage=${damageBigInt} damageTotal=${this.damageTotal}`,
       );
       return;
     }
