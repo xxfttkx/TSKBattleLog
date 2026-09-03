@@ -29,13 +29,6 @@ export class BattleLogMod implements Mod {
     traceMethodByName(image, "TSKBattleManager", "InitializeResult", this, () =>
       this.tskBattleLog.onEndBattle(),
     );
-    traceMethodByName(
-      image,
-      "TSKBattleAttack",
-      "SetDamageNormal",
-      this,
-      this.handleSetDamageNormal,
-    );
     // Set*DamageValue：quiet hook，只做累计+暴击回填，日志由 flushGroups 统一输出
     traceMethodByName(
       image,

@@ -201,3 +201,14 @@ UI层面的伤害显示与技能执行相关方法。
 ```
 数据长这样，有的具体的类懒得dump下去了。有可能有用，但有用不太可能。
 
+## SetDamageNormal
+normal attack，现在从 CaluculationNormalDamage 中记录
+```
+    // traceMethodByName(
+    //   image,
+    //   "TSKBattleAttack",
+    //   "SetDamageNormal",
+    //   this,
+    //   this.handleSetDamageNormal,
+    // );
+```
