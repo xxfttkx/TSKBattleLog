@@ -1,9 +1,10 @@
-import { BattleMode } from "../common";
-import { log, getNameByTSKBattleNote } from "../utils";
-import { TSKBattleLog } from "../TSKBattleLog";
+import { AttackType, BattleMode } from "../common";
+import { log, getNameByTSKBattleNote, parseArgument } from "../utils";
+import { TSKBattleLog, CalcSegment } from "../TSKBattleLog";
 import {
   Mod,
   MethodEnterHandler,
+  MethodLeaveHandler,
   traceMethodByName,
   dumpArgsHandler,
 } from "../mod";
@@ -66,6 +67,18 @@ export class BattleLogMod implements Mod {
     // traceMethodByName(image, "TSKBattleSkillManager", "SetSkillEffect", dumpArgsHandler);
     // traceMethodByName(image, "TSKBattleTeam", "StartSkillDamage", dumpArgsHandler);
 
+    // CaluculationNormalDamage：quiet hook（进出日志由 damage-calc-trace 打印），
+    // 仅采集段细节（防守方/多段序号/skillValue）供 Set*DamageValue 落地时关联
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "CaluculationNormalDamage",
+      this,
+      this.handleCalcDamageEnter,
+      this.handleCalcDamageLeave,
+      true,
+    );
+
     // 回合计数：hook BattleUpdate，对比 turnCount 变化
     this.setupTurnCountHook(image);
   }
@@ -82,7 +95,7 @@ export class BattleLogMod implements Mod {
       offset = cls.field("turnCount").offset;
     } catch {
       offset = 0x19c;
-      log()
+      log("[battle-log] turnCount field not found via API, fallback to 0x19c");
     }
 
     const method = cls.method("BattleUpdate");
@@ -107,6 +120,49 @@ export class BattleLogMod implements Mod {
       },
     });
   }
+
+  // ===== CaluculationNormalDamage 段细节采集（quiet hook）=====
+
+  private handleCalcDamageEnter: MethodEnterHandler = (
+    _cls,
+    _method,
+    args,
+    _ctx,
+    invocation,
+  ) => {
+    const ctx = invocation as any;
+    ctx._calcAttackerAddr = args[0].toString();
+    const defence = new Il2Cpp.Object(args[1]);
+    ctx._calcDefenderName = getNameByTSKBattleNote(defence);
+    ctx._calcKind =
+      AttackType[parseArgument(args[8], "enum") as number] ?? "Unknown";
+    ctx._calcBeforeRush = args[2].toInt32();
+    ctx._calcRush = args[3].toInt32();
+    ctx._calcMultiple = parseArgument(args[11], "int") as number;
+    ctx._calcSkillValue = parseArgument(args[4], "float") as number;
+  };
+
+  private handleCalcDamageLeave: MethodLeaveHandler = (
+    _cls,
+    _method,
+    retval,
+    invocation,
+  ) => {
+    const ctx = invocation as any;
+    if (ctx._calcAttackerAddr === undefined) return;
+    const seg: CalcSegment = {
+      attackerAddress: ctx._calcAttackerAddr,
+      damage: BigInt(retval.toString()),
+      kind: ctx._calcKind,
+      defenderName: ctx._calcDefenderName,
+      beforeRushCount: ctx._calcBeforeRush,
+      rushCount: ctx._calcRush,
+      multipleCount: ctx._calcMultiple,
+      skillValue: ctx._calcSkillValue,
+      turn: this.tskBattleLog.turnCount,
+    };
+    this.tskBattleLog.addCalcSegment(seg);
+  };
 
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {
     const hp = parseInt(args[1].toString(), 16);

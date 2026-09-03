@@ -6,12 +6,16 @@ export type MethodEnterHandler = (
   args: InvocationArguments,
   /** Interceptor 的 CpuContext，可用于 Thread.backtrace（BacktraceMod 使用） */
   context: CpuContext,
+  /** Interceptor 的 InvocationContext，可在 onEnter/onLeave 间暂存字段 */
+  invocation: InvocationContext,
 ) => void;
 
 export type MethodLeaveHandler = (
   cls: Il2Cpp.Class,
   method: Il2Cpp.Method,
   retval: InvocationReturnValue,
+  /** Interceptor 的 InvocationContext，可读取 onEnter 阶段暂存的字段 */
+  invocation: InvocationContext,
 ) => void;
 
 export interface Mod {
@@ -54,6 +58,8 @@ export function traceMethodByName(
   mod?: Mod,
   onEnter?: MethodEnterHandler,
   onLeave?: MethodLeaveHandler,
+  /** quiet=true 时不打印注册/进入/返回日志（用于多个 mod trace 同一函数时避免重复） */
+  quiet = false,
 ): TraceListener | undefined {
   const cls = image.class(className);
   if (!cls) {
@@ -69,7 +75,7 @@ export function traceMethodByName(
     return undefined;
   }
 
-  log("Trace:", cls.name, method.name);
+  log(`Trace${quiet && "(quiet)"}:`, cls.name, method.name);
 
   // 进入日志也可被 mod 开关抑制
   const logEnter = `enter ${cls.name}.${method.name}`;
@@ -77,7 +83,7 @@ export function traceMethodByName(
 
   return Interceptor.attach(method.virtualAddress, {
     onEnter(args) {
-      if (mod === undefined || mod.enabled) {
+      if (!quiet && (mod === undefined || mod.enabled)) {
         log(logEnter);
       }
       if (onEnter) {
@@ -85,15 +91,15 @@ export function traceMethodByName(
         const self = this as any;
         const ctx: CpuContext = self.context ?? self;
         const guardedEnter = mod ? guarded(mod, onEnter) : onEnter;
-        guardedEnter(cls, method, args, ctx);
+        guardedEnter(cls, method, args, ctx, self as InvocationContext);
       }
     },
     onLeave(retval) {
       if (onLeave) {
         const guardedLeave = mod ? guarded(mod, onLeave) : onLeave;
-        guardedLeave(cls, method, retval);
+        guardedLeave(cls, method, retval, this as InvocationContext);
       }
-      if (mod === undefined || mod.enabled) {
+      if (!quiet && (mod === undefined || mod.enabled)) {
         log(logReturn(retval));
       }
     },

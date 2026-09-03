@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-FridaTest 控制面板（悬浮窗）
+TSKBattleLog 控制面板（悬浮窗）
 ============================
 
 功能：
@@ -212,7 +212,7 @@ class FridaBridge:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("FridaTest 控制面板")
+        self.title("TSKBattleLog 控制面板")
         self.geometry("680x480")
         self.minsize(460, 320)
         # 默认置顶
