@@ -130,6 +130,12 @@ export class TSKBattleLog {
       this.currentAttacker = seg.attackerAddress;
     }
 
+    // 动作序列 Normal -> Ex -> Unison 是天然的 flush 信号：
+    // EX 的第一段到来说明 Normal 已结束，先把 Normal 组输出
+    if (seg.kind === "Ex") {
+      this.flushGroups("Normal");
+    }
+
     const queue = this.calcQueue.get(seg.attackerAddress) ?? [];
     queue.push(seg);
     this.calcQueue.set(seg.attackerAddress, queue);
@@ -158,10 +164,14 @@ export class TSKBattleLog {
     group.segments.push(seg);
   }
 
-  /** 输出所有尚未输出的技能分组汇总（每次动作一组） */
-  flushGroups(): void {
+  /**
+   * 输出尚未输出的技能分组汇总。
+   * @param kind 只输出指定 kind 的组（如 "Normal"）；不传则输出全部
+   */
+  flushGroups(kind?: string): void {
     for (const g of this.skillGroups) {
       if (g.printed) continue;
+      if (kind !== undefined && g.kind !== kind) continue;
       g.printed = true;
       const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
       const crits = g.segments.filter((s) => s.isCritical === "True").length;
