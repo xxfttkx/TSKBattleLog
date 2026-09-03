@@ -352,14 +352,15 @@ class App(tk.Tk):
             )
 
     def _upsert_mod_row(self, name: str, *, enabled: bool, category: str,
-                        description: str):
+                        description: str, preserve_state: bool = False):
         category = category if category in self.category_frames else "观察"
         parent = self.category_frames[category]
 
         if name in self.mod_vars:
             info = self.mod_rows[name]
-            # 勾选/描述同步
-            self.mod_vars[name].set(enabled)
+            # 同步描述；勾选状态默认跟随上报值，preserve_state 时保留用户勾选
+            if not preserve_state:
+                self.mod_vars[name].set(enabled)
             info["description"].configure(text=description or "")
             # 分组变化：拆出来挂到新分组
             if info["row"].master is not parent:
@@ -484,16 +485,42 @@ class App(tk.Tk):
         self.after(80, self._poll_queue)
 
     def _apply_mod_list(self, mods: list[dict]):
+        # agent 的 modList 反映的是 build 时打包进 agent.js 的旧配置；
+        # 保留用户在 GUI 里的勾选意图（preserve_state），不做反向覆盖
         for m in mods:
             self._upsert_mod_row(
                 m.get("name", "?"),
                 enabled=bool(m.get("enabled", False)),
                 category=m.get("category", "观察"),
                 description=m.get("description", ""),
+                preserve_state=True,
             )
-        self.status_var.set(
-            f"已加载 {sum(1 for m in mods if m.get('enabled'))}/{len(mods)} 个 mod"
+
+        # 把 GUI 勾选状态与 agent 实际状态做 diff，差异的下发 toggle。
+        # agent 收到 enabled=true 且未加载的 mod 会补执行 onLoad（运行时启用），
+        # enabled=false 只置标志（hook 已挂的由守卫跳过）。
+        synced = 0
+        for m in mods:
+            name = m.get("name", "?")
+            if name not in self.mod_vars:
+                continue
+            desired = bool(self.mod_vars[name].get())
+            if desired != bool(m.get("enabled", False)):
+                self.bridge.toggle_mod(name, desired)
+                synced += 1
+        if synced > 0:
+            t = time.strftime("%H:%M:%S.") + f"{int(time.time()*1000)%1000:03d}"
+            self._append_log(
+                t, f"[bridge] 按面板勾选同步 {synced} 个 mod 开关到 agent"
+            )
+
+        # 状态栏以面板勾选为准（同步消息随后由 agent 确认）
+        desired_enabled = sum(
+            1 for m in mods
+            if m.get("name") in self.mod_vars
+            and self.mod_vars[m["name"]].get()
         )
+        self.status_var.set(f"已加载 {desired_enabled}/{len(mods)} 个 mod")
 
     def _apply_mod_state(self, name: str, enabled: bool):
         if name in self.mod_vars:
