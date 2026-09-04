@@ -220,7 +220,7 @@ class FridaBridge:
                     ("modState", (payload.get("name"), payload.get("enabled")))
                 )
             elif msg_type == "unitList":
-                self.ui_queue.put(("unitList", payload.get("units", [])))
+                self.ui_queue.put(("unitList", payload))
             elif msg_type == "buffData":
                 self.ui_queue.put(("buffData", payload))
         elif message["type"] == "error":
@@ -253,6 +253,7 @@ class App(tk.Tk):
         # 出战角色头像栏 + buff 弹窗
         self.unit_buttons: dict[str, ttk.Button] = {}
         self.unit_photos: dict[str, ImageTk.PhotoImage] = {}  # 保引用防 GC
+        self.enemy_buttons: dict[str, ttk.Button] = {}  # 敌人紧凑文字按钮
         self._buff_dialog: dict | None = None
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
@@ -302,6 +303,8 @@ class App(tk.Tk):
 
         # 出战角色头像栏（战斗初始化后由 agent 上报 unitList 填充）
         self.units_bar = ttk.Frame(self)  # 初始不 pack，收到 unitList 才显示
+        # 敌人紧凑条（纯文字小按钮，不下载头像）
+        self.enemies_bar = ttk.Frame(self)
 
         # 主体：Notebook 两页切换（MODs / Logs），不同时显示
         self.notebook = ttk.Notebook(self)
@@ -569,8 +572,21 @@ class App(tk.Tk):
 
     # ---- 出战角色头像栏 / buff 查询 ----
 
-    def _apply_unit_list(self, units: list[dict]):
-        """agent 战斗初始化后上报出战角色：重建头像栏，逐个下载/读缓存头像"""
+    def _apply_unit_list(self, payload):
+        """agent 战斗初始化后上报单位：team=Player 走头像栏，Enemy 走紧凑文字条。
+        兼容旧格式（直接传 units 数组，视为玩家）。"""
+        if isinstance(payload, dict):
+            team = payload.get("team", "Player")
+            units = payload.get("units", [])
+        else:
+            team, units = "Player", payload
+        if team == "Enemy":
+            self._apply_enemy_list(units)
+        else:
+            self._apply_player_list(units)
+
+    def _apply_player_list(self, units: list[dict]):
+        """玩家方：头像按钮，后台下载/读缓存 wiki 头像"""
         for w in self.units_bar.winfo_children():
             w.destroy()
         self.unit_buttons.clear()
@@ -578,14 +594,14 @@ class App(tk.Tk):
         if not units:
             self.units_bar.pack_forget()
             return
-        self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 4),
+        self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 2),
                             before=self.notebook)
         for u in units:
             address = u.get("address", "")
             name = u.get("characterName", "?")
             btn = ttk.Button(
                 self.units_bar, text=name, compound="top",
-                command=lambda a=address: self._on_unit_click(a),
+                command=lambda a=address, n=name: self._on_unit_click(a, n),
             )
             btn.pack(side="left", padx=6, pady=2)
             self.unit_buttons[address] = btn
@@ -594,6 +610,38 @@ class App(tk.Tk):
         self._append_log(time.strftime("%H:%M:%S.") +
                          f"{int(time.time()*1000)%1000:03d}",
                          f"[units] 出战角色 {len(units)} 名，点击头像可查看 buff")
+
+    def _apply_enemy_list(self, units: list[dict]):
+        """敌方：紧凑文字小按钮条（不下载头像，少占空间），放在玩家头像栏上方"""
+        for w in self.enemies_bar.winfo_children():
+            w.destroy()
+        self.enemy_buttons.clear()
+        if not units:
+            self.enemies_bar.pack_forget()
+            return
+        # 敌人条排在玩家头像栏之上；玩家栏还没出现时退而贴在 notebook 前
+        before = self.units_bar if self.units_bar.winfo_manager() == "pack" \
+            else self.notebook
+        self.enemies_bar.pack(side="top", fill="x", padx=8, pady=(2, 4),
+                              before=before)
+        ttk.Label(self.enemies_bar, text="敌人:",
+                  foreground="#c0392b").pack(side="left", padx=(0, 4))
+        for u in units:
+            address = u.get("address", "")
+            name = u.get("characterName", "?")
+            short = name if len(name) <= 12 else name[:11] + "…"
+            btn = tk.Button(
+                self.enemies_bar, text=short, font=("", 8),
+                relief="flat", bg="#fdecea", fg="#c0392b",
+                activebackground="#f5c6cb", bd=0, padx=6, pady=1,
+                cursor="hand2",
+                command=lambda a=address, n=name: self._on_unit_click(a, n),
+            )
+            btn.pack(side="left", padx=3)
+            self.enemy_buttons[address] = btn
+        self._append_log(time.strftime("%H:%M:%S.") +
+                         f"{int(time.time()*1000)%1000:03d}",
+                         f"[units] 敌人 {len(units)} 名，点击名字可查看 buff")
 
     def _download_icon(self, unit: dict):
         """后台线程：读缓存或从 wiki 下载头像，结果经 ui_queue 回主线程"""
@@ -630,22 +678,22 @@ class App(tk.Tk):
                          f"{int(time.time()*1000)%1000:03d}",
                          f"[units] 头像加载失败 {name}: {err}")
 
-    def _on_unit_click(self, address: str):
+    def _on_unit_click(self, address: str, name: str | None = None):
         if self.bridge.script is None:
             messagebox.showinfo("提示", "尚未注入，无法查询 buff")
             return
-        self._open_buff_dialog(address)
+        self._open_buff_dialog(address, name)
         self.bridge.post({"type": "buffRequest", "payload": {"address": address}})
 
-    def _open_buff_dialog(self, address: str):
+    def _open_buff_dialog(self, address: str, name: str | None = None):
         if self._buff_dialog is not None:
             try:
                 self._buff_dialog["top"].destroy()
             except Exception:
                 pass
         top = tk.Toplevel(self)
-        top.title(f"Skill Effects - {address}")
-        top.geometry("840x360")
+        top.title(f"Skill Effects - {name or address}")
+        top.geometry("860x420")
         top.attributes("-topmost", self._always_top)
 
         header = ttk.Frame(top)
@@ -658,6 +706,13 @@ class App(tk.Tk):
                                 command=lambda: self._toggle_buff_mode())
         toggle_btn.pack(side="right")
 
+        # 战斗实时属性（ATK/CRT/EX），buffData 回来后填充
+        stats_label = ttk.Label(
+            top, text="", font=("", 10, "bold"),
+            foreground="#1a5fb4",
+        )
+        stats_label.pack(anchor="w", padx=8, pady=(0, 2))
+
         cols = ("type", "time", "value", "effectValue",
                 "value2", "value3", "value4", "value5")
         widths = (300, 70, 80, 90, 70, 70, 70, 70)
@@ -667,6 +722,7 @@ class App(tk.Tk):
             tree.column(c, width=w, anchor="center")
         tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self._buff_dialog = {"top": top, "tree": tree, "info": info,
+                             "stats_label": stats_label,
                              "address": address, "mode_var": mode_var,
                              "toggle_btn": toggle_btn, "effects": None}
 
@@ -720,10 +776,26 @@ class App(tk.Tk):
             return
         if "error" in payload:
             dlg["info"].configure(text=f"读取失败（战斗结束后地址会失效）: {payload['error']}")
+            dlg["stats_label"].configure(text="")
             return
         effects = payload.get("effects", [])
         dlg["effects"] = effects
         dlg["info"].configure(text=f"共 {len(effects)} 个效果")
+
+        # 战斗实时属性（ATK 含 buff / base / CRT / EX 上升 / 普攻回复 EX）
+        stats = payload.get("stats") or {}
+        if stats.get("error"):
+            dlg["stats_label"].configure(
+                text=f"(属性读取失败: {stats['error']})", foreground="#999")
+        elif stats:
+            dlg["stats_label"].configure(
+                text=(f"ATK: {stats.get('atk')}  (base {stats.get('baseAttack')})    "
+                      f"CRT: {stats.get('crt')/100:.2f}%    "
+                      f"EX上升: {stats.get('exUp')}    "
+                      f"普攻回复EX: {stats.get('exGain')}"),
+                foreground="#1a5fb4")
+        else:
+            dlg["stats_label"].configure(text="")
         # 每次新数据先重置为明细模式，再渲染
         dlg["mode_var"].set(False)
         dlg["toggle_btn"].configure(text="切换为汇总")

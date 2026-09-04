@@ -105,12 +105,32 @@ Il2Cpp.perform(() => {
     );
   });
 
-  // 宿主点击头像查询单位 buff（skillEffectList）
+  // 宿主点击头像查询单位 buff（skillEffectList）+ 实时战斗属性
   armRecv("buffRequest", (data: { address: string }) => {
     try {
       const unit = new Il2Cpp.Object(ptr(data.address));
       const effects = getSkillEffects(unit);
-      sendHost("buffData", { address: data.address, effects });
+      let stats: any;
+      try {
+        const baseAttack = unit.method("GetBaseAttack").invoke() as number;
+        const atk = unit.method("GetAttack").invoke(false) as number;
+        const crt = unit.method("GetCritical").invoke() as number;
+        const unitData = unit.field("<UnitData>k__BackingField")
+          .value as Il2Cpp.Object;
+        const exUp = unitData.field("<ExGaugeRate>k__BackingField")
+          .value as number;
+        stats = {
+          baseAttack,
+          atk,
+          crt,
+          exUp,
+          // 通常攻击回复 EX（与 BattleLog 初始化日志口径一致）
+          exGain: Math.ceil((100 + exUp) / 3.75),
+        };
+      } catch (e) {
+        stats = { error: String(e) };
+      }
+      sendHost("buffData", { address: data.address, effects, stats });
     } catch (e) {
       // 战斗结束地址失效等情况：优雅返回错误
       sendHost("buffData", { address: data.address, error: String(e) });

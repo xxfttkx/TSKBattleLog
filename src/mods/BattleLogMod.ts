@@ -187,17 +187,36 @@ export class BattleLogMod implements Mod {
       `${teamType} Initialize: hp=${hp} maxHp=${maxHp} stun=${stun} notes.length=${notesSize} mode=${modeName} overHealRate=${overHealRate}`,
     );
 
+    // 收集双方单位（玩家头像栏 / 敌人紧凑条 / buff 查看入口共用）
+    const units: {
+      address: string;
+      unitName: string;
+      characterName: string;
+    }[] = [];
+    for (let i = 0; i < notesSize; i++) {
+      const note = notes.get(i);
+      const unitData = note.field("<UnitData>k__BackingField")
+        .value as Il2Cpp.Object;
+      const unitName =
+        (unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String)
+          ?.content ?? "";
+      const characterName =
+        (
+          unitData.field("<CharacterName>k__BackingField")
+            .value as Il2Cpp.String
+        )?.content ?? "";
+      units.push({
+        address: note.handle.toString(),
+        unitName,
+        characterName,
+      });
+    }
+
     if (teamType === "Player" || teamType === "Unknown") {
       this.tskBattleLog.init(notes);
-
-      // 上报出战角色给宿主（GUI 头像栏 + buff 查询入口）
-      const units = this.tskBattleLog.notes.map((n) => ({
-        address: n.address,
-        unitName: n.unitName,
-        characterName: n.characterName,
-      }));
-      sendHost("unitList", { units });
     }
+    // 敌我双方都上报，GUI 按 team 区分展示（玩家带头像，敌人纯文字紧凑条）
+    sendHost("unitList", { team: teamType, units });
   };
 
   private handleSetSkillDamageValue: MethodEnterHandler = (
