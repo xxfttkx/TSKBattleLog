@@ -648,8 +648,15 @@ class App(tk.Tk):
         top.geometry("840x360")
         top.attributes("-topmost", self._always_top)
 
-        info = ttk.Label(top, text="读取中...")
-        info.pack(anchor="w", padx=8, pady=4)
+        header = ttk.Frame(top)
+        header.pack(fill="x", padx=8, pady=4)
+        info = ttk.Label(header, text="读取中...")
+        info.pack(side="left")
+        # 切换：逐条明细 / 同 type 汇总（仅累计 value、effectValue）
+        mode_var = tk.BooleanVar(value=False)
+        toggle_btn = ttk.Button(header, text="切换为汇总",
+                                command=lambda: self._toggle_buff_mode())
+        toggle_btn.pack(side="right")
 
         cols = ("type", "time", "value", "effectValue",
                 "value2", "value3", "value4", "value5")
@@ -660,7 +667,52 @@ class App(tk.Tk):
             tree.column(c, width=w, anchor="center")
         tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self._buff_dialog = {"top": top, "tree": tree, "info": info,
-                             "address": address}
+                             "address": address, "mode_var": mode_var,
+                             "toggle_btn": toggle_btn, "effects": None}
+
+    def _toggle_buff_mode(self):
+        dlg = self._buff_dialog
+        if dlg is None or dlg["effects"] is None:
+            return
+        total_mode = not dlg["mode_var"].get()
+        dlg["mode_var"].set(total_mode)
+        dlg["toggle_btn"].configure(
+            text="切换为明细" if total_mode else "切换为汇总")
+        tree = dlg["tree"]
+        for row in tree.get_children():
+            tree.delete(row)
+        if total_mode:
+            tree.configure(columns=("type", "count", "value", "effectValue"))
+            for c, w, t in (("type", 360, "type"), ("count", 70, "count"),
+                            ("value", 100, "value"),
+                            ("effectValue", 110, "effectValue")):
+                tree.heading(c, text=t)
+                tree.column(c, width=w, anchor="center")
+            totals: dict[str, list] = {}
+            for it in dlg["effects"]:
+                t_ = it.get("type", "")
+                acc = totals.setdefault(t_, [0, 0, 0])
+                acc[0] += 1
+                acc[1] += it.get("value", 0) or 0
+                acc[2] += it.get("effectValue", 0) or 0
+            for t_, (cnt, v, ev) in sorted(
+                totals.items(), key=lambda kv: -kv[1][1]):
+                tree.insert("", "end", values=(t_, cnt, v, ev))
+        else:
+            tree.configure(columns=("type", "time", "value", "effectValue",
+                                    "value2", "value3", "value4", "value5"))
+            for c, w in zip(("type", "time", "value", "effectValue",
+                             "value2", "value3", "value4", "value5"),
+                            (300, 70, 80, 90, 70, 70, 70, 70)):
+                tree.heading(c, text=c)
+                tree.column(c, width=w, anchor="center")
+            for it in dlg["effects"]:
+                tree.insert("", "end", values=(
+                    it.get("type", ""), it.get("time", ""), it.get("value", ""),
+                    it.get("effectValue", ""), it.get("value2", ""),
+                    it.get("value3", ""), it.get("value4", ""),
+                    it.get("value5", ""),
+                ))
 
     def _apply_buff_data(self, payload: dict):
         dlg = self._buff_dialog
@@ -670,9 +722,23 @@ class App(tk.Tk):
             dlg["info"].configure(text=f"读取失败（战斗结束后地址会失效）: {payload['error']}")
             return
         effects = payload.get("effects", [])
+        dlg["effects"] = effects
         dlg["info"].configure(text=f"共 {len(effects)} 个效果")
+        # 每次新数据先重置为明细模式，再渲染
+        dlg["mode_var"].set(False)
+        dlg["toggle_btn"].configure(text="切换为汇总")
+        tree = dlg["tree"]
+        tree.configure(columns=("type", "time", "value", "effectValue",
+                                "value2", "value3", "value4", "value5"))
+        for c, w in zip(("type", "time", "value", "effectValue",
+                         "value2", "value3", "value4", "value5"),
+                        (300, 70, 80, 90, 70, 70, 70, 70)):
+            tree.heading(c, text=c)
+            tree.column(c, width=w, anchor="center")
+        for row in tree.get_children():
+            tree.delete(row)
         for it in effects:
-            dlg["tree"].insert("", "end", values=(
+            tree.insert("", "end", values=(
                 it.get("type", ""), it.get("time", ""), it.get("value", ""),
                 it.get("effectValue", ""), it.get("value2", ""),
                 it.get("value3", ""), it.get("value4", ""), it.get("value5", ""),
