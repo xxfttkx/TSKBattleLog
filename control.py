@@ -17,10 +17,12 @@ import re
 import sys
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
+from PIL import Image, ImageTk
 
 ROOT_DIR = Path(__file__).resolve().parent
 MODS_DIR = ROOT_DIR / "src" / "mods"
@@ -28,8 +30,19 @@ MODS_JSON = ROOT_DIR / "mods.json"
 TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
 AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 LOG_DIR = ROOT_DIR / "logs"
+ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
+WIKI_BASE = "https://twinklestarknights.wikiru.jp"
+
+
+def wiki_icon_url(unit_name: str, character_name: str) -> str:
+    """构造 wiki 头像直链。
+    规律（已验证）：attach2/696D67_<hex_utf8('［UnitName］角色名_icon_NF.png')>.png
+    其中 696D67 是 "img" 的 hex 前缀。"""
+    page = f"［{unit_name}］{character_name}_icon_NF.png"
+    hx = page.encode("utf-8").hex().upper()
+    return f"{WIKI_BASE}/attach2/696D67_{hx}.png"
 
 
 # ---------- mod 元数据 ----------
@@ -102,6 +115,15 @@ class FridaBridge:
                 self.session.detach()
         except Exception:
             pass
+
+    def post(self, message: dict):
+        """向 agent 发送任意消息（要求 script 已加载）"""
+        if self.script is None:
+            return
+        try:
+            self.script.post(message)
+        except Exception as e:
+            self._log_internal(f"[bridge] post {message.get('type')} 失败: {e}")
 
     def toggle_mod(self, name: str, enabled: bool):
         if self.script is None:
@@ -197,6 +219,10 @@ class FridaBridge:
                 self.ui_queue.put(
                     ("modState", (payload.get("name"), payload.get("enabled")))
                 )
+            elif msg_type == "unitList":
+                self.ui_queue.put(("unitList", payload.get("units", [])))
+            elif msg_type == "buffData":
+                self.ui_queue.put(("buffData", payload))
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
@@ -224,6 +250,10 @@ class App(tk.Tk):
         self.mod_vars: dict[str, tk.BooleanVar] = {}
         self.mod_rows: dict[str, dict] = {}  # 存 label 等引用，便于刷新状态
         self._started = False  # 是否已点击过「启动注入」
+        # 出战角色头像栏 + buff 弹窗
+        self.unit_buttons: dict[str, ttk.Button] = {}
+        self.unit_photos: dict[str, ImageTk.PhotoImage] = {}  # 保引用防 GC
+        self._buff_dialog: dict | None = None
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
@@ -269,6 +299,9 @@ class App(tk.Tk):
         self.status_var = tk.StringVar(value="未连接")
         ttk.Label(toolbar, textvariable=self.status_var,
                   foreground="#555").pack(side="left", padx=16)
+
+        # 出战角色头像栏（战斗初始化后由 agent 上报 unitList 填充）
+        self.units_bar = ttk.Frame(self)  # 初始不 pack，收到 unitList 才显示
 
         # 主体：Notebook 两页切换（MODs / Logs），不同时显示
         self.notebook = ttk.Notebook(self)
@@ -480,6 +513,14 @@ class App(tk.Tk):
                     messagebox.showerror("错误", data)
                 elif kind == "connected":
                     self.start_btn.configure(state="disabled", text="✓ 已注入")
+                elif kind == "unitList":
+                    self._apply_unit_list(data)
+                elif kind == "buffData":
+                    self._apply_buff_data(data)
+                elif kind == "unitIconReady":
+                    self._apply_unit_icon(*data)
+                elif kind == "unitIconFailed":
+                    self._apply_unit_icon_failed(*data)
         except queue.Empty:
             pass
         self.after(80, self._poll_queue)
@@ -525,6 +566,117 @@ class App(tk.Tk):
     def _apply_mod_state(self, name: str, enabled: bool):
         if name in self.mod_vars:
             self.mod_vars[name].set(bool(enabled))
+
+    # ---- 出战角色头像栏 / buff 查询 ----
+
+    def _apply_unit_list(self, units: list[dict]):
+        """agent 战斗初始化后上报出战角色：重建头像栏，逐个下载/读缓存头像"""
+        for w in self.units_bar.winfo_children():
+            w.destroy()
+        self.unit_buttons.clear()
+        self.unit_photos.clear()
+        if not units:
+            self.units_bar.pack_forget()
+            return
+        self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 4),
+                            before=self.notebook)
+        for u in units:
+            address = u.get("address", "")
+            name = u.get("characterName", "?")
+            btn = ttk.Button(
+                self.units_bar, text=name, compound="top",
+                command=lambda a=address: self._on_unit_click(a),
+            )
+            btn.pack(side="left", padx=6, pady=2)
+            self.unit_buttons[address] = btn
+            threading.Thread(target=self._download_icon, args=(u,),
+                             daemon=True).start()
+        self._append_log(time.strftime("%H:%M:%S.") +
+                         f"{int(time.time()*1000)%1000:03d}",
+                         f"[units] 出战角色 {len(units)} 名，点击头像可查看 buff")
+
+    def _download_icon(self, unit: dict):
+        """后台线程：读缓存或从 wiki 下载头像，结果经 ui_queue 回主线程"""
+        address = unit.get("address", "")
+        try:
+            url = wiki_icon_url(unit.get("unitName", ""),
+                                unit.get("characterName", ""))
+            fname = url.rsplit("/", 1)[-1]
+            ICON_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            path = ICON_CACHE_DIR / fname
+            if not path.exists():
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "Mozilla/5.0 FridaTestControl"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    data = r.read()
+                if len(data) < 100:
+                    raise ValueError(f"响应过小 ({len(data)} bytes)，URL 可能失效")
+                path.write_bytes(data)
+            img = Image.open(path).convert("RGBA").resize((48, 48))
+            self.ui_queue.put(("unitIconReady", (address, img)))
+        except Exception as e:
+            self.ui_queue.put(("unitIconFailed",
+                               (address, str(e), unit.get("characterName", "?"))))
+
+    def _apply_unit_icon(self, address: str, img: "Image.Image"):
+        photo = ImageTk.PhotoImage(img)
+        self.unit_photos[address] = photo  # 保引用，防止被 GC 后图片消失
+        btn = self.unit_buttons.get(address)
+        if btn:
+            btn.configure(image=photo)
+
+    def _apply_unit_icon_failed(self, address: str, err: str, name: str):
+        self._append_log(time.strftime("%H:%M:%S.") +
+                         f"{int(time.time()*1000)%1000:03d}",
+                         f"[units] 头像加载失败 {name}: {err}")
+
+    def _on_unit_click(self, address: str):
+        if self.bridge.script is None:
+            messagebox.showinfo("提示", "尚未注入，无法查询 buff")
+            return
+        self._open_buff_dialog(address)
+        self.bridge.post({"type": "buffRequest", "payload": {"address": address}})
+
+    def _open_buff_dialog(self, address: str):
+        if self._buff_dialog is not None:
+            try:
+                self._buff_dialog["top"].destroy()
+            except Exception:
+                pass
+        top = tk.Toplevel(self)
+        top.title(f"Skill Effects - {address}")
+        top.geometry("840x360")
+        top.attributes("-topmost", self._always_top)
+
+        info = ttk.Label(top, text="读取中...")
+        info.pack(anchor="w", padx=8, pady=4)
+
+        cols = ("type", "time", "value", "effectValue",
+                "value2", "value3", "value4", "value5")
+        widths = (300, 70, 80, 90, 70, 70, 70, 70)
+        tree = ttk.Treeview(top, columns=cols, show="headings")
+        for c, w in zip(cols, widths):
+            tree.heading(c, text=c)
+            tree.column(c, width=w, anchor="center")
+        tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self._buff_dialog = {"top": top, "tree": tree, "info": info,
+                             "address": address}
+
+    def _apply_buff_data(self, payload: dict):
+        dlg = self._buff_dialog
+        if dlg is None or payload.get("address") != dlg["address"]:
+            return
+        if "error" in payload:
+            dlg["info"].configure(text=f"读取失败（战斗结束后地址会失效）: {payload['error']}")
+            return
+        effects = payload.get("effects", [])
+        dlg["info"].configure(text=f"共 {len(effects)} 个效果")
+        for it in effects:
+            dlg["tree"].insert("", "end", values=(
+                it.get("type", ""), it.get("time", ""), it.get("value", ""),
+                it.get("effectValue", ""), it.get("value2", ""),
+                it.get("value3", ""), it.get("value4", ""), it.get("value5", ""),
+            ))
 
     # ---- 日志渲染 ----
 

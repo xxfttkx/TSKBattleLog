@@ -1,10 +1,10 @@
 {
-  "auto-skill": false,
+  "auto-skill": true,
   "backtrace": false,
   "battle-log": true,
   "damage-calc-trace": false,
   "field-watch": false,
   "qte-perfect": true,
   "trace-config": false,
-  "unit-list-dump": false
+  "unit-list-dump": true
 }

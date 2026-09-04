@@ -1,5 +1,5 @@
 import "frida-il2cpp-bridge";
-import { log } from "./utils";
+import { log, sendHost } from "./utils";
 import { Mod, publishModList, publishModState } from "./mod";
 import { BattleLogMod } from "./mods/BattleLogMod";
 import { QteMod } from "./mods/QteMod";
@@ -10,6 +10,7 @@ import { TraceConfigMod } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { TraceEntry } from "./mods/TraceConfigMod";
 import { FieldWatchMod } from "./mods/FieldWatchMod";
+import { getSkillEffects } from "./debug/skillEffects";
 import modsConfig from "../mods.json";
 
 const mods: Mod[] = [
@@ -102,6 +103,18 @@ Il2Cpp.perform(() => {
       Array.isArray(cfg?.backtrace) ? (cfg.backtrace as BacktraceEntry[]) : [],
       typeof cfg?.backtraceDepth === "number" ? cfg.backtraceDepth : 5,
     );
+  });
+
+  // 宿主点击头像查询单位 buff（skillEffectList）
+  armRecv("buffRequest", (data: { address: string }) => {
+    try {
+      const unit = new Il2Cpp.Object(ptr(data.address));
+      const effects = getSkillEffects(unit);
+      sendHost("buffData", { address: data.address, effects });
+    } catch (e) {
+      // 战斗结束地址失效等情况：优雅返回错误
+      sendHost("buffData", { address: data.address, error: String(e) });
+    }
   });
 
   // 向宿主上报 mod 清单

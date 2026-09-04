@@ -19,7 +19,7 @@ enum AttackType {
   Ex = 4,
 }
 
-enum SkillType {
+export enum SkillType {
   None = 0,
   Attack = 100,
   MultiAttack = 101,
@@ -411,7 +411,6 @@ export {
   TeamType,
   AbilityCompatibility,
   AttackType,
-  SkillType,
   Timing,
   BattleMode,
 };

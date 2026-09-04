@@ -1,5 +1,5 @@
 import { AttackType, BattleMode } from "../common";
-import { log, getNameByTSKBattleNote, parseArgument } from "../utils";
+import { log, getNameByTSKBattleNote, parseArgument, sendHost } from "../utils";
 import { TSKBattleLog, CalcSegment } from "../TSKBattleLog";
 import {
   Mod,
@@ -189,6 +189,14 @@ export class BattleLogMod implements Mod {
 
     if (teamType === "Player" || teamType === "Unknown") {
       this.tskBattleLog.init(notes);
+
+      // 上报出战角色给宿主（GUI 头像栏 + buff 查询入口）
+      const units = this.tskBattleLog.notes.map((n) => ({
+        address: n.address,
+        unitName: n.unitName,
+        characterName: n.characterName,
+      }));
+      sendHost("unitList", { units });
     }
   };
 
