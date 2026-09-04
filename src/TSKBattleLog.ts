@@ -130,12 +130,6 @@ export class TSKBattleLog {
       this.currentAttacker = seg.attackerAddress;
     }
 
-    // 动作序列 Normal -> Ex -> Unison 是天然的 flush 信号：
-    // EX 的第一段到来说明 Normal 已结束，先把 Normal 组输出
-    if (seg.kind === "Ex") {
-      this.flushGroups("Normal");
-    }
-
     const queue = this.calcQueue.get(seg.attackerAddress) ?? [];
     queue.push(seg);
     this.calcQueue.set(seg.attackerAddress, queue);
@@ -216,8 +210,7 @@ export class TSKBattleLog {
     const damageBigInt = BigInt(damage);
     this.damageTotal += damageBigInt;
 
-    // 关联 calc 细节（多段/防守方/技能倍率），暴击回填到段上，
-    // 由 flushGroups 在攻击者切换/回合切换时统一输出
+    // 关联 calc 细节（多段/防守方/技能倍率），暴击回填到段上
     const seg = this.takeCalcSegment(address, damageBigInt);
     if (seg) {
       seg.isCritical = isCritical;
@@ -236,6 +229,11 @@ export class TSKBattleLog {
       return;
     }
     note.addDamage(damageBigInt);
+
+    // Normal 必为单段，落地（暴击已回填）后立即输出
+    if (damageType === DamageType.Normal) {
+      this.flushGroups("Normal");
+    }
   }
 
   toString(): string {
