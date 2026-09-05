@@ -287,6 +287,13 @@ class App(tk.Tk):
             toolbar, text="重载配置", command=self._reload_trace_config
         ).pack(side="left", padx=4)
 
+        # 隐藏/显示角色头像栏和敌人条（专注看日志时用）
+        self.hide_units_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            toolbar, text="隐藏单位栏", variable=self.hide_units_var,
+            command=self._toggle_units_visibility,
+        ).pack(side="left", padx=4)
+
         ttk.Button(toolbar, text="清空日志", command=self._clear_log).pack(
             side="right", padx=4
         )
@@ -438,6 +445,24 @@ class App(tk.Tk):
     def _toggle_topmost(self):
         self._always_top = bool(self.topmost_var.get())
         self.attributes("-topmost", self._always_top)
+
+    def _toggle_units_visibility(self):
+        """隐藏/显示玩家头像栏与敌人条（不影响头像下载和 buff 查询）"""
+        hidden = bool(self.hide_units_var.get())
+        if hidden:
+            self.units_bar.pack_forget()
+            self.enemies_bar.pack_forget()
+        else:
+            # 重新按固定顺序排回：敌人条在玩家头像栏之上
+            if self.enemy_buttons:
+                before = self.units_bar \
+                    if self.units_bar.winfo_manager() == "pack" \
+                    else self.notebook
+                self.enemies_bar.pack(side="top", fill="x", padx=8,
+                                      pady=(2, 4), before=before)
+            if self.unit_buttons:
+                self.units_bar.pack(side="top", fill="x", padx=8,
+                                    pady=(0, 2), before=self.notebook)
 
     def _on_click_start(self):
         if self._started:
