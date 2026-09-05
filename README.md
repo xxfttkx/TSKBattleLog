@@ -1,5 +1,7 @@
 # TSKBattleLog
 
+English | [简体中文](README.zh-CN.md)
+
 A battle log analyzer for Twinkle Star Knights using Frida and IL2CPP.
 
 TSKBattleLog captures and analyzes battle events from the game runtime, including damage events, skill usage, and combat states. It also provides configurable auto-battle skill selection through `char_skill.json`.
