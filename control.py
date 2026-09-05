@@ -24,11 +24,18 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from PIL import Image, ImageTk
 
-ROOT_DIR = Path(__file__).resolve().parent
+# PyInstaller 打包后 __file__ 指向 _internal 临时目录，
+# 用户可见的文件（配置/日志/缓存/mod_manifest.json）应放在 exe 同级目录
+if getattr(sys, "frozen", False):
+    ROOT_DIR = Path(sys.executable).resolve().parent
+    # agent.js 通过 pyinstaller --add-data 放进 bundle 根（_MEIPASS）
+    AGENT_JS = Path(getattr(sys, "_MEIPASS", ROOT_DIR)) / "agent.js"
+else:
+    ROOT_DIR = Path(__file__).resolve().parent
+    AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 MODS_DIR = ROOT_DIR / "src" / "mods"
 MODS_JSON = ROOT_DIR / "mods.json"
 TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
-AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 LOG_DIR = ROOT_DIR / "logs"
 GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
@@ -58,6 +65,14 @@ _CLASS_FIELD_RE = re.compile(
 
 
 def _parse_mod_manifest() -> list[dict]:
+    # 打包模式：读取 CI 预生成的 mod_manifest.json（exe 旁无 .ts 源码可解析）
+    manifest_json = ROOT_DIR / "mod_manifest.json"
+    if manifest_json.is_file():
+        try:
+            return json.loads(manifest_json.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    # 开发模式：从 src/mods/*.ts 正则提取
     if not MODS_DIR.is_dir():
         return []
     result: list[dict] = []
@@ -189,8 +204,8 @@ class FridaBridge:
             self.ui_queue.put(("error", f"附加进程失败: {e}"))
             return
 
-        agent_source = AGENT_JS.read_text(encoding="utf-8")
         try:
+            agent_source = AGENT_JS.read_text(encoding="utf-8")
             self.script = self.session.create_script(agent_source)
         except Exception as e:
             self.ui_queue.put(("error", f"创建 Frida script 失败: {e}"))

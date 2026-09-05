@@ -97,17 +97,19 @@ jobs:
             Set-Content -Path release/trace_config.json -Value '{"trace":[],"backtrace":[],"backtraceDepth":5}'
           }
 
-      # 5) 压缩为 zip artifact（每次构建都可下载）
+      # 5) 压缩 zip 供 Release 附件使用
       - name: Zip release folder
         shell: pwsh
         run: |
           Compress-Archive -Path release/* -DestinationPath TSKBattleLog-windows-x64.zip
 
+      # artifact 直接上传 release 目录（upload-artifact 会自动打包一层 zip，
+      # 上传已压缩的 zip 会导致下载后 zip 套 zip）
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: TSKBattleLog-windows-x64
-          path: TSKBattleLog-windows-x64.zip
+          path: release/
           retention-days: 30
 
       # 6) 推 tag 时额外创建 GitHub Release 并附 zip
