@@ -320,10 +320,42 @@ class App(tk.Tk):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(side="top", fill="both", expand=True, padx=8, pady=(0, 8))
 
-        # ---- Tab 1：MOD 选择 ----
-        mods_tab = ttk.Frame(self.notebook, padding=(10, 8))
+        # ---- Tab 1：MOD 选择（Canvas 滚动容器，锁定勾选后仍可滚动查看） ----
+        mods_tab = ttk.Frame(self.notebook)
         self.notebook.add(mods_tab, text="MODs")
 
+        mods_canvas = tk.Canvas(mods_tab, highlightthickness=0)
+        mods_scrollbar = ttk.Scrollbar(mods_tab, orient="vertical",
+                                       command=mods_canvas.yview)
+        mods_inner = ttk.Frame(mods_canvas, padding=(10, 8))
+        mods_inner.bind(
+            "<Configure>",
+            lambda e: mods_canvas.configure(
+                scrollregion=mods_canvas.bbox("all")),
+        )
+        mods_canvas.create_window((0, 0), window=mods_inner, anchor="nw",
+                                  tags="inner")
+        mods_canvas.bind(
+            "<Configure>",
+            lambda e: mods_canvas.itemconfigure("inner", width=e.width),
+        )
+        mods_canvas.configure(yscrollcommand=mods_scrollbar.set)
+        mods_canvas.pack(side="left", fill="both", expand=True)
+        mods_scrollbar.pack(side="right", fill="y")
+
+        # Windows 滚轮直接生效；绑定在 canvas 与内部控件上（锁定复选框不影响）
+        def _on_mousewheel(event):
+            mods_canvas.yview_scroll(int(-event.delta / 120), "units")
+
+        def _bind_wheel(widget):
+            widget.bind("<MouseWheel>", _on_mousewheel)
+            for child in widget.winfo_children():
+                _bind_wheel(child)
+
+        _bind_wheel(mods_inner)
+        self._bind_mods_wheel = _bind_wheel  # 供 _upsert_mod_row 给动态行绑定
+
+        mods_tab = mods_inner
         ttk.Label(
             mods_tab,
             text="先勾选所需 mod，再点击上方「▶ 启动注入」",
@@ -417,6 +449,9 @@ class App(tk.Tk):
         var = tk.BooleanVar(value=enabled)
         row = ttk.Frame(parent)
         row.pack(fill="x", pady=1)
+        # 新行动态绑定滚轮，保证鼠标悬停在行上也能滚动
+        if hasattr(self, "_bind_mods_wheel"):
+            self._bind_mods_wheel(row)
 
         cb = ttk.Checkbutton(
             row, variable=var, text=name,
