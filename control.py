@@ -818,9 +818,13 @@ class App(tk.Tk):
             dlg["stats_label"].configure(
                 text=f"(属性读取失败: {stats['error']})", foreground="#999")
         elif stats:
+            crt = stats.get("crt")
+            crt_str = f"{crt/100:.2f}%" if isinstance(crt, (int, float)) else str(crt)
+            note_count = stats.get("noteCount")
             dlg["stats_label"].configure(
                 text=(f"ATK: {stats.get('atk')}  (base {stats.get('baseAttack')})    "
-                      f"CRT: {stats.get('crt')/100:.2f}%    "
+                      f"CRT: {crt_str}    "
+                      f"NoteCount: {note_count}    "
                       f"EX上升: {stats.get('exUp')}    "
                       f"普攻回复EX: {stats.get('exGain')}"),
                 foreground="#1a5fb4")

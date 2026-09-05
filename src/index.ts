@@ -119,11 +119,18 @@ Il2Cpp.perform(() => {
           .value as Il2Cpp.Object;
         const exUp = unitData.field("<ExGaugeRate>k__BackingField")
           .value as number;
+        let noteCount: number | string;
+        try {
+          noteCount = unit.field("noteCount").value as number;
+        } catch (e) {
+          noteCount = `err: ${e}`;
+        }
         stats = {
           baseAttack,
           atk,
           crt,
           exUp,
+          noteCount,
           // 通常攻击回复 EX（与 BattleLog 初始化日志口径一致）
           exGain: Math.ceil((100 + exUp) / 3.75),
         };
