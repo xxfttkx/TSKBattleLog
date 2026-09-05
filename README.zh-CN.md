@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-基于 Frida 和 IL2CPP 的 Twinkle Star Knights 战斗日志分析工具。
+基于 Frida 和 IL2CPP 的 《闪耀星骑士》 战斗日志分析工具。
 
 TSKBattleLog 捕获并分析游戏运行时的战斗事件，包括伤害事件、技能使用和战斗状态。它还通过 `char_skill.json` 提供可配置的自动战斗技能选择。
 
