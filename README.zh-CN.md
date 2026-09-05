@@ -2,53 +2,29 @@
 
 [English](README.md) | 简体中文
 
-基于 Frida 和 IL2CPP 的 《闪耀星骑士》 战斗日志分析工具。
+基于 Frida 和 IL2CPP 的《闪耀星骑士》战斗日志分析工具。
 
-TSKBattleLog 捕获并分析游戏运行时的战斗事件，包括伤害事件、技能使用和战斗状态。它还通过 `char_skill.json` 提供可配置的自动战斗技能选择。
+TSKBattleLog 捕获并分析游戏运行时的战斗事件——伤害、技能、战斗状态——并提供悬浮控制面板用于加载/切换 mod 和实时查看单位 buff。自动战斗技能选择可通过 `char_skill.json` 配置。
 
 ## 功能特性
 
-- 实时战斗事件日志
-- 伤害追踪与战后伤害统计
-- 技能使用追踪
+- 毫秒级时间戳的实时战斗事件日志
+- 各单位伤害追踪与战后排名
+- 多段技能分组（按攻击者 / 回合 / 类型 / 段数），含暴击数与技能倍率
 - 合击（Unison）伤害追踪
-- 战斗状态分析
 - 通过 `char_skill.json` 配置自动战斗技能选择
 - 通过 `trace_config.json` 配置调试观测点与 IL2CPP 调用栈回溯
-- 通过悬浮控制面板在运行时切换 mod
-- 毫秒级精度的运行时日志查看器
+- Mod 加载器，支持运行时开关，配悬浮控制面板
+- 单位头像栏（玩家 wiki 图标）+ 紧凑敌人列表；点击任意单位可查看实时 buff、ATK/CRT/NoteCount 及 EX 相关属性，支持明细/汇总切换
+- 日志自动落盘 + 面板内日志查看器（清空 / 复制 / 打开日志目录）
 
-## 输出示例
+## Mod 分类
 
-战斗结束后，TSKBattleLog 会根据捕获的战斗事件生成伤害统计：
-
-```text
-[13:59:55.017] enter TSKBattleManager.InitializeResult
-[13:59:55.018] [TSKBattleLog] onEndBattle: total damage=8865136
-[13:59:55.018] [TSKBattleLog] [バニーサンタ] 蘭美 damage:113626(1%)
-[13:59:55.018] [TSKBattleLog] [初日の出を迎えて] フィオナ damage:50699(1%)
-[13:59:55.018] [TSKBattleLog] [炎宿せし宝石] ルルゥ damage:3903(0%)
-[13:59:55.018] [TSKBattleLog] [霹靂の射手] 梨緒 damage:431585(5%)
-[13:59:55.018] [TSKBattleLog] [星を見るもの] フィオナ《魔王》 damage:8104144(91%)
-[13:59:55.019] [TSKBattleLog] unison damage=161179(2%)
-[13:59:55.065] InitializeResult return: 0x1c853b5e000
-```
-
-## 技术说明
-
-TSKBattleLog 使用 Frida 和 `frida-il2cpp-bridge` 在运行时 hook IL2CPP 方法，重建战斗事件。
-
-项目通过追踪相关方法、将游戏内部战斗数据转换为可读日志来观测游戏运行时行为。
-
-Mod 分为三类：
-
-- **Observer（观测类）**：只读日志 / 数据导出，不改变运行时状态
-- **Modifier（修改类）**：改变游戏内行为（如 QTE 结果、技能选择）
-- **Debug（调试类）**：用于分析的详细底层追踪（日志量很大）
+- **观察**：只读日志 / 数据导出，不改变运行时状态
+- **修改**：改变游戏内行为（如 QTE 结果、技能选择）
+- **调试**：用于分析的详细底层追踪（日志量很大）
 
 ## 安装
-
-安装 Node 依赖：
 
 ```bash
 npm install
@@ -56,11 +32,9 @@ npm install
 
 ## 使用方法
 
-以下两种入口任选其一。
-
 ### 方式一：悬浮控制面板（推荐）
 
-一个基于 `frida-python` 的 Tkinter 置顶窗口。可以在注入前选择要加载的 mod，在运行时切换任意 mod，并实时查看/导出日志。
+基于 `frida-python` 的 Tkinter 置顶窗口。
 
 一次性安装依赖：
 
@@ -74,67 +48,47 @@ pip install frida frida-tools
 .\control.ps1
 ```
 
-脚本会先执行 `npm run build`，然后打开面板。勾选需要的 mod，启动游戏（或先启动游戏，顺序不限），然后点击 **▶ 启动注入**。
+脚本会先执行 `npm run build`，然后打开面板。勾选需要的 mod，点击 **▶ 启动注入**。游戏可在面板之前或之后启动——桥接器会等待进程出现。
 
 面板功能：
 
 - **窗口置顶**开关（左上角）
-- **Mod 列表**，按 Observer / Modifier / Debug 分组。勾选/取消勾选立即生效；选择结果会持久化到 `mods.json`，供下次启动使用。
-- **日志查看器**（右侧面板），带清空 / 复制到剪贴板 / 另存为日志文件按钮。
-- 环形缓冲区保留最近 5000 行；更早的日志会自动丢弃。
+- **MODs / Logs** 标签页（不同时显示）；启动注入后自动切到 Logs
+- Mod 列表按 观察 / 修改 / 调试 分组，勾选结果持久化到 `mods.json`。注入开始后复选框锁定（战斗中切换 mod 不安全）
+- **重载配置**：重新读取 `trace_config.json`，运行时更新 trace/backtrace 观测点
+- **隐藏单位栏**：隐藏玩家头像栏与敌人列表，专注看日志
+- 日志查看器带 **清空 / 复制日志 / 打开日志目录**；日志同时自动写入 `logs/`（8 KB 缓冲，关闭时 flush）
+- 5000 行环形缓冲；更早的日志自动丢弃
+- 玩家头像栏（48 px wiki 图标）及其上方的紧凑敌人名条。点击任意单位弹出 **Skill Effects** 窗口，显示实时 buff（明细/汇总切换）以及 ATK（含基础值）、CRT、NoteCount、EX 上升率和普攻回复 EX
 
 ### 方式二：无界面注入（仅控制台）
 
-先启动游戏，然后运行提供的 PowerShell 脚本：
+先启动游戏，然后：
 
 ```powershell
 .\run.ps1
 ```
 
-脚本会：
+脚本会构建 agent、附加到正在运行的游戏进程，并将日志保存到 `logs/`。
 
-* 使用 `npm run build` 构建 Frida agent
-* 将 agent 附加到正在运行的游戏进程
-* 将运行时日志保存到 `logs` 目录
+## Mod 列表
 
-日志文件带时间戳生成：
+每个功能都是 `src/mods/` 下独立的 mod。`mods.json` 保存默认启用状态，并由面板自动更新。
 
-```
-logs/
-└── 20260716_001234.log
-```
+| 键                  | 分类 | 说明                                                                                               |
+|---------------------|------|----------------------------------------------------------------------------------------------------|
+| `battle-log`        | 观察 | 实时战斗伤害日志 + 战后各单位伤害排名、多段技能分组与回合计数                                       |
+| `unit-list-dump`    | 观察 | 进入编队编辑器时将所有单位属性（递归展平）导出到 `unit_list.json`                                   |
+| `qte-perfect`       | 修改 | 强制每次 QTE 结果为 PERFECT                                                                        |
+| `auto-skill`        | 修改 | 自动模式下根据 `char_skill.json` 自动选择 EX1 / EX2 / 关闭                                          |
+| `damage-calc-trace` | 调试 | 打印 `CaluculationNormalDamage` 参数、各 Offset 系数及单位技能效果列表——日志量非常大                 |
+| `trace-config`      | 调试 | 批量注册 `trace_config.json` 中列出的参数转储追踪点                                                  |
+| `backtrace`         | 调试 | 进入 `trace_config.json` 中列出的方法时打印 IL2CPP 调用栈                                           |
+| `field-watch`       | 调试 | 监控 `turnCount`、`TSKBattleNote.CT` 与 `CurrentSpeed`，变化时打印写入方法名 + 调用栈                 |
 
-## Mod 配置（`mods.json`）
+## 技能配置（`char_skill.json`）
 
-每个功能都位于 `src/mods/` 下独立的 mod 中。`mods.json` 定义每个 mod 的默认启用状态。通过方式一勾选/取消勾选会自动写回该文件。
-
-```json
-{
-  "auto-skill": true,
-  "backtrace": false,
-  "battle-log": false,
-  "damage-calc-trace": false,
-  "qte-perfect": true,
-  "trace-config": false,
-  "unit-list-dump": true
-}
-```
-
-| 键                  | 分类     | 说明                                                                 |
-|---------------------|----------|----------------------------------------------------------------------|
-| `battle-log`        | Observer | 战后各单位伤害排名（只读）                                           |
-| `qte-perfect`       | Modifier | 强制每次 QTE 结果为 PERFECT                                          |
-| `auto-skill`        | Modifier | 自动模式下根据 `char_skill.json` 自动选择 EX1 / EX2 / 关闭           |
-| `damage-calc-trace` | Debug    | 打印 `CaluculationNormalDamage` 参数及每个 Offset 系数——日志量非常大 |
-| `unit-list-dump`    | Observer | 打开编队编辑器时将每个单位的属性导出到 `unit_list.json`              |
-| `trace-config`      | Debug    | 批量注册 `trace_config.json` 中列出的参数转储追踪点                  |
-| `backtrace`         | Debug    | 进入 `trace_config.json` 中列出的方法时打印 IL2CPP 调用栈            |
-
-## 技能配置
-
-`char_skill.json` 控制 `auto-skill` mod 使用的优先级。
-
-示例：
+控制 `auto-skill` 的优先级。
 
 ```json
 {
@@ -146,15 +100,15 @@ logs/
 
 取值：
 
-- `2`：优先 EX2；只要 EX 槽满足 EX2 消耗就自动释放。
-- `1`：优先 EX1；只要 EX 槽满足 EX1 消耗就自动释放。
-- `0`：该单位从不自动释放任何 EX 技能。
+- `2`：优先 EX2
+- `1`：优先 EX1
+- `0`：从不自动释放 EX 技能
 
-回退查找顺序为 `[单位名] 角色名` → `单位名`，因此在没有精确覆盖项时，单个条目即可覆盖一个单位的所有变体。
+回退查找顺序为 `[单位名] 角色名` → `单位名`，因此单个条目可覆盖一个单位的所有变体。
 
 ## 调试观测点（`trace_config.json`）
 
-`trace-config` 和 `backtrace` 两个 mod 共用 `trace_config.json`，因此添加新的观测点**无需修改源码，也无需重新注入**：
+`trace-config` 与 `backtrace` 共用此文件——添加观测点**无需改源码，也无需重新注入**：
 
 ```json
 {
@@ -168,17 +122,15 @@ logs/
 }
 ```
 
-- `trace`：为列出的每个 `类.方法` 挂载 `dumpArgs`。
-- `backtrace`：每次进入该方法时打印 IL2CPP 调用栈（地址通过方法地址索引解析）；每条目可单独设置 `depth`，覆盖全局的 `backtraceDepth`。
-- 编辑文件后，点击控制面板上的 **重载配置** 即可立即生效——新观测点会在运行时挂载，被移除的观测点会在运行时卸载。文件在注入时也会读取一次。
-- 默认请保持数组为空：追踪已被其他 mod（如 `battle-log`）hook 的方法，会导致该方法的日志输出翻倍。
+- `trace`：为列出的每个 `类.方法` 挂载 `dumpArgs`
+- `backtrace`：进入方法时打印 IL2CPP 调用栈（经方法地址索引解析）；每条目可单独设 `depth`，覆盖全局 `backtraceDepth`
+- 编辑后点击 **重载配置** 立即生效——新观测点运行时挂载，被移除的运行时卸载
+- 默认保持数组为空：追踪已被其他 mod（如 `battle-log`）hook 的方法会导致该方法日志翻倍
 
 ## 免责声明
 
-本项目仅供研究、分析和个人定制使用。
-
-部分功能会修改战斗相关状态，可能影响游戏行为。使用风险自负。
+仅供研究、分析和个人使用。部分功能会修改战斗状态，可能影响游戏行为。使用风险自负。
 
 ## 致谢
 
-感谢 [TSKHook-frida](https://github.com/TSKModding/TSKHook-frida) 为 Frida 与 IL2CPP 运行时分析提供了宝贵参考。
+感谢 [TSKHook-frida](https://github.com/TSKModding/TSKHook-frida) 为 Frida 与 IL2CPP 运行时分析提供宝贵参考。
