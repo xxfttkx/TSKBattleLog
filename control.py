@@ -619,8 +619,10 @@ class App(tk.Tk):
         if not units:
             self.units_bar.pack_forget()
             return
-        self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 2),
-                            before=self.notebook)
+        # 用户勾选隐藏时：按钮照常构建（取消隐藏立即可见），仅不 pack 栏
+        if not self.hide_units_var.get():
+            self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 2),
+                                before=self.notebook)
         for u in units:
             address = u.get("address", "")
             name = u.get("characterName", "?")
@@ -644,11 +646,14 @@ class App(tk.Tk):
         if not units:
             self.enemies_bar.pack_forget()
             return
-        # 敌人条排在玩家头像栏之上；玩家栏还没出现时退而贴在 notebook 前
-        before = self.units_bar if self.units_bar.winfo_manager() == "pack" \
-            else self.notebook
-        self.enemies_bar.pack(side="top", fill="x", padx=8, pady=(2, 4),
-                              before=before)
+        # 用户勾选隐藏时：按钮照常构建，仅不 pack 栏
+        if not self.hide_units_var.get():
+            # 敌人条排在玩家头像栏之上；玩家栏还没出现时退而贴在 notebook 前
+            before = self.units_bar \
+                if self.units_bar.winfo_manager() == "pack" \
+                else self.notebook
+            self.enemies_bar.pack(side="top", fill="x", padx=8, pady=(2, 4),
+                                  before=before)
         ttk.Label(self.enemies_bar, text="敌人:",
                   foreground="#c0392b").pack(side="left", padx=(0, 4))
         for u in units:
