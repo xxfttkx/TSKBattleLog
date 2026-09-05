@@ -30,6 +30,7 @@ MODS_JSON = ROOT_DIR / "mods.json"
 TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
 AGENT_JS = ROOT_DIR / "dist" / "agent.js"
 LOG_DIR = ROOT_DIR / "logs"
+GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
@@ -241,6 +242,8 @@ class App(tk.Tk):
         self.title("TSKBattleLog 控制面板")
         self.geometry("680x480")
         self.minsize(460, 320)
+        # 恢复上次的窗口位置与大小（geometry: "WxH+X+Y"）
+        self._restore_geometry()
         # 默认置顶
         self._always_top = True
         self.attributes("-topmost", True)
@@ -512,7 +515,28 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror("打开失败", f"无法打开日志目录:\n{e}")
 
+    def _restore_geometry(self):
+        """从 gui_config.json 恢复窗口位置与大小；越界/损坏时静默回退默认"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            geom = cfg.get("geometry")
+            if isinstance(geom, str):
+                self.geometry(geom)
+        except Exception:
+            pass
+
+    def _save_geometry(self):
+        """保存当前窗口位置与大小到 gui_config.json"""
+        try:
+            GUI_CONFIG.write_text(
+                json.dumps({"geometry": self.geometry()}, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
     def _on_close(self):
+        self._save_geometry()
         self.bridge.stop()
         if self._log_file:
             try:

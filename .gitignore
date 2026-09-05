@@ -147,3 +147,6 @@ __pycache__/
 
 # cache
 cache/
+
+# config
+gui_config.json
