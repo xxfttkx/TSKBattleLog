@@ -401,6 +401,17 @@ class App(tk.Tk):
         )  # 错误
         self.log_text.configure(state="disabled")
 
+        # 跟随状态：初始跟随；用户上滚则暂停，滚回底部自动恢复
+        self._log_follow = True
+        self.log_text.bind("<MouseWheel>",
+                           lambda e: self.after_idle(self._update_log_follow))
+        self.log_text.vbar.bind(
+            "<ButtonPress-1>",
+            lambda e: self.after_idle(self._update_log_follow))
+        self.log_text.vbar.bind(
+            "<B1-Motion>",
+            lambda e: self.after_idle(self._update_log_follow))
+
     # ---- 初始化 / 保存 mods.json ----
 
     def _load_mods_json_defaults(self):
@@ -534,6 +545,7 @@ class App(tk.Tk):
         self._save_mods_json()
 
     def _clear_log(self):
+        self._log_follow = True
         self.log_text.configure(state="normal")
         self.log_text.delete("1.0", "end")
         self.log_text.configure(state="disabled")
@@ -911,6 +923,10 @@ class App(tk.Tk):
 
     # ---- 日志渲染 ----
 
+    def _update_log_follow(self):
+        """用户滚轮/拖滚动条后调用：位于底部则恢复跟随，否则暂停"""
+        self._log_follow = float(self.log_text.yview()[1]) >= 0.999
+
     def _append_log(self, time_str: str, message: str, error: bool = False):
         self.log_text.configure(state="normal")
 
@@ -933,8 +949,8 @@ class App(tk.Tk):
         if line_count > LOG_MAX_LINES:
             self.log_text.delete("1.0", f"{line_count - LOG_MAX_LINES}.0")
 
-        # 自动滚到底（只在用户停留在底部时，避免手动向上翻看被顶走）
-        if float(self.log_text.yview()[1]) > 0.9:
+        # 跟随模式：用户停在底部（或从未上滚）才自动滚到底
+        if self._log_follow:
             self.log_text.see("end")
 
         self.log_text.configure(state="disabled")
