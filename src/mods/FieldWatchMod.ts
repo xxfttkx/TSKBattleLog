@@ -31,8 +31,7 @@ const TARGETS: FieldWatchConfig[] = [
 export class FieldWatchMod implements Mod {
   name = "field-watch";
   category = "调试" as const;
-  description =
-    "监控 turnCount / TSKBattleNote.CT、CurrentSpeed 字段变化，打印修改者方法名和调用栈";
+  description = "监控指定类的指定字段变化，打印修改者方法名和调用栈";
   enabled = false;
 
   private listeners: TraceListener[] = [];

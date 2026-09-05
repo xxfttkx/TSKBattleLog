@@ -13,7 +13,7 @@ import {
 export class BattleLogMod implements Mod {
   name = "battle-log";
   category = "观察" as const;
-  description = "战斗中与结束时输出各单位伤害";
+  description = "打印战斗相关各种信息";
   enabled = true;
 
   private tskBattleLog = new TSKBattleLog();

@@ -41,14 +41,18 @@ jobs:
         run: |
           import json, re, pathlib
           mods_dir = pathlib.Path("src/mods")
-          pattern = re.compile(r'''^\s*(name|category|description)\s*=\s*(["'])(.*?)\2''')
+          # = 后允许换行再接字符串（较长的 description）
+          pattern = re.compile(
+              r'^\s*(name|category|description)\s*=\s*(?:\n\s*)?(["\'])(.*?)\2',
+              re.MULTILINE)
           manifest = []
           for path in sorted(mods_dir.glob("*.ts")):
+              src = path.read_text(encoding="utf-8")
               fields = {}
-              for line in path.read_text(encoding="utf-8").splitlines():
-                  m = pattern.match(line)
-                  if m:
-                      fields[m.group(1)] = m.group(3)
+              for m in pattern.finditer(src):
+                  key = m.group(1)
+                  if key not in fields:
+                      fields[key] = m.group(3)
               if "name" in fields:
                   manifest.append({
                       "name": fields["name"],

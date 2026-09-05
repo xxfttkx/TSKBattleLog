@@ -77,14 +77,14 @@ pip install frida frida-tools
 
 | 键                  | 分类 | 说明                                                                                               |
 |---------------------|------|----------------------------------------------------------------------------------------------------|
-| `battle-log`        | 观察 | 实时战斗伤害日志 + 战后各单位伤害排名、多段技能分组与回合计数                                       |
-| `unit-list-dump`    | 观察 | 进入编队编辑器时将所有单位属性（递归展平）导出到 `unit_list.json`                                   |
-| `qte-perfect`       | 修改 | 强制每次 QTE 结果为 PERFECT                                                                        |
-| `auto-skill`        | 修改 | 自动模式下根据 `char_skill.json` 自动选择 EX1 / EX2 / 关闭                                          |
-| `damage-calc-trace` | 调试 | 打印 `CaluculationNormalDamage` 参数、各 Offset 系数及单位技能效果列表——日志量非常大                 |
-| `trace-config`      | 调试 | 批量注册 `trace_config.json` 中列出的参数转储追踪点                                                  |
-| `backtrace`         | 调试 | 进入 `trace_config.json` 中列出的方法时打印 IL2CPP 调用栈                                           |
-| `field-watch`       | 调试 | 监控 `turnCount`、`TSKBattleNote.CT` 与 `CurrentSpeed`，变化时打印写入方法名 + 调用栈                 |
+| `battle-log`        | 观察 | 打印战斗相关各种信息（伤害统计、多段分组、回合、战斗结算）                                          |
+| `unit-list-dump`    | 观察 | 角色界面进行筛选或排序操作时将所有单位属性导出到 `unit_list.json`                                   |
+| `qte-perfect`       | 修改 | 战斗开始时的 QTE 结果强制 PERFECT                                                                   |
+| `auto-skill`        | 修改 | auto模式下按 `char_skill.json` 配置自动选择 EX1/EX2                                                 |
+| `damage-calc-trace` | 调试 | 打印伤害计算相关的各个参数——日志量非常大                                                            |
+| `trace-config`      | 调试 | 按 `trace_config.json` 批量注册参数 dump 观察点（改 JSON 后点面板重载配置即生效）                    |
+| `backtrace`         | 调试 | 按 `trace_config.json` 在指定方法进入时打印 IL2CPP 调用栈                                           |
+| `field-watch`       | 调试 | 监控指定类的指定字段变化，打印修改者方法名和调用栈                                                   |
 
 ## 技能配置（`char_skill.json`）
 

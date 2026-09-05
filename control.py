@@ -49,9 +49,11 @@ def wiki_icon_url(unit_name: str, character_name: str) -> str:
 # ---------- mod 元数据 ----------
 # 从 src/mods/*.ts 中正则提取 Mod 类的 name/category/description 字面量，
 # 让 control.py 在未启动注入前也能拿到正确的元信息展示。
+# 支持 = 后换行再接字符串的写法（如较长的 description）。
 
 _CLASS_FIELD_RE = re.compile(
-    r'''^\s*(name|category|description)\s*=\s*(["'])(.*?)\2''',
+    r'''^\s*(name|category|description)\s*=\s*(?:\n\s*)?(["'])(.*?)\2''',
+    re.MULTILINE,
 )
 
 
@@ -65,10 +67,10 @@ def _parse_mod_manifest() -> list[dict]:
         except Exception:
             continue
         fields: dict = {}
-        for line in src.splitlines():
-            m = _CLASS_FIELD_RE.match(line)
-            if m:
-                fields[m.group(1)] = m.group(3)
+        for m in _CLASS_FIELD_RE.finditer(src):
+            key = m.group(1)
+            if key not in fields:
+                fields[key] = m.group(3)
         if "name" in fields:
             result.append({
                 "name": fields["name"],

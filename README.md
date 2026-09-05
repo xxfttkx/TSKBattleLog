@@ -75,16 +75,16 @@ This builds the agent, attaches to the running game process, and saves logs to `
 
 Every feature is its own mod under `src/mods/`. `mods.json` holds the default enabled state and is updated automatically by the panel.
 
-| Key                 | Category | Description                                                                                                      |
-|---------------------|----------|------------------------------------------------------------------------------------------------------------------|
-| `battle-log`        | Observer | Real-time battle damage log + per-unit post-battle ranking, multi-hit grouping and turn tracking                 |
-| `unit-list-dump`    | Observer | On entering the party editor, exports every unit's attributes (recursively flattened) to `unit_list.json`       |
-| `qte-perfect`       | Modifier | Forces every QTE result to PERFECT                                                                               |
-| `auto-skill`        | Modifier | Auto-picks EX1 / EX2 / off during auto-mode based on `char_skill.json`                                           |
-| `damage-calc-trace` | Debug    | Prints `CaluculationNormalDamage` args, every Offset coefficient and the unit skill effect list — very verbose   |
-| `trace-config`      | Debug    | Bulk-registers arg-dump trace points listed in `trace_config.json`                                               |
-| `backtrace`         | Debug    | Prints an IL2CPP call stack on entry for methods listed in `trace_config.json`                                   |
-| `field-watch`       | Debug    | Watches `turnCount`, `TSKBattleNote.CT` and `CurrentSpeed`, logging the writer method + call stack on change    |
+| Key                 | Category | Description                                                                                                  |
+|---------------------|----------|--------------------------------------------------------------------------------------------------------------|
+| `battle-log`        | Observer | Prints battle-related info (damage stats, multi-hit grouping, turns, post-battle summary)                    |
+| `unit-list-dump`    | Observer | On filtering/sorting in the character screen, exports all unit attributes to `unit_list.json`                |
+| `qte-perfect`       | Modifier | Forces the battle-start QTE result to PERFECT                                                                |
+| `auto-skill`        | Modifier | In auto mode, picks EX1/EX2 automatically per `char_skill.json`                                              |
+| `damage-calc-trace` | Debug    | Prints damage calculation parameters — very verbose                                                          |
+| `trace-config`      | Debug    | Bulk-registers arg-dump trace points from `trace_config.json` (edit JSON, then press reload on the panel)    |
+| `backtrace`         | Debug    | Prints an IL2CPP call stack on entry of methods listed in `trace_config.json`                                |
+| `field-watch`       | Debug    | Watches fields of a given class, logging the writer method + call stack on change                            |
 
 ## Skill configuration (`char_skill.json`)
 

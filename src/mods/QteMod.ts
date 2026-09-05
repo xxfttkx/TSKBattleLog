@@ -6,7 +6,7 @@ import { Mod, guarded } from "../mod";
 export class QteMod implements Mod {
   name = "qte-perfect";
   category = "修改" as const;
-  description = "所有 QTE 结果强制 PERFECT";
+  description = "战斗开始时的 QTE 结果强制 PERFECT";
   enabled = true;
 
   onLoad(image: Il2Cpp.Image): void {

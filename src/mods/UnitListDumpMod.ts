@@ -5,7 +5,8 @@ import { Mod, MethodLeaveHandler, traceMethodByName } from "../mod";
 export class UnitListDumpMod implements Mod {
   name = "unit-list-dump";
   category = "观察" as const;
-  description = "进入角色编队界面时将所有单位属性导出到 unit_list.json";
+  description =
+    "角色界面进行筛选或排序操作时将所有单位属性导出到 unit_list.json";
   enabled = false;
 
   onLoad(image: Il2Cpp.Image): void {
