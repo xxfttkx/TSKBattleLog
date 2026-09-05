@@ -222,3 +222,52 @@ normal attack，现在从 CaluculationNormalDamage 中记录
     );
   };
 ```
+
+## TSKBattleNote.CT
+这是turn..，不是note自身的而是当前回合数..和`TSKBattleMain.turnCount`数据相同，但后者是全局的，用起来更安心。
+```
+{
+        fieldName: "<CT>k__BackingField",
+        fallbackOffset: 0xa8,
+        tag: "[CT-watch]",
+      },
+```
+
+## TSKBattleNote.CurrentSpeed
+下限是5的CT值，很幽默，用到时才更新，感觉有点脱裤子放屁。
+```
+{
+    className: "TSKBattleNote",
+    tag: "[note-watch]",
+    backtraceDepth: 6,
+    fields: [
+      {
+        fieldName: "<CurrentSpeed>k__BackingField",
+        fallbackOffset: 0xc8,
+        tag: "[speed-watch]",
+      },
+    ],
+  },
+```
+
+```
+[17:14:21.090] [speed-watch] DeployNote changed <CurrentSpeed>k__BackingField: 11 -> 5
+[17:14:21.119] └─ UnityEngine.AddressableAssets.AddressablesImpl.<AutoReleaseHandleOnCompletion>b__115_0+0x135e73
+[17:14:21.134]   └─ TSKBattleMain.<Attack>b__88_0+0x1a7
+[17:14:21.152]     └─ <CheckEndFrame>d__22.MoveNext+0x147
+[17:14:21.186]       └─ UnityEngine.SetupCoroutine.InvokeMoveNext+0x65
+[17:14:21.186]         └─ 0x7ffe70d7ff69
+[17:14:21.186]           └─ 0x7ffe70d7ff09
+```
+
+## TSKBattleNote.TurnCount
+应该是该角色出手过的次数，但好像没什么用。
+```
+fields: [
+      {
+        fieldName: "<TurnCount>k__BackingField",
+        fallbackOffset: 0xa4,
+        tag: "[turn-count-watch]",
+      },
+    ],
+```
