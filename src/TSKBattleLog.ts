@@ -70,9 +70,16 @@ export class TSKBattleLog {
     // 回合切换视为上一回合所有动作结束，先输出未 flush 的分组
     this.flushGroups();
     this.turnCount = newVal;
-    const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}`;
+    const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}    damageTotal=${this.damageTotal}`;
     log(msg);
     this.logs.push(msg);
+    let damageMsg = ``;
+    for (const note of this.notes) {
+      const percentage = this.getDamagePercentage(note.damage);
+      damageMsg += `${note.characterName}(${percentage}) `;
+    }
+    log(damageMsg);
+    this.logs.push(damageMsg);
   }
 
   init(notes: Il2Cpp.Array<Il2Cpp.Object>): void {
@@ -173,7 +180,7 @@ export class TSKBattleLog {
       const msg =
         `[TSKBattleLog] ${g.attackerName} ${g.kind} -> ${g.defenderName}: ` +
         `${hits} hit${hits > 1 ? "s" : ""}, damage=${total}, crit=${crits}` +
-        `, sv=${g.skillValue.toFixed(2)}, turn=${g.turn}`;
+        `, sv=${g.skillValue.toFixed(2)}`;
       log(msg);
       this.logs.push(msg);
     }
@@ -224,7 +231,7 @@ export class TSKBattleLog {
       this.currentAttacker = address;
       this.unisonDamageTotal += damageBigInt;
       log(
-        `[TSKBattleLog] Unison Attack[${note.getName()}]: damage=${damageBigInt} damageTotal=${this.damageTotal}`,
+        `[TSKBattleLog] Unison Attack[${note.getName()}]: damage=${damageBigInt}`,
       );
       return;
     }
@@ -247,8 +254,7 @@ export class TSKBattleLog {
       `[TSKBattleLog] onEndBattle: total damage=${this.damageTotal}, turns=${this.turnCount}`,
     );
     for (const note of this.notes) {
-      const value = Number(note.damage) / Number(this.damageTotal);
-      const percentage = `${(value * 100).toFixed(0)}%`;
+      const percentage = this.getDamagePercentage(note.damage);
       log(
         `[TSKBattleLog] ${note!.getName()} damage:${note.damage}(${percentage})`,
       );
@@ -259,5 +265,10 @@ export class TSKBattleLog {
     log(
       `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`,
     );
+  }
+
+  getDamagePercentage(damage: bigint): string {
+    const value = Number(damage) / Number(this.damageTotal);
+    return `${(value * 100).toFixed(0)}%`;
   }
 }
