@@ -39,7 +39,7 @@ export class FieldWatchMod implements Mod {
 
   onLoad(image: Il2Cpp.Image): void {
     for (const target of TARGETS) {
-      this.listeners.push(...watchField(image, target));
+      this.listeners.push(...watchField(image, target, this));
     }
   }
 }

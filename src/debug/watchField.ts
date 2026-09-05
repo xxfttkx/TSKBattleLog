@@ -1,5 +1,5 @@
 import { log } from "../utils";
-import { TraceListener } from "../mod";
+import { Mod, TraceListener } from "../mod";
 import {
   buildMethodIndex,
   isMethodIndexBuilt,
@@ -44,6 +44,7 @@ interface ResolvedField {
 export function watchField(
   image: Il2Cpp.Image,
   config: FieldWatchConfig,
+  mod?: Mod,
 ): TraceListener[] {
   const {
     className,
@@ -123,6 +124,7 @@ export function watchField(
           (this as any)._enterCtx = this.context;
         },
         onLeave(_retval) {
+          if (mod && !mod.enabled) return;
           const instance = (this as any)._instance as NativePointer;
           const olds = (this as any)._olds as Record<string, number>;
           if (!instance || !olds) return;
