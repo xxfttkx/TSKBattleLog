@@ -234,7 +234,7 @@ normal attack，现在从 CaluculationNormalDamage 中记录
 ```
 
 ## TSKBattleNote.CurrentSpeed
-下限是5的CT值，很幽默，用到时才更新，感觉有点脱裤子放屁。
+下限是5的CT值，很幽默，用到时才更新，感觉有点脱裤子放屁。就是当前你在0的位置时它的数值是你上次的，你攻击完后才会计算你这次要移到哪个位置。
 ```
 {
     className: "TSKBattleNote",
