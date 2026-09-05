@@ -1,0 +1,115 @@
+name: Build Windows EXE
+
+on:
+  # 手动触发（Actions 页面点 Run workflow，可选 tag）
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version tag (e.g. v1.0.0), empty = artifact only"
+        required: false
+        default: ""
+  # 推送 v* tag 时自动构建并发布 Release
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 1) 构建 agent.js（esbuild）
+      - name: Build agent.js
+        run: npm ci && npm run build
+
+      # 2) 预生成 mod 元数据（打包后无 .ts 源码可解析）
+      - name: Generate mod manifest
+        shell: python
+        run: |
+          import json, re, pathlib
+          mods_dir = pathlib.Path("src/mods")
+          pattern = re.compile(r'''^\s*(name|category|description)\s*=\s*(["'])(.*?)\2''')
+          manifest = []
+          for path in sorted(mods_dir.glob("*.ts")):
+              fields = {}
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  m = pattern.match(line)
+                  if m:
+                      fields[m.group(1)] = m.group(3)
+              if "name" in fields:
+                  manifest.append({
+                      "name": fields["name"],
+                      "category": fields.get("category", "观察"),
+                      "description": fields.get("description", ""),
+                  })
+          pathlib.Path("mod_manifest.json").write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8")
+          print(f"manifest: {len(manifest)} mods")
+
+      # 3) 安装 Python 依赖 + PyInstaller 打包
+      - name: Install Python deps
+        run: |
+          pip install frida==17.* pillow==11.* pyinstaller==6.*
+
+      - name: Build EXE (onedir)
+        run: >
+          pyinstaller --noconfirm --clean
+          --name TSKBattleLog
+          --windowed
+          --onedir
+          --add-data "dist/agent.js;."
+          --hidden-import frida
+          control.py
+
+      # 4) 组装发布目录：exe + 用户可编辑的 json 配置
+      - name: Assemble release folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item -Recurse -Force dist/TSKBattleLog/* release/
+          Copy-Item -Force mod_manifest.json release/
+          foreach ($f in @("mods.json","trace_config.json","char_skill.json")) {
+            if (Test-Path $f) { Copy-Item -Force $f release/ }
+          }
+          # 缺省配置兜底：用户目录没有时生成空骨架
+          if (-not (Test-Path release/mods.json)) {
+            Set-Content -Path release/mods.json -Value "{}"
+          }
+          if (-not (Test-Path release/trace_config.json)) {
+            Set-Content -Path release/trace_config.json -Value '{"trace":[],"backtrace":[],"backtraceDepth":5}'
+          }
+
+      # 5) 压缩为 zip artifact（每次构建都可下载）
+      - name: Zip release folder
+        shell: pwsh
+        run: |
+          Compress-Archive -Path release/* -DestinationPath TSKBattleLog-windows-x64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TSKBattleLog-windows-x64
+          path: TSKBattleLog-windows-x64.zip
+          retention-days: 30
+
+      # 6) 推 tag 时额外创建 GitHub Release 并附 zip
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TSKBattleLog-windows-x64.zip
+          generate_release_notes: true
