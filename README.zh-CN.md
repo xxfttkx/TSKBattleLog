@@ -71,6 +71,17 @@ pip install frida frida-tools
 
 脚本会构建 agent、附加到正在运行的游戏进程，并将日志保存到 `logs/`。
 
+## 使用打包版 EXE
+
+从 [Releases](../../releases)（或 Actions 运行记录的产物）下载 `TSKBattleLog-windows-x64.zip` 并解压，运行 `TSKBattleLog.exe`：
+
+- 无需安装 Python 或 frida，依赖已内置
+- 面板用法与[方式一](#方式一悬浮控制面板推荐)完全相同：勾选需要的 mod，点击 **▶ 启动注入**
+- 配置文件与 exe 同目录，可直接编辑：`mods.json`（mod 开关）、`trace_config.json`（调试观测点）、`char_skill.json`（自动技能优先级）
+- 日志写入同目录的 `logs/`，窗口位置记忆保存在 `gui_config.json`
+
+自行构建参见 [`.github/workflows/build-exe.yml`](.github/workflows/build-exe.yml)。
+
 ## Mod 列表
 
 每个功能都是 `src/mods/` 下独立的 mod。`mods.json` 保存默认启用状态，并由面板自动更新。

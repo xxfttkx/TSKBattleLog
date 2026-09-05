@@ -71,6 +71,17 @@ Start the game, then:
 
 This builds the agent, attaches to the running game process, and saves logs to `logs/`.
 
+## Using the packaged EXE
+
+Download `TSKBattleLog-windows-x64.zip` from [Releases](../../releases) (or from an Actions run artifact), extract it, and run `TSKBattleLog.exe`:
+
+- No Python or frida installation required — dependencies are bundled
+- The panel works exactly like [Method A](#method-a-floating-control-panel-recommended): tick the mods you want, then press **▶ 启动注入**
+- Config files sit next to the exe and can be edited directly: `mods.json` (mod toggles), `trace_config.json` (debug observation points), `char_skill.json` (auto-skill priority)
+- Logs are written to `logs/` next to the exe; window position is remembered in `gui_config.json`
+
+To build it yourself, see [`.github/workflows/build-exe.yml`](.github/workflows/build-exe.yml).
+
 ## Mods
 
 Every feature is its own mod under `src/mods/`. `mods.json` holds the default enabled state and is updated automatically by the panel.
