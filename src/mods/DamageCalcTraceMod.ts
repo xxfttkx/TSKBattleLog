@@ -168,8 +168,6 @@ export class DamageCalcTraceMod implements Mod {
     const team = new Il2Cpp.Object(teamPtr);
     const teamType = team.handle.add(0x28).readS32();
     log(`attack teamType=${TeamType[teamType]}`);
-    this.logSkillEffectList(attack);
-    this.logSkillEffectList(defence);
 
     log(
       `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`,
