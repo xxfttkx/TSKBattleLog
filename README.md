@@ -6,6 +6,16 @@ A battle log analyzer for *Twinkle Star Knights* using Frida and IL2CPP.
 
 TSKBattleLog captures and analyzes battle events from the game runtime — damage, skills, combat states — and provides a floating control panel to load/toggle mods and inspect unit buffs in real time. Auto-battle skill selection is configurable via `char_skill.json`.
 
+## Screenshots
+
+![Control panel](screenshots/gui.png)
+
+*Floating control panel: mod toggles, player/enemy unit bars and the live battle log*
+
+![Skill Effects window](screenshots/skill_effects.png)
+
+*Skill Effects window (opens on unit click): live stats — ATK / CRT / NoteCount / EX_UP — plus a detail/summary buff table*
+
 ## Features
 
 - Real-time battle event logging with millisecond timestamps

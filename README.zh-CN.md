@@ -6,6 +6,16 @@
 
 TSKBattleLog 捕获并分析游戏运行时的战斗事件——伤害、技能、战斗状态——并提供悬浮控制面板用于加载/切换 mod 和实时查看单位 buff。自动战斗技能选择可通过 `char_skill.json` 配置。
 
+## 截图
+
+![控制面板](screenshots/gui.png)
+
+*悬浮控制面板：mod 开关、敌我单位栏与实时战斗日志*
+
+![Skill Effects 弹窗](screenshots/skill_effects.png)
+
+*Skill Effects 弹窗（点击单位打开）：实时属性——ATK / CRT / NoteCount / EX上升——以及明细/汇总 buff 表格*
+
 ## 功能特性
 
 - 毫秒级时间戳的实时战斗事件日志
