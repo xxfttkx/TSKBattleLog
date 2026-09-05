@@ -271,3 +271,14 @@ fields: [
       },
     ],
 ```
+
+## Windows x64 的 bool 参数坑
+`SetSkillDamageValue` 的 `args[8]`（isCritical）直接 `toInt32() != 0` 会把非暴击判成暴击。
+Windows x64 ABI 中 bool 参数在栈槽里只有低 8 位有效，高位是残留垃圾（看起来像之前栈上的伤害值）：
+落地 0x437ab 时 args[8] 读到 0x43701，低 8 位 0x01 才是真实的 bool，非暴击段读到 0x21a00（低 8 位 0x00）。
+
+正确读法：`(args[8].toInt32() & 0xff) != 0`。`SetDamageValue` 的 `args[4]` 同理。
+
+栈槽高位残留同样会出现在 int 参数上：`CaluculationNormalDamage` 的 `args[11]`（multipleCount）
+在段号为 0 时读到 `0x7ffe00000000`（残留地址碎片 + 低 32 位真实的 0）。`toInt32()` 只取低 32 位
+碰巧无碍，但说明栈传参的槽位高位一律不可信。

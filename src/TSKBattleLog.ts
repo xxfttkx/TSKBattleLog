@@ -14,6 +14,7 @@ export interface CalcSegment {
   damage: bigint;
   /** AttackType：Normal / Ex / ... */
   kind: string;
+  defenderAddress: string;
   defenderName: string;
   beforeRushCount: number;
   rushCount: number;
@@ -26,11 +27,12 @@ export interface CalcSegment {
   damageType?: string;
 }
 
-/** 同一次技能动作的多段伤害分组（同攻击者/回合/kind，multipleCount 连续） */
+/** 同一次技能动作的多段伤害分组（同攻击者/回合/kind/目标，multipleCount 连续） */
 export interface SkillGroup {
   attackerAddress: string;
   attackerName: string;
   kind: string;
+  defenderAddress: string;
   defenderName: string;
   skillValue: number;
   turn: number;
@@ -141,20 +143,22 @@ export class TSKBattleLog {
     queue.push(seg);
     this.calcQueue.set(seg.attackerAddress, queue);
 
-    // 分组：同攻击者/回合/kind 的最近一组，multipleCount 归 0 则另起一组
+    // 分组：同攻击者/回合/kind/目标的最近一组，multipleCount 归 0 则另起一组
     let group = [...this.skillGroups]
       .reverse()
       .find(
         (g) =>
           g.attackerAddress === seg.attackerAddress &&
           g.turn === seg.turn &&
-          g.kind === seg.kind,
+          g.kind === seg.kind &&
+          g.defenderAddress === seg.defenderAddress,
       );
     if (!group || seg.multipleCount === 0) {
       group = {
         attackerAddress: seg.attackerAddress,
         attackerName: note.getName(),
         kind: seg.kind,
+        defenderAddress: seg.defenderAddress,
         defenderName: seg.defenderName,
         skillValue: seg.skillValue,
         turn: seg.turn,

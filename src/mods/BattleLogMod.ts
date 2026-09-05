@@ -133,6 +133,7 @@ export class BattleLogMod implements Mod {
     const ctx = invocation as any;
     ctx._calcAttackerAddr = args[0].toString();
     const defence = new Il2Cpp.Object(args[1]);
+    ctx._calcDefenderAddr = args[1].toString();
     ctx._calcDefenderName = getNameByTSKBattleNote(defence);
     ctx._calcKind =
       AttackType[parseArgument(args[8], "enum") as number] ?? "Unknown";
@@ -154,6 +155,7 @@ export class BattleLogMod implements Mod {
       attackerAddress: ctx._calcAttackerAddr,
       damage: BigInt(retval.toString()),
       kind: ctx._calcKind,
+      defenderAddress: ctx._calcDefenderAddr,
       defenderName: ctx._calcDefenderName,
       beforeRushCount: ctx._calcBeforeRush,
       rushCount: ctx._calcRush,
@@ -226,14 +228,15 @@ export class BattleLogMod implements Mod {
   ) => {
     const value = args[1].toString();
     const attackAddress = args[4].toString();
-    const isCritical = args[8].toInt32() != 0 ? "True" : "False";
+    // bool 参数在栈槽中只有低 8 位有效，高位是残留垃圾，必须 & 0xff
+    const isCritical = (args[8].toInt32() & 0xff) != 0 ? "True" : "False";
     this.tskBattleLog.addDamageNote(attackAddress, value, "Skill", isCritical);
   };
 
   private handleSetDamageValue: MethodEnterHandler = (_cls, _method, args) => {
     const value = args[1].toString();
     const attackAddress = args[5].toString();
-    const isCritical = args[4].toInt32() != 0 ? "True" : "False";
+    const isCritical = (args[4].toInt32() & 0xff) != 0 ? "True" : "False";
     this.tskBattleLog.addDamageNote(attackAddress, value, "Normal", isCritical);
   };
 
