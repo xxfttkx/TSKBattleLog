@@ -24,6 +24,10 @@ import { log } from "../utils";
  * 第 15 版策略：CModule 纯 native hook，零 JS 参与、零跨线程 invoke。
  * 第 16 版：双重校验防句柄复用误伤——C 表存句柄 + 创建时的 m_CachedPtr，
  * 命中句柄后比对 *(self+0x10)，不一致（复用死槽位）即放行。
+ * 第 17 版：scan 数据源弃用 Il2Cpp.gc.choose（liveness 计算 + stopWorld 暂停
+ * 全部游戏线程，大堆上几十 ms，三轮全压开场 = 前几回合卡顿主嫌疑），改为
+ * Initialize(args[4]) 的 notes List 直读：_items[i] -> TSKBattleNote.unitIcon
+ * (0x58) -> TSKBattleUnitIcon，纯内存读零 invoke；type==0（玩家队）才扫。
  * - replacement 是 C 函数（CModule 编译），在游戏线程直接执行：查 16 槽
  *   指针表命中看守对象 && value == 0.3f → 改传 1.0f 调原函数，否则放行。
  *   纳秒级开销，游戏原生路径零感知。
@@ -40,7 +44,8 @@ import { log } from "../utils";
  * 踩坑记录（详见 notes/archive.md）：
  * - get_name() 返回的名字自带双引号 → 比较前剥引号；Transform.Find 的 string 参数
  *   在本环境 invoke 会报 incorrect parameter types，孩子查找用枚举+剥引号比较
- * - gc.choose 混入已销毁对象，invoke 前先读 m_CachedPtr（偏移 0x10）判活
+ * - gc.choose 混入已销毁对象（引擎侧已 Destroy 但 C# 包装仍可达），invoke 前
+ *   先读 m_CachedPtr（偏移 0x10）判活
  * - 枚举孩子要逐孩子 try，别把整层包在一个 try 里
  * - Thread.backtrace 不传 context 只能得到垃圾帧（0xffffffff... 前缀），
  *   NativeCallback 内抓栈需另想办法（本功能最终不需要抓栈，工具已删）
@@ -125,13 +130,12 @@ let guardedNativeTable: NativePointer | null = null;
 let guardedCountPtr: NativePointer | null = null;
 let fixCountPtr: NativePointer | null = null;
 let lastFixCount = 0;
+/** Initialize(args[4]) 传入的玩家队 notes List 句柄（scanNotes 的数据源） */
+let notesListHandle: NativePointer = ptr(0);
+/** unitIcon 为空的提示只打一次（每场战斗重置） */
+let warnedNullIcon = false;
 
 export function gaugeViewOnTop(image: Il2Cpp.Image): void {
-  const cls = image.tryClass("TSKBattleUnitIcon");
-  if (!cls) {
-    log("[gauge-top] TSKBattleUnitIcon not found");
-    return;
-  }
   const teamCls = image.tryClass("TSKBattleTeam");
   if (!teamCls) {
     log("[gauge-top] TSKBattleTeam not found");
@@ -154,18 +158,22 @@ export function gaugeViewOnTop(image: Il2Cpp.Image): void {
   armNativeHook(image);
 
   Interceptor.attach(init.virtualAddress, {
-    onEnter() {
+    onEnter(args) {
       // 游戏线程清表：旧战斗对象的句柄出表，防句柄复用误伤；
-      // 2s 后 scan 重新盯住新战斗的分支根并重填
+      // 延迟 scan 重新盯住新战斗的分支根并重填
       clearGuardTable();
+      // 只扫玩家队（type==0；x64 栈槽高位不可信，按低 8 位判）：
+      // TSKBattleNote.unitIcon 仅玩家侧指向 TSKBattleUnitIcon
+      if ((args[5].toInt32() & 0xff) !== 0) return;
+      notesListHandle = args[4];
       for (const delay of SCAN_DELAYS) {
-        setTimeout(() => scan(cls, `t=${delay / 1000}s`), delay);
+        setTimeout(() => scanNotes(`t=${delay / 1000}s`), delay);
       }
     },
   });
 
   log(
-    `[gauge-top] armed: native hook + scan TSKBattleUnitIcon ${SCAN_DELAYS.map((d) => `${d / 1000}s`).join("/")} after battle init（无 JS 参与、无跨线程 invoke）`,
+    `[gauge-top] armed: native hook + notes(unitIcon) 直读 scan ${SCAN_DELAYS.map((d) => `${d / 1000}s`).join("/")} after battle init（零 gc.choose、零 stop-the-world）`,
   );
 }
 
@@ -231,6 +239,10 @@ function armNativeHook(image: Il2Cpp.Image): boolean {
 
 /** 清空看守表（战斗 Initialize 时调用，防旧句柄复用误伤） */
 function clearGuardTable(): void {
+  // 新战斗重新扫描：旧 seen 句柄可能被 GC 复用，必须一并清掉
+  // （放在守卫检查前：hook 挂载失败的诊断模式下也要重置）
+  seenInstances.clear();
+  warnedNullIcon = false;
   if (!guardedCountPtr) return;
   guardedList.length = 0;
   alphaGuarded.clear();
@@ -274,42 +286,64 @@ function isNativeAlive(obj: Il2Cpp.Object): boolean {
   }
 }
 
-function scan(cls: Il2Cpp.Class, tag: string): void {
-  let instances: Il2Cpp.Object[] = [];
-  try {
-    instances = Il2Cpp.gc.choose(cls);
-  } catch (e) {
-    log(`[gauge-top] ${tag} gc.choose failed: ${e}`);
-    return;
-  }
-
+/**
+ * 从 Initialize 的 notes List 参数直读图标实例：
+ * notesList._items[i] -> TSKBattleNote.unitIcon(0x58) -> TSKBattleUnitIcon。
+ * 全程字段/数组偏移的纯内存读，替代 Il2Cpp.gc.choose（liveness 计算要
+ * stopWorld 暂停全部游戏线程，大堆上几十 ms，三轮全压开场 = 前几回合
+ * 卡顿主嫌疑）。invoke 只剩 apply 的父链 walk：新图标才走，看守命中即短路。
+ */
+function scanNotes(tag: string): void {
+  if (notesListHandle.isNull()) return;
   let fresh = 0;
   let dead = 0;
-  for (const inst of instances) {
-    const key = inst.handle.toString();
-    if (!isNativeAlive(inst)) {
-      if (!seenInstances.has(key)) {
-        seenInstances.add(key);
-        dead++;
+  try {
+    const list = new Il2Cpp.Object(notesListHandle);
+    const items = list.field("_items")
+      .value as Il2Cpp.Array<Il2Cpp.Object> | null;
+    const size = list.field("_size").value as number;
+    for (let i = 0; items && size && i < size; i++) {
+      const note = items.get(i);
+      if (!note || note.handle.isNull()) continue;
+      const icon = note.field("unitIcon").value as Il2Cpp.Object | null;
+      if (!icon || icon.handle.isNull()) {
+        if (!warnedNullIcon) {
+          warnedNullIcon = true;
+          log(
+            `[gauge-top] ${tag} note[${i}].unitIcon 为空（图标未挂载，等下一轮）`,
+          );
+        }
+        continue;
       }
-      continue;
+      const key = icon.handle.toString();
+      if (!isNativeAlive(icon)) {
+        if (!seenInstances.has(key)) {
+          seenInstances.add(key);
+          dead++;
+        }
+        continue;
+      }
+      if (seenInstances.has(key)) continue;
+      seenInstances.add(key);
+      const wantDump = !dumped;
+      dumped = true;
+      try {
+        apply(icon, wantDump, tag);
+      } catch (e) {
+        log(`[gauge-top] ${tag} error: ${e}`);
+      }
+      fresh++;
     }
-    if (seenInstances.has(key)) continue;
-    seenInstances.add(key);
-    const wantDump = !dumped;
-    dumped = true;
-    try {
-      apply(inst, wantDump, tag);
-    } catch (e) {
-      log(`[gauge-top] ${tag} error: ${e}`);
-    }
-    fresh++;
+  } catch (e) {
+    log(`[gauge-top] ${tag} notes scan failed: ${e}`);
+    return;
   }
-  // 不做"无新实例也复查"：apply 是一长串 invoke Unity API，反复跑是
-  // 卡死/闪退风险源。常态保持靠 native hook（表驱动），无需复查。
   if (fresh > 0 || dead > 0) {
+    log(`[gauge-top] ${tag} scan: ${fresh} alive new (dead skipped: ${dead})`);
+  }
+  if (tag === "t=20s" && alphaGuarded.size === 0) {
     log(
-      `[gauge-top] ${tag} scan: ${fresh} alive new / ${instances.length} total (dead skipped: ${dead})`,
+      "[gauge-top] 三轮 scan 后看守表仍为空：unitIcon 可能一直未赋值，检查字段名/时序",
     );
   }
 }

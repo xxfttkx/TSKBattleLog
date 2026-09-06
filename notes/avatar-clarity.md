@@ -200,6 +200,24 @@ Unity 对象的恶果，这条路彻底封死**。
 JS 只做"找对象、填表、看计数"（控制面），逐次调用的过滤判断完全下沉到
 native（数据面）——思想类似 eBPF/XDP：控制面留在用户态，数据面下沉内核态。
 
+### 第 17 版：scan 数据源改为 notes 直读（当前形态）
+
+003220 回归通过后仍有"前几回合卡顿"，头号嫌疑是 scan 的 `Il2Cpp.gc.choose`：
+它不是查 UI 树，而是对整个 GC 堆做 **liveness 可达性计算**，期间
+`stopWorld()` 暂停全部游戏线程（bridge 实现：stopWorld → livenessAllocateStruct
+→ livenessCalculationFromStatics/Finalize → startWorld），大堆上一次几十 ms；
+2s/10s/20s 三轮全压开场，与卡顿时间窗吻合。它返回的是"GC 可达"对象，混着
+引擎侧已 Destroy 但 C# 包装仍可达的实例（15 total / 5 alive 的来源）。
+
+改法：图标实例不扫堆，沿数据链直读——`TSKBattleTeam.Initialize` 的 `args[4]`
+是 notes List（battle-log 同款读取），`_items[i]` → `TSKBattleNote.unitIcon`
+（偏移 0x58）→ `TSKBattleUnitIcon`，全程字段/数组偏移的纯内存读，零 invoke、
+零 stop-the-world。仅玩家队扫描（type==0，x64 栈槽按低 8 位判）；unitIcon 在
+onEnter 时可能未赋值（图标 UI 晚于数据层挂载），靠多轮 scan 兜底，t=20s 仍空
+则打日志提示。invoke 只剩 apply 的父链 walk（新图标才走，看守命中即短路）。
+顺带修一个旧隐患：跨场 scan 的 `seenInstances` 去重表此前不随战斗清空，
+句柄被 GC 复用时会漏扫新图标，现随 clearGuardTable 一并清空。
+
 ## 检验过程
 
 整个功能的验证依赖"日志证据链"，每轮测试都从 `logs/*_panel.log` 读结论：
