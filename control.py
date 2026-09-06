@@ -36,6 +36,7 @@ else:
 MODS_DIR = ROOT_DIR / "src" / "mods"
 MODS_JSON = ROOT_DIR / "mods.json"
 TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
+CHAR_SKILL_JSON = ROOT_DIR / "char_skill.json"
 LOG_DIR = ROOT_DIR / "logs"
 GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
@@ -99,11 +100,11 @@ def _parse_mod_manifest() -> list[dict]:
 # Agent -> Host（通过 Frida script.on("message")）
 #   type == "log"     : payload = {time, message}
 #   type == "modList" : payload = {mods: [{name, description, category, enabled}]}
-#   type == "modState": payload = {name, enabled}
 #
 # Host -> Agent（通过 script.post(...)）
-#   type == "toggle"      : {name, enabled}
-#   type == "traceConfig" : trace_config.json 全量内容（trace/backtrace/backtraceDepth）
+#   type == "initMods"   : mods.json 全量内容 {name: enabled}，modList 握手后下发一次
+#   type == "charSkill"  : char_skill.json 全量内容 {单位名: 技能优先级}
+#   type == "traceConfig": trace_config.json 全量内容（trace/backtrace/backtraceDepth）
 
 
 # ============== Frida 会话线程 ==============
@@ -143,14 +144,30 @@ class FridaBridge:
         except Exception as e:
             self._log_internal(f"[bridge] post {message.get('type')} 失败: {e}")
 
-    def toggle_mod(self, name: str, enabled: bool):
+    def post_init_mods(self):
+        """把 mods.json 全量下发给 agent——mod 启用/加载的唯一依据。
+        agent 初始全部禁用，收到后按配置启用并补 onLoad。"""
         if self.script is None:
+            self._log_internal("[bridge] 尚未注入，无法下发 initMods")
             return
         try:
-            self.script.post({"type": "toggle",
-                              "payload": {"name": name, "enabled": enabled}})
+            cfg = json.loads(MODS_JSON.read_text(encoding="utf-8"))
+            self.script.post({"type": "initMods", "payload": cfg})
+            self._log_internal("[bridge] initMods 已下发")
         except Exception as e:
-            self._log_internal(f"[bridge] toggle {name}={enabled} 失败: {e}")
+            self._log_internal(f"[bridge] 下发 initMods 失败: {e}")
+
+    def post_char_skill(self):
+        """把 char_skill.json 全量下发给 agent（auto-skill 的技能优先级表）"""
+        if self.script is None:
+            self._log_internal("[bridge] 尚未注入，无法下发 charSkill")
+            return
+        try:
+            cfg = json.loads(CHAR_SKILL_JSON.read_text(encoding="utf-8"))
+            self.script.post({"type": "charSkill", "payload": cfg})
+            self._log_internal("[bridge] charSkill 已下发")
+        except Exception as e:
+            self._log_internal(f"[bridge] 下发 charSkill 失败: {e}")
 
     def post_trace_config(self):
         """把 trace_config.json 全量下发给 agent（trace-config / backtrace 两个 mod 消费）"""
@@ -231,12 +248,13 @@ class FridaBridge:
                 )
             elif msg_type == "modList":
                 self.ui_queue.put(("modList", payload.get("mods", [])))
-                # 收到 modList 说明 agent 侧 recv 已注册完毕，此时下发调试观察点配置
+                # 收到 modList 说明 agent 侧 recv 已注册完毕。
+                # 顺序：先 initMods（agent 据此 onLoad 挂 hook），再 charSkill
+                # （模块级技能优先级表），最后 traceConfig
+                # （trace-config/backtrace 的 applyConfig 要求 onLoad 已执行）
+                self.post_init_mods()
+                self.post_char_skill()
                 self.post_trace_config()
-            elif msg_type == "modState":
-                self.ui_queue.put(
-                    ("modState", (payload.get("name"), payload.get("enabled")))
-                )
             elif msg_type == "unitList":
                 self.ui_queue.put(("unitList", payload))
             elif msg_type == "buffData":
@@ -554,11 +572,8 @@ class App(tk.Tk):
         self.bridge.post_trace_config()
 
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
-        enabled = bool(var.get())
-        # 只有 bridge.script 已就绪才实时推送给 agent；否则仅保存到 mods.json
-        # 作为启动注入时的初始值。
-        if self.bridge.script is not None:
-            self.bridge.toggle_mod(name, enabled)
+        # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
+        # 注入后复选框已冻结，本回调不会再触发。
         self._save_mods_json()
 
     def _clear_log(self):
@@ -620,8 +635,6 @@ class App(tk.Tk):
                     self._append_log(*data)
                 elif kind == "modList":
                     self._apply_mod_list(data)
-                elif kind == "modState":
-                    self._apply_mod_state(*data)
                 elif kind == "error":
                     self._append_log(time.strftime("%H:%M:%S.") +
                                      f"{int(time.time()*1000)%1000:03d}",
@@ -642,7 +655,8 @@ class App(tk.Tk):
         self.after(80, self._poll_queue)
 
     def _apply_mod_list(self, mods: list[dict]):
-        # agent 的 modList 反映的是 build 时打包进 agent.js 的旧配置；
+        # agent 上报的 modList 只用于同步分类/描述元数据（其 enabled 恒为 false：
+        # agent 初始全禁用，开关以 initMods 下发的 mods.json 为准）；
         # 保留用户在 GUI 里的勾选意图（preserve_state），不做反向覆盖
         for m in mods:
             self._upsert_mod_row(
@@ -653,35 +667,13 @@ class App(tk.Tk):
                 preserve_state=True,
             )
 
-        # 把 GUI 勾选状态与 agent 实际状态做 diff，差异的下发 toggle。
-        # agent 收到 enabled=true 且未加载的 mod 会补执行 onLoad（运行时启用），
-        # enabled=false 只置标志（hook 已挂的由守卫跳过）。
-        synced = 0
-        for m in mods:
-            name = m.get("name", "?")
-            if name not in self.mod_vars:
-                continue
-            desired = bool(self.mod_vars[name].get())
-            if desired != bool(m.get("enabled", False)):
-                self.bridge.toggle_mod(name, desired)
-                synced += 1
-        if synced > 0:
-            t = time.strftime("%H:%M:%S.") + f"{int(time.time()*1000)%1000:03d}"
-            self._append_log(
-                t, f"[bridge] 按面板勾选同步 {synced} 个 mod 开关到 agent"
-            )
-
-        # 状态栏以面板勾选为准（同步消息随后由 agent 确认）
+        # 状态栏以面板勾选为准
         desired_enabled = sum(
             1 for m in mods
             if m.get("name") in self.mod_vars
             and self.mod_vars[m["name"]].get()
         )
         self.status_var.set(f"已加载 {desired_enabled}/{len(mods)} 个 mod")
-
-    def _apply_mod_state(self, name: str, enabled: bool):
-        if name in self.mod_vars:
-            self.mod_vars[name].set(bool(enabled))
 
     # ---- 出战角色头像栏 / buff 查询 ----
 

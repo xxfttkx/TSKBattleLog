@@ -117,8 +117,3 @@ export function publishModList(mods: Mod[]) {
     })),
   });
 }
-
-/** 宿主侧开关变更时推送一条状态确认消息 */
-export function publishModState(name: string, enabled: boolean) {
-  sendHost("modState", { name, enabled });
-}

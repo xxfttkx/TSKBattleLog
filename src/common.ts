@@ -1,5 +1,21 @@
 import charSkill from "../char_skill.json";
-const skillMap = new Map<string, number>(Object.entries(charSkill));
+
+// 技能优先级表：先用构建时内联的 char_skill.json 填充（无宿主的 frida CLI /
+// run.ps1 模式下直接生效）；宿主 control.py 握手后通过 charSkill 消息下发磁盘
+// 最新值覆盖重填。Map 引用保持不变，消费方零改动。
+const skillMap = new Map<string, number>(
+  Object.entries(charSkill) as [string, number][],
+);
+
+/** 宿主下发 char_skill.json 全量内容：清空并重填技能优先级表 */
+export function applyCharSkill(config: Record<string, number>): void {
+  skillMap.clear();
+  if (config && typeof config === "object") {
+    for (const [k, v] of Object.entries(config)) {
+      if (typeof v === "number") skillMap.set(k, v);
+    }
+  }
+}
 
 enum TeamType {
   Player = 0,

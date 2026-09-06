@@ -1,6 +1,6 @@
 import "frida-il2cpp-bridge";
 import { log, sendHost } from "./utils";
-import { Mod, publishModList, publishModState } from "./mod";
+import { Mod, publishModList } from "./mod";
 import { BattleLogMod } from "./mods/BattleLogMod";
 import { QteMod } from "./mods/QteMod";
 import { AutoSkillMod } from "./mods/AutoSkillMod";
@@ -11,6 +11,7 @@ import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { TraceEntry } from "./mods/TraceConfigMod";
 import { FieldWatchMod } from "./mods/FieldWatchMod";
 import { getSkillEffects } from "./debug/skillEffects";
+import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
 
 const mods: Mod[] = [
@@ -23,6 +24,15 @@ const mods: Mod[] = [
   new BacktraceMod(),
   new FieldWatchMod(),
 ];
+
+// mod 初始开关取构建时内联的 mods.json 快照：无宿主的 frida CLI（run.ps1）模式
+// 下直接以此生效；宿主 control.py 握手后会通过 initMods 下发磁盘最新值覆盖。
+for (const mod of mods) {
+  const enabled = (modsConfig as Record<string, boolean>)[mod.name];
+  if (enabled !== undefined) {
+    mod.enabled = enabled;
+  }
+}
 
 /**
  * recv 是一次性的：回调里重新注册自身，实现持续监听宿主消息。
@@ -51,16 +61,10 @@ Il2Cpp.perform(() => {
 
   const image = Il2Cpp.domain.assembly("Assembly-CSharp").image;
 
-  // 初始开关：以 mods.json 为默认值（宿主后续可覆盖）
-  for (const mod of mods) {
-    const enabled = (modsConfig as Record<string, boolean>)[mod.name];
-    if (enabled !== undefined) {
-      mod.enabled = enabled;
-    }
-  }
-
   const loadedMods = new Set<string>();
 
+  // 按内联 mods.json 做初始加载（run.ps1 无宿主时的工作路径）；
+  // 有宿主时 initMods 随后下发磁盘最新值，差异的 mod 在此处理器中补 onLoad/置标志
   for (const mod of mods) {
     if (mod.enabled) {
       log(`[loader] load mod: ${mod.name}`);
@@ -71,22 +75,27 @@ Il2Cpp.perform(() => {
     }
   }
 
-  // 先注册消息接收，再上报 mod 清单（宿主收到 modList 后才会下发 traceConfig，
-  // 保证下发时 recv 已就绪）
-  armRecv("toggle", (data: { name: string; enabled: boolean }) => {
-    const mod = mods.find((m) => m.name === data.name);
-    if (mod) {
-      mod.enabled = !!data.enabled;
-      // 首次启用时才 onLoad（注册 hook），关闭的 mod 不预注册
+  // 先注册消息接收，再上报 mod 清单（宿主收到 modList 后才会下发
+  // initMods/charSkill/traceConfig，保证下发时 recv 已就绪）
+  armRecv("initMods", (config: Record<string, boolean>) => {
+    // 宿主下发 mods.json 全量内容：据此启用并加载 mod。
+    // 复选框注入后冻结，本消息整个会话只处理一次。
+    for (const mod of mods) {
+      mod.enabled = !!config[mod.name];
       if (mod.enabled && !loadedMods.has(mod.name)) {
-        log(`[loader] load mod: ${mod.name} (runtime enable)`);
+        log(`[loader] load mod: ${mod.name}`);
         mod.onLoad(image);
         loadedMods.add(mod.name);
-      } else {
-        log(`[loader] ${mod.enabled ? "enable" : "disable"} mod: ${mod.name}`);
+      } else if (!mod.enabled) {
+        log(`[loader] skip mod: ${mod.name} (disabled)`);
       }
-      publishModState(mod.name, mod.enabled);
     }
+  });
+
+  // 技能优先级配置（char_skill.json）：模块级 skillMap，不依赖 mod onLoad 顺序
+  armRecv("charSkill", (cfg: Record<string, number>) => {
+    applyCharSkill(cfg ?? {});
+    log(`[loader] charSkill applied: ${Object.keys(cfg ?? {}).length} entries`);
   });
 
   armRecv("traceConfig", (cfg: any) => {
