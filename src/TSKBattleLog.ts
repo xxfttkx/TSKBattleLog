@@ -264,7 +264,9 @@ export class TSKBattleLog {
       );
     }
     const unisonValue =
-      Number(this.unisonDamageTotal) / Number(this.damageTotal);
+      this.damageTotal === BigInt(0)
+        ? 0
+        : Number(this.unisonDamageTotal) / Number(this.damageTotal);
     const unisonPercentage = `${(unisonValue * 100).toFixed(0)}%`;
     log(
       `[TSKBattleLog] unison damage=${this.unisonDamageTotal}(${unisonPercentage})`,
@@ -272,6 +274,8 @@ export class TSKBattleLog {
   }
 
   getDamagePercentage(damage: bigint): string {
+    // 战斗刚开始 damageTotal=0，除零会显示 NaN%
+    if (this.damageTotal === BigInt(0)) return "0%";
     const value = Number(damage) / Number(this.damageTotal);
     return `${(value * 100).toFixed(0)}%`;
   }

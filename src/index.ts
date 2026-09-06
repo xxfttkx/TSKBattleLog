@@ -10,6 +10,7 @@ import { TraceConfigMod } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { TraceEntry } from "./mods/TraceConfigMod";
 import { FieldWatchMod } from "./mods/FieldWatchMod";
+import { AvatarClarityMod } from "./mods/AvatarClarityMod";
 import { getSkillEffects } from "./debug/skillEffects";
 import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
@@ -23,6 +24,7 @@ const mods: Mod[] = [
   new TraceConfigMod(),
   new BacktraceMod(),
   new FieldWatchMod(),
+  new AvatarClarityMod(),
 ];
 
 // mod 初始开关取构建时内联的 mods.json 快照：无宿主的 frida CLI（run.ps1）模式

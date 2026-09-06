@@ -282,3 +282,43 @@ Windows x64 ABI 中 bool 参数在栈槽里只有低 8 位有效，高位是残�
 栈槽高位残留同样会出现在 int 参数上：`CaluculationNormalDamage` 的 `args[11]`（multipleCount）
 在段号为 0 时读到 `0x7ffe00000000`（残留地址碎片 + 低 32 位真实的 0）。`toInt32()` 只取低 32 位
 碰巧无碍，但说明栈传参的槽位高位一律不可信。
+
+## hook ..ctor 零命中
+Unity 的 `MonoBehaviour` 派生类（如 `TSKBattleUnitIcon`）由引擎经 `Instantiate`/克隆/`AddComponent` 创建，
+**不会执行托管 `.ctor`**，`Interceptor.attach` 挂上去整场战斗都等不到调用。
+要拿存活实例用 `Il2Cpp.gc.choose(image.tryClass("XXX"))`（扫 GC 堆，别高频轮询），
+再配一个业务方法（如 `TSKBattleTeam.Initialize`）做触发时机 + `setTimeout` 延迟等 UI 树建完。
+
+## get_name() 返回的名字自带双引号
+本环境（Unity 2021.3.25f1 + frida-il2cpp-bridge）下 `String(obj.method("get_name").invoke())`
+返回的名字**首尾带双引号字符**，如 `'"TimeLine"'`。直接与 `"TimeLine"` 做相等比较永远失败，
+且日志里表现为双重引号（`""UnitPlayerIconRoot""`），非常隐蔽。
+gaugeTop 找 TimeLine 连续两轮失败都是这个原因（表现为 "not found"，实际节点就在 MainRoot 下）。
+
+解决办法：比较前 `replace(/"/g, "")` 剥引号；或者根本不走字符串比较，
+优先用 Unity 原生 `transform.Find("TimeLine")`（引擎内部按真实名字比较，无此问题）。
+
+排查这类问题时可以打印一层孩子列表做对照：如果 `childNames` 能看到目标名字
+而 `findChild` 返回 -1，基本就是名字内容和你以为的不一样。
+
+## gc.choose 混入已销毁对象，invoke 前先查 m_CachedPtr
+`Il2Cpp.gc.choose` 扫出的是托管侧仍被引用的对象，native 侧可能早已 `Destroy`。
+对死对象 invoke 会抛 `Error: system error`（实测 30 个实例里 25 个是死的），
+而且是未定义行为，有一次直接把游戏卡死。
+
+invoke 前先读 `UnityEngine.Object` 的第一个实例字段 `m_CachedPtr`
+（x64 下偏移 0x10，`Destroy` 后引擎置 0，这正是 Unity `== null` 判空的实现）：
+
+```typescript
+function isNativeAlive(obj: Il2Cpp.Object): boolean {
+  try {
+    return !obj.handle.add(0x10).readPointer().isNull();
+  } catch {
+    return true; // 读不到就保守放行
+  }
+}
+```
+
+只读内存不 invoke，对死对象也安全。另外 `try { 整层枚举 } catch` 的写法有陷阱：
+枚举孩子时只要有一个失效节点抛错就会把整层结果吞掉，
+要**逐孩子 try** 跳过，别把整层包在一个 try 里。

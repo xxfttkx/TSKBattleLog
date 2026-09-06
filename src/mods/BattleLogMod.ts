@@ -8,6 +8,7 @@ import {
   traceMethodByName,
   dumpArgsHandler,
 } from "../mod";
+import { gaugeViewOnTop } from "../debug/gaugeTop";
 
 /** 战斗伤害统计（观察型） */
 export class BattleLogMod implements Mod {
