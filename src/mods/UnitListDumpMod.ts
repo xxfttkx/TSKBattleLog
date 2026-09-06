@@ -51,5 +51,11 @@ export class UnitListDumpMod implements Mod {
     const sister_unit_list = TeamUnitListEntity.field("sister_unit_list")
       .value as Il2Cpp.Array<Il2Cpp.Object>;
     log(`sister_unit_list length: ${sister_unit_list.length}`);
+    const sister_units: Record<string, any>[] = [];
+    for (let i = 0; i < sister_unit_list.length; i++) {
+      sister_units.push(dumpIl2CppObject(sister_unit_list.get(i), 3));
+    }
+    saveJson("sister_unit_list.json", sister_units);
+    log(`sister_unit_list saved to sister_unit_list.json`);
   };
 }
