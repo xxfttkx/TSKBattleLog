@@ -8,9 +8,13 @@ TSKBattleLog 捕获并分析游戏运行时的战斗事件——伤害、技能�
 
 ## 截图
 
-![控制面板](screenshots/gui.png)
+![MODs 标签页](screenshots/gui_mods.png)
 
-*悬浮控制面板：mod 开关、敌我单位栏与实时战斗日志*
+*MODs 标签页：按分类分组的 mod 开关*
+
+![Logs 标签页](screenshots/gui_logs.png)
+
+*Logs 标签页：实时战斗日志查看器，带清空 / 复制 / 打开日志目录*
 
 ![Skill Effects 弹窗](screenshots/skill_effects.png)
 
@@ -101,7 +105,8 @@ pip install frida frida-tools
 | `battle-log`        | 观察 | 打印战斗相关各种信息（伤害统计、多段分组、回合、战斗结算）                                          |
 | `unit-list-dump`    | 观察 | 角色界面进行筛选或排序操作时将所有单位属性导出到 `unit_list.json`                                   |
 | `qte-perfect`       | 修改 | 战斗开始时的 QTE 结果强制 PERFECT                                                                   |
-| `auto-skill`        | 修改 | auto模式下按 `char_skill.json` 配置自动选择 EX1/EX2                                                 |
+| `auto-skill`        | 修改 | auto 模式下按 `char_skill.json` 配置自动选择 EX1/EX2                                                 |
+| `avatar-clarity`    | 修改 | 通过 CModule native hook 拦截 `CanvasGroup.set_alpha`，使角色头像 UI（buff 图标、觉醒标记）常态不半透明 |
 | `damage-calc-trace` | 调试 | 打印伤害计算相关的各个参数——日志量非常大                                                            |
 | `trace-config`      | 调试 | 按 `trace_config.json` 批量注册参数 dump 观察点（改 JSON 后点面板重载配置即生效）                    |
 | `backtrace`         | 调试 | 按 `trace_config.json` 在指定方法进入时打印 IL2CPP 调用栈                                           |

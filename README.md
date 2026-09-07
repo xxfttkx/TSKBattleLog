@@ -8,9 +8,13 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 
 ## Screenshots
 
-![Control panel](screenshots/gui.png)
+![MODs tab](screenshots/gui_mods.png)
 
-*Floating control panel: mod toggles, player/enemy unit bars and the live battle log*
+*MODs tab: mod toggles grouped by category*
+
+![Logs tab](screenshots/gui_logs.png)
+
+*Logs tab: real-time battle log viewer with clear / copy / open logs folder*
 
 ![Skill Effects window](screenshots/skill_effects.png)
 
@@ -102,6 +106,7 @@ Every feature is its own mod under `src/mods/`. `mods.json` holds the default en
 | `unit-list-dump`    | Observer | On filtering/sorting in the character screen, exports all unit attributes to `unit_list.json`                |
 | `qte-perfect`       | Modifier | Forces the battle-start QTE result to PERFECT                                                                |
 | `auto-skill`        | Modifier | In auto mode, picks EX1/EX2 automatically per `char_skill.json`                                              |
+| `avatar-clarity`    | Modifier | Keeps character avatar UI (buff icons, awakening indicators) fully opaque during normal gameplay via a native CModule hook on `CanvasGroup.set_alpha` |
 | `damage-calc-trace` | Debug    | Prints damage calculation parameters — very verbose                                                          |
 | `trace-config`      | Debug    | Bulk-registers arg-dump trace points from `trace_config.json` (edit JSON, then press reload on the panel)    |
 | `backtrace`         | Debug    | Prints an IL2CPP call stack on entry of methods listed in `trace_config.json`                                |
