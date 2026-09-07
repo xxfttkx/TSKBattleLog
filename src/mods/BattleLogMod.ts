@@ -171,18 +171,22 @@ export class BattleLogMod implements Mod {
     const hp = parseInt(args[1].toString(), 16);
     const maxHp = parseInt(args[2].toString(), 16);
     const stun = parseInt(args[3].toString(), 16);
-    const notesList = new Il2Cpp.Object(args[4]);
+    // x64 栈槽高位一律不可信（与 bool 参数同一规则）：type/mode 值域 ⊆ 0~7，
+    // 只读低 8 位；overHealRate 是 Int32（20000 > 255），读低 32 位
+    // 踩坑记录见 notes/archive.md
+    const type = args[5].toInt32() & 0xff;
+    const mode = args[6].toInt32() & 0xff;
+    const overHealRate = args[7].toInt32() >>> 0;
 
+    const notesList = new Il2Cpp.Object(args[4]);
     const notes = notesList.field("_items")
       .value as Il2Cpp.Array<Il2Cpp.Object>;
     const notesSize = notesList.field("_size").value as number;
-    const type = parseInt(args[5].toString(), 16);
-    const mode = parseInt(args[6].toString(), 16);
-    const overHealRate = parseInt(args[7].toString(), 16);
-    // 直接使用枚举的反向映射
-    const modeName = BattleMode[mode]; // "DamageChallengeAtMode"
-    const teamType = type == 0 ? "Player" : type == 1 ? "Enemy" : "Unknown";
-    if (teamType === "Unknown") {
+    // 枚举反向映射；低 8 位也脏时显示 raw 值便于诊断
+    const modeName = BattleMode[mode] ?? `raw:${mode}`;
+    const teamType =
+      type == 0 ? "Player" : type == 1 ? "Enemy" : `Unknown(type=${type})`;
+    if (type != 0 && type != 1) {
       log(`Unknown team type: ${type}`);
     }
 
@@ -199,7 +203,16 @@ export class BattleLogMod implements Mod {
     for (let i = 0; i < notesSize; i++) {
       const note = notes.get(i);
       const unitData = note.field("<UnitData>k__BackingField")
-        .value as Il2Cpp.Object;
+        .value as Il2Cpp.Object | null;
+      if (!unitData || unitData.handle.isNull()) {
+        // 敌方某些模式下 UnitData 未赋值，跳过以免 access violation
+        units.push({
+          address: note.handle.toString(),
+          unitName: "???",
+          characterName: "???",
+        });
+        continue;
+      }
       const unitName =
         (unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String)
           ?.content ?? "";

@@ -283,6 +283,37 @@ Windows x64 ABI 中 bool 参数在栈槽里只有低 8 位有效，高位是残�
 在段号为 0 时读到 `0x7ffe00000000`（残留地址碎片 + 低 32 位真实的 0）。`toInt32()` 只取低 32 位
 碰巧无碍，但说明栈传参的槽位高位一律不可信。
 
+## TSKBattleTeam.Initialize 枚举/int 参数读出垃圾值
+现象：普通关卡战斗里玩家队 Initialize 打出 `Unknown team type` / `mode=undefined` /
+`overHealRate=140724603473440` 一类垃圾值，而同场敌方队完全正常；换战斗类型后
+正常与否也会变。与调用次序无关，纯属参数读取姿势不对。
+
+原因（与上面的 bool 坑同源，x64 栈槽高位一律不可信）：
+- `args[5]`（TeamType）和 `args[6]`（BattleMode）是枚举，值域只有 0~7。小值域枚举
+  在调用点可能按 1 字节传参，x64 栈槽只有低 8 位有效，其余是之前调用留下的残留，
+  且残留模式与战斗类型相关——这解释了"有的类型正常有的不正常"。
+- 直接 `toInt32()` 把高位脏位一起带出来 → 枚举反向映射查不到 → `mode=undefined`。
+- `args[7]`（overHealRate，Int32）原先用 `parseInt(args[7].toString(), 16)` 读——
+  `args[i].toString()` 是把参数当指针打的地址字符串，读出来自然是地址碎片；
+  Int32 参数应走 `toInt32()`（本身只取低 32 位，不受高 32 位残留影响）。
+
+解决：
+```typescript
+const type = args[5].toInt32() & 0xff;          // 枚举值域 0~7，只信低 8 位
+const mode = args[6].toInt32() & 0xff;          // BattleMode 同理
+const overHealRate = args[7].toInt32() >>> 0;   // Int32，低 32 位按无符号显示
+```
+枚举反向映射加 raw 兜底，低 8 位也全脏时显示原始值便于诊断：
+`BattleMode[mode] ?? "raw:" + mode`。
+
+验证（logs/20260907_202637）：普通关卡玩家队 `mode=Normal overHealRate=20000`、
+敌方三波全部 `mode=Normal overHealRate=0`，垃圾值消失。
+
+教训：栈槽参数**一律按类型/值域掩码读取**——bool 用 `& 0xff != 0`、小枚举 `& 0xff`、
+int 用 `>>> 0`。也别想靠多读几个参数碰运气（mod.ts 的 argsCopy 方案已回退）：
+残留内容取决于调用方路径，读得越多错得越离谱。掩码救不回整段被覆盖的低位，
+那种情况只能 dump 原始槽值或换调用方间接获取。
+
 ## hook ..ctor 零命中
 Unity 的 `MonoBehaviour` 派生类（如 `TSKBattleUnitIcon`）由引擎经 `Instantiate`/克隆/`AddComponent` 创建，
 **不会执行托管 `.ctor`**，`Interceptor.attach` 挂上去整场战斗都等不到调用。
