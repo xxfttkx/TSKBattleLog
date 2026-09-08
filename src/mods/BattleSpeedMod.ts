@@ -51,6 +51,8 @@ export class BattleSpeedMod implements Mod {
     };
 
     const battleMain = image.class("TSKBattleMain");
+    // BattleUpdate 是战斗驱动循环（实测战斗中 ~37fps 调用，非回合推进），
+    // 在此每帧维持 timeScale
     Interceptor.attach(battleMain.method("BattleUpdate").virtualAddress, {
       onEnter: apply,
     });
