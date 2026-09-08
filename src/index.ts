@@ -14,6 +14,7 @@ import { AvatarClarityMod } from "./mods/AvatarClarityMod";
 import { getSkillEffects } from "./debug/skillEffects";
 import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
+import { BattleSpeedMod } from "./mods/BattleSpeedMod";
 
 const mods: Mod[] = [
   new BattleLogMod(),
@@ -25,6 +26,7 @@ const mods: Mod[] = [
   new BacktraceMod(),
   new FieldWatchMod(),
   new AvatarClarityMod(),
+  new BattleSpeedMod(),
 ];
 
 // mod 初始开关取构建时内联的 mods.json 快照：无宿主的 frida CLI（run.ps1）模式

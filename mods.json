@@ -3,6 +3,7 @@
   "avatar-clarity": true,
   "backtrace": false,
   "battle-log": true,
+  "battle-speed": true,
   "damage-calc-trace": false,
   "field-watch": false,
   "qte-perfect": true,
