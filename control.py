@@ -569,6 +569,8 @@ class App(tk.Tk):
         self.notebook.select(1)
 
     def _reload_trace_config(self):
+        # charSkill 是模块级 skillMap（清表重填），不依赖 mod onLoad，随时可下发
+        self.bridge.post_char_skill()
         self.bridge.post_trace_config()
 
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
