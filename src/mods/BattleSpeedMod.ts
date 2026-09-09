@@ -1,16 +1,47 @@
 import { log } from "../utils";
 import { Mod } from "../mod";
 
-/** 战斗倍速（修改型） */
+/**
+ * 战斗倍速（修改型）。
+ *
+ * 方案：每帧直接写 UnityEngine.Time.set_timeScale(SPEED)（看门狗式维持）。
+ *
+ * 为什么不走游戏自己的速度通道：TSKBattleConfig.SetGameSpeed() 最终也是调
+ * Time.set_timeScale（IL2CPP 下 icall 按字符串 "UnityEngine.Time::set_timeScale
+ * (System.Single)" 懒解析缓存），换算公式 timeScale = gameSpeed*0.5+1。
+ * 但静态字段 TSKBattleConfig.gameSpeed（static_fields+0x4）是要同步给服务器的
+ * 设置值，不能改；且 SetGameSpeed 受 TSKBattleConfig.ignoreChangeSpeed(static_fields+0x8) 锁标志保护（慢动作/
+ * 过场时置位，阻止恢复档位冲掉演出 timeScale）。直写 timeScale 既不碰服务端
+ * 状态，又能连慢动作演出一起快进（绕过锁标志，正是想要的效果）。
+ *
+ * 锚点 TSKBattleMain.BattleUpdate 实测为战斗驱动循环（~37fps 逐帧调用，
+ * TSKBattleMain 无 Unity 原生 Update 消息），在游戏线程内 invoke 无跨线程风险。
+ * timeScale==0 是游戏主动暂停，不覆盖；战斗结算 InitializeResult 写回 1；
+ * 异常退出路径游戏自己的清理也会恢复（已实测）。
+ *
+ * 倍率由宿主通过 battleSpeed 消息运行时下发（面板工具栏下拉框，属个人偏好，
+ * 存 gui_config.json）；不依赖 onLoad 时机：applyConfig 只更新目标值，
+ * 看门狗下一帧即按新值维持。无宿主 run.ps1 使用内置默认 2.0。
+ */
 export class BattleSpeedMod implements Mod {
   name = "battle-speed";
   category = "修改" as const;
   description =
-    "战斗中 2 倍速（Time.timeScale；游戏暂停时不干预，战斗结束自动恢复）";
+    "战斗倍速（Time.timeScale；倍率在面板工具栏调整，暂停不干预，战斗结束自动恢复）";
   enabled = true;
 
-  /** 目标倍速：想改倍率改这里（3.0 即 3 倍速） */
-  private static readonly SPEED = 2.0;
+  /** 目标倍速：默认 2.0，宿主可通过 applyConfig 运行时下发（1.0~10.0） */
+  speed = 2.0;
+
+  /** 宿主下发倍率（battleSpeed 消息 {speed}）。onLoad 前后均可调用。 */
+  applyConfig(speed: number): void {
+    if (typeof speed !== "number" || !isFinite(speed)) return;
+    const clamped = Math.min(10, Math.max(1, speed));
+    if (clamped !== this.speed) {
+      log(`[battle-speed] 倍率: ${this.speed} -> ${clamped}`);
+      this.speed = clamped;
+    }
+  }
 
   onLoad(image: Il2Cpp.Image): void {
     // 查找 UnityEngine.Time：不预设程序集名/命名空间，遍历所有程序集，
@@ -24,21 +55,22 @@ export class BattleSpeedMod implements Mod {
     const getTimeScale = timeCls.method("get_timeScale");
     const setTimeScale = timeCls.method("set_timeScale");
     log(`[battle-speed] Time 类定位: ${timeCls.namespace}.${timeCls.name}`);
-    const SPEED = BattleSpeedMod.SPEED;
     const self = this;
     let errorLogged = false;
 
     // 每帧维持/恢复倍速。均在游戏线程内 invoke（BattleUpdate 是战斗主循环），
     // 无跨线程 invoke 风险；每帧仅 1~2 次静态 icall，开销可忽略。
-    // timeScale == 0 是游戏主动暂停，不覆盖；mod 禁用时把倍速恢复为 1。
+    // 目标倍率 self.speed 可被宿主运行时更新；timeScale == 0 是游戏主动暂停，
+    // 不覆盖；mod 禁用时把当前倍速恢复为 1。
     const apply = (): void => {
       try {
         const cur = getTimeScale.invoke() as number;
+        const target = self.speed;
         if (self.enabled) {
-          if (cur !== 0 && Math.abs(cur - SPEED) > 1e-6) {
-            setTimeScale.invoke(SPEED);
+          if (cur !== 0 && Math.abs(cur - target) > 1e-6) {
+            setTimeScale.invoke(target);
           }
-        } else if (Math.abs(cur - SPEED) < 1e-6) {
+        } else if (Math.abs(cur - target) < 1e-6) {
           setTimeScale.invoke(1);
         }
         errorLogged = false;
@@ -73,7 +105,7 @@ export class BattleSpeedMod implements Mod {
     );
 
     log(
-      `[battle-speed] armed: 战斗中 timeScale=${SPEED}（暂停不干预，结算恢复 1）`,
+      `[battle-speed] armed: 战斗中 timeScale=${this.speed}（暂停不干预，结算恢复 1）`,
     );
   }
 

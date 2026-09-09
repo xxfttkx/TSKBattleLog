@@ -118,6 +118,16 @@ Il2Cpp.perform(() => {
     );
   });
 
+  // 战斗倍速（battle-speed）：宿主面板下拉框下发，目标值类配置，onLoad 前后均可
+  armRecv("battleSpeed", (cfg: any) => {
+    const speedMod = mods.find((m) => m instanceof BattleSpeedMod) as
+      | BattleSpeedMod
+      | undefined;
+    const speed =
+      cfg && typeof cfg === "object" ? (cfg.speed as number) : (cfg as number);
+    speedMod?.applyConfig(Number(speed));
+  });
+
   // 宿主点击头像查询单位 buff（skillEffectList）+ 实时战斗属性
   armRecv("buffRequest", (data: { address: string }) => {
     try {

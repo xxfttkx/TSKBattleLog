@@ -181,6 +181,16 @@ class FridaBridge:
         except Exception as e:
             self._log_internal(f"[bridge] 下发 traceConfig 失败: {e}")
 
+    def post_battle_speed(self):
+        """下发战斗倍速给 battle-speed mod（运行时可多次调用，立即生效）"""
+        if self.script is None:
+            return
+        try:
+            self.script.post(
+                {"type": "battleSpeed", "payload": {"speed": self.battle_speed}})
+        except Exception as e:
+            self._log_internal(f"[bridge] 下发 battleSpeed 失败: {e}")
+
     # ------- 内部 -------
 
     def _run(self):
@@ -249,12 +259,13 @@ class FridaBridge:
             elif msg_type == "modList":
                 self.ui_queue.put(("modList", payload.get("mods", [])))
                 # 收到 modList 说明 agent 侧 recv 已注册完毕。
-                # 顺序：先 initMods（agent 据此 onLoad 挂 hook），再 charSkill
-                # （模块级技能优先级表），最后 traceConfig
-                # （trace-config/backtrace 的 applyConfig 要求 onLoad 已执行）
+                # 顺序：initMods（onLoad 挂 hook）→ charSkill（模块级技能表）
+                # → traceConfig（applyConfig 要求 onLoad 已执行）→ battleSpeed
+                # （battle-speed 目标倍率，目标值类配置，onLoad 前后均可）
                 self.post_init_mods()
                 self.post_char_skill()
                 self.post_trace_config()
+                self.post_battle_speed()
             elif msg_type == "unitList":
                 self.ui_queue.put(("unitList", payload))
             elif msg_type == "buffData":
@@ -296,6 +307,8 @@ class App(tk.Tk):
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
+        # 下拉框初值来自 gui_config（个人偏好），同步给 bridge 供握手下发
+        self.bridge.battle_speed = self._read_battle_speed()
         self._load_mods_json_defaults()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -331,6 +344,19 @@ class App(tk.Tk):
             toolbar, text="隐藏单位栏", variable=self.hide_units_var,
             command=self._toggle_units_visibility,
         ).pack(side="left", padx=4)
+
+        # 战斗倍速（battle-speed mod 目标倍率，注入前后均可改，运行时即时生效）
+        ttk.Label(toolbar, text="战斗倍速").pack(side="left", padx=(12, 2))
+        self.battle_speed_var = tk.StringVar(
+            value=f"{self._read_battle_speed():g}x")
+        speed_combo = ttk.Combobox(
+            toolbar, textvariable=self.battle_speed_var,
+            values=["1x", "1.5x", "2x", "3x"], width=4,
+            state="readonly", justify="center",
+        )
+        speed_combo.pack(side="left")
+        speed_combo.bind("<<ComboboxSelected>>",
+                         lambda _e: self._on_battle_speed_change())
 
         ttk.Button(toolbar, text="清空日志", command=self._clear_log).pack(
             side="right", padx=4
@@ -573,6 +599,30 @@ class App(tk.Tk):
         self.bridge.post_char_skill()
         self.bridge.post_trace_config()
 
+    def _on_battle_speed_change(self):
+        """倍速下拉框变更：同步 bridge + 持久化到 gui_config + 已注入则即时下发"""
+        try:
+            speed = float(self.battle_speed_var.get().rstrip("x"))
+        except ValueError:
+            return
+        if not (1.0 <= speed <= 10.0):
+            return
+        self.bridge.battle_speed = speed
+        self._save_gui_config()
+        if self._started:
+            self.bridge.post_battle_speed()
+
+    def _read_battle_speed(self) -> float:
+        """读 gui_config.json 的 battleSpeed（个人偏好），缺失/非法回退 2.0"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            speed = float(cfg.get("battleSpeed", 2.0))
+            if 1.0 <= speed <= 10.0:
+                return speed
+        except Exception:
+            pass
+        return 2.0
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
         # 注入后复选框已冻结，本回调不会再触发。
@@ -606,18 +656,30 @@ class App(tk.Tk):
         except Exception:
             pass
 
-    def _save_geometry(self):
-        """保存当前窗口位置与大小到 gui_config.json"""
+    def _save_gui_config(self):
+        """保存窗口几何与战斗倍速（个人偏好）到 gui_config.json，失败静默"""
         try:
+            cfg: dict = {}
+            if GUI_CONFIG.exists():
+                try:
+                    cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+                except Exception:
+                    cfg = {}
+            cfg["geometry"] = self.geometry()
+            try:
+                cfg["battleSpeed"] = float(
+                    self.battle_speed_var.get().rstrip("x"))
+            except Exception:
+                pass
             GUI_CONFIG.write_text(
-                json.dumps({"geometry": self.geometry()}, indent=2),
+                json.dumps(cfg, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
         except Exception:
             pass
 
     def _on_close(self):
-        self._save_geometry()
+        self._save_gui_config()
         self.bridge.stop()
         if self._log_file:
             try:
