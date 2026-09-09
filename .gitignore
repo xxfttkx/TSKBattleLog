@@ -150,3 +150,7 @@ cache/
 
 # config
 gui_config.json
+
+# Trae IDE：个人状态不入库，但 .trae/skills 工作流技能随仓库共享
+.trae/*
+!.trae/skills/

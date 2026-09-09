@@ -527,6 +527,32 @@ class App(tk.Tk):
         speed_combo.bind("<<ComboboxSelected>>",
                          lambda _e: self._on_battle_speed_change())
 
+        # 日志外观：字号 / 是否彩色（本机显示偏好）
+        lf_log = ttk.LabelFrame(
+            settings_inner, text="日志外观（Logs 页）", padding=(10, 8))
+        lf_log.pack(fill="x", pady=4)
+        log_row = ttk.Frame(lf_log)
+        log_row.pack(anchor="w")
+        ttk.Label(log_row, text="字号").pack(side="left", padx=(0, 6))
+        self.log_font_size_var = tk.StringVar(
+            value=str(self._read_log_font_size()))
+        font_combo = ttk.Combobox(
+            log_row, textvariable=self.log_font_size_var,
+            values=["8", "9", "10", "11", "12", "14", "16"], width=4,
+            state="readonly", justify="center",
+        )
+        font_combo.pack(side="left")
+        font_combo.bind("<<ComboboxSelected>>",
+                        lambda _e: self._on_log_font_size_change())
+        self.log_color_var = tk.BooleanVar(value=self._read_log_color())
+        ttk.Checkbutton(
+            log_row, text="彩色日志", variable=self.log_color_var,
+            command=self._on_log_color_toggle,
+        ).pack(side="left", padx=(20, 0))
+        # 启动即按配置应用一次
+        self._apply_log_font_size(self._read_log_font_size())
+        self._apply_log_colors(self._read_log_color())
+
         # unit-list-dump：导出文件落在游戏目录，提供一键打开入口
         lf_dump = ttk.LabelFrame(
             settings_inner, text="单位列表导出（unit-list-dump）",
@@ -743,6 +769,54 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror("打开失败", f"无法打开日志目录:\n{e}")
 
+    # ---- 日志外观（字号 / 彩色），个人偏好存 gui_config.json ----
+
+    # 彩色 tag 配色（与 _append_log 打的 tag 对应）；关闭彩色时统一成消息色
+    LOG_TAG_COLORS = {
+        "t": "#888888",        # 时间戳
+        "m": "#e6e6e6",        # 普通消息
+        "loader": "#66ccff",   # loader 前缀
+        "bridge": "#ffcc66",   # bridge / agent-error 前缀
+        "err": "#ff6666",      # 错误
+    }
+
+    def _apply_log_font_size(self, size: int):
+        self.log_text.configure(font=("Consolas", int(size)))
+
+    def _apply_log_colors(self, enabled: bool):
+        mono = self.LOG_TAG_COLORS["m"]
+        for tag, color in self.LOG_TAG_COLORS.items():
+            self.log_text.tag_configure(tag, foreground=color if enabled else mono)
+
+    def _on_log_font_size_change(self):
+        try:
+            size = int(self.log_font_size_var.get())
+        except (ValueError, AttributeError):
+            return
+        self._apply_log_font_size(size)
+        self._save_gui_config()
+
+    def _on_log_color_toggle(self):
+        self._apply_log_colors(bool(self.log_color_var.get()))
+        self._save_gui_config()
+
+    def _read_log_font_size(self) -> int:
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            size = int(cfg.get("logFontSize", 9))
+            if 6 <= size <= 24:
+                return size
+        except Exception:
+            pass
+        return 9
+
+    def _read_log_color(self) -> bool:
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("logColor", True))
+        except Exception:
+            return True
+
     def _restore_geometry(self):
         """从 gui_config.json 恢复窗口位置与大小；越界/损坏时静默回退默认"""
         try:
@@ -766,6 +840,14 @@ class App(tk.Tk):
             try:
                 cfg["battleSpeed"] = float(
                     self.battle_speed_var.get().rstrip("x"))
+            except Exception:
+                pass
+            try:
+                cfg["logFontSize"] = int(self.log_font_size_var.get())
+            except Exception:
+                pass
+            try:
+                cfg["logColor"] = bool(self.log_color_var.get())
             except Exception:
                 pass
             GUI_CONFIG.write_text(
