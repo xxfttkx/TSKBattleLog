@@ -17,6 +17,7 @@ import re
 import sys
 import threading
 import time
+import ctypes
 import urllib.request
 from pathlib import Path
 
@@ -42,6 +43,37 @@ GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
+
+
+def _get_process_exe_path(pid: int):
+    """按 pid 取进程 exe 完整路径（Windows，纯 ctypes 标准库）。失败返回 None。"""
+    try:
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        # 64 位下 HANDLE 是 8 字节，必须显式声明 restype，否则默认 c_int 会截断句柄
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.QueryFullProcessImageNameW.restype = ctypes.c_int
+        k32.QueryFullProcessImageNameW.argtypes = [
+            ctypes.c_void_p, ctypes.c_ulong, ctypes.c_wchar_p,
+            ctypes.POINTER(ctypes.c_ulong)]
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            return None
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            size = ctypes.c_ulong(1024)
+            # QueryFullProcessImageNameW(handle, flags=0, buf, &size)
+            if k32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(size)):
+                return buf.value
+            return None
+        finally:
+            k32.CloseHandle(handle)
+    except Exception:
+        return None
+
+
 WIKI_BASE = "https://twinklestarknights.wikiru.jp"
 
 
@@ -117,6 +149,9 @@ class FridaBridge:
         self.script = None
         self._stop = threading.Event()
         self.thread = None
+        self.pid = None  # 注入目标进程 pid（找到后回填，供解析游戏目录）
+        # 战斗倍速目标值：GUI 下拉框同步写入，握手时随初始配置一起下发
+        self.battle_speed = 2.0
 
     def start(self):
         self.thread = threading.Thread(target=self._run, daemon=True)
@@ -224,6 +259,7 @@ class FridaBridge:
             return
 
         # 2) attach + 加载脚本
+        self.pid = pid
         self._log_internal(f"[bridge] 找到进程 pid={pid}，开始注入 ...")
         try:
             self.session = self.device.attach(pid)
@@ -345,19 +381,6 @@ class App(tk.Tk):
             command=self._toggle_units_visibility,
         ).pack(side="left", padx=4)
 
-        # 战斗倍速（battle-speed mod 目标倍率，注入前后均可改，运行时即时生效）
-        ttk.Label(toolbar, text="战斗倍速").pack(side="left", padx=(12, 2))
-        self.battle_speed_var = tk.StringVar(
-            value=f"{self._read_battle_speed():g}x")
-        speed_combo = ttk.Combobox(
-            toolbar, textvariable=self.battle_speed_var,
-            values=["1x", "1.5x", "2x", "3x"], width=4,
-            state="readonly", justify="center",
-        )
-        speed_combo.pack(side="left")
-        speed_combo.bind("<<ComboboxSelected>>",
-                         lambda _e: self._on_battle_speed_change())
-
         ttk.Button(toolbar, text="清空日志", command=self._clear_log).pack(
             side="right", padx=4
         )
@@ -472,6 +495,80 @@ class App(tk.Tk):
         self.log_text.vbar.bind(
             "<B1-Motion>",
             lambda e: self.after_idle(self._update_log_follow))
+
+        # ---- Tab 3：设置（各 mod 的具体参数 / 工具入口）----
+        settings_tab = ttk.Frame(self.notebook)
+        self.notebook.add(settings_tab, text="设置")
+
+        settings_inner = ttk.Frame(settings_tab, padding=(12, 10))
+        settings_inner.pack(fill="both", expand=True)
+
+        # battle-speed：战斗倍速（从工具栏迁入，属本机个人偏好）
+        lf_speed = ttk.LabelFrame(
+            settings_inner, text="战斗倍速（battle-speed）", padding=(10, 8))
+        lf_speed.pack(fill="x", pady=4)
+        ttk.Label(
+            lf_speed,
+            text="战斗中的时间流速倍率，切换即时生效；游戏暂停（timeScale=0）时不干预。\n"
+                 "保存在本机 gui_config.json。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(0, 6))
+        speed_row = ttk.Frame(lf_speed)
+        speed_row.pack(anchor="w")
+        ttk.Label(speed_row, text="倍率").pack(side="left", padx=(0, 6))
+        self.battle_speed_var = tk.StringVar(
+            value=f"{self._read_battle_speed():g}x")
+        speed_combo = ttk.Combobox(
+            speed_row, textvariable=self.battle_speed_var,
+            values=["1x", "1.5x", "2x", "3x"], width=5,
+            state="readonly", justify="center",
+        )
+        speed_combo.pack(side="left")
+        speed_combo.bind("<<ComboboxSelected>>",
+                         lambda _e: self._on_battle_speed_change())
+
+        # unit-list-dump：导出文件落在游戏目录，提供一键打开入口
+        lf_dump = ttk.LabelFrame(
+            settings_inner, text="单位列表导出（unit-list-dump）",
+            padding=(10, 8))
+        lf_dump.pack(fill="x", pady=4)
+        ttk.Label(
+            lf_dump,
+            text="开启后在角色界面筛选/排序会导出 unit_list.json / sister_unit_list.json。\n"
+                 "文件经 Frida 以相对路径写入游戏进程工作目录（即游戏安装目录）：",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(0, 4))
+        self.game_dir_var = tk.StringVar(value="注入后自动显示游戏目录")
+        ttk.Label(lf_dump, textvariable=self.game_dir_var,
+                  foreground="#0a7").pack(anchor="w", pady=(0, 6))
+        ttk.Button(lf_dump, text="打开游戏所在目录",
+                   command=self._open_game_dir).pack(anchor="w")
+
+    # ---- 游戏目录（unit-list-dump 等导出文件落点） ----
+
+    def _resolve_game_dir(self):
+        """按注入目标 pid 解析游戏 exe 所在目录；未注入/失败返回 None。"""
+        pid = getattr(self.bridge, "pid", None)
+        if not pid:
+            return None
+        exe = _get_process_exe_path(int(pid))
+        if not exe:
+            return None
+        return os.path.dirname(exe)
+
+    def _open_game_dir(self):
+        path = self._resolve_game_dir()
+        if not path:
+            messagebox.showinfo(
+                "提示", "尚未获取到游戏进程，请先启动注入并进入游戏。")
+            return
+        if not os.path.isdir(path):
+            messagebox.showerror("打开失败", f"目录不存在：\n{path}")
+            return
+        try:
+            os.startfile(path)  # type: ignore[attr-defined]
+        except Exception as e:
+            messagebox.showerror("打开失败", str(e))
 
     # ---- 初始化 / 保存 mods.json ----
 
@@ -706,6 +803,9 @@ class App(tk.Tk):
                     messagebox.showerror("错误", data)
                 elif kind == "connected":
                     self.start_btn.configure(state="disabled", text="✓ 已注入")
+                    game_dir = self._resolve_game_dir()
+                    if game_dir:
+                        self.game_dir_var.set(game_dir)
                 elif kind == "unitList":
                     self._apply_unit_list(data)
                 elif kind == "buffData":
