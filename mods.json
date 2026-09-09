@@ -1,6 +1,6 @@
 {
   "auto-skill": true,
-  "avatar-clarity": true,
+  "avatar-clarity": false,
   "backtrace": false,
   "battle-log": true,
   "battle-speed": true,

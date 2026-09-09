@@ -353,3 +353,91 @@ function isNativeAlive(obj: Il2Cpp.Object): boolean {
 只读内存不 invoke，对死对象也安全。另外 `try { 整层枚举 } catch` 的写法有陷阱：
 枚举孩子时只要有一个失效节点抛错就会把整层结果吞掉，
 要**逐孩子 try** 跳过，别把整层包在一个 try 里。
+
+## gameSpeed
+
+```
+
+void TSKBattleConfig$$SetGameSpeed(void)
+
+{
+  int iVar1;
+  code *pcVar2;
+  undefined8 uVar3;
+  
+  if (DAT_1840906c3 == '\0') {
+    FUN_1802e0750(&TSKBattleConfig_TypeInfo);
+    DAT_1840906c3 = '\x01';
+  }
+  if (*(char *)(*(longlong *)(TSKBattleConfig_TypeInfo + 0xb8) + 8) == '\0') {
+    iVar1 = *(int *)(*(longlong *)(TSKBattleConfig_TypeInfo + 0xb8) + 4);
+    pcVar2 = DAT_1840a1560;
+    if ((DAT_1840a1560 == (code *)0x0) &&
+       (pcVar2 = (code *)FUN_1802cb940("UnityEngine.Time::set_timeScale(System.Single)"),
+       pcVar2 == (code *)0x0)) {
+      uVar3 = FUN_1802cb590("UnityEngine.Time::set_timeScale(System.Single)");
+      FUN_1802c93b0(uVar3,0);
+      pcVar2 = (code *)swi(3);
+      (*pcVar2)();
+      return;
+    }
+    DAT_1840a1560 = pcVar2;
+    (*DAT_1840a1560)((float)iVar1 * 0.5 + 1.0);
+  }
+  return;
+}
+```
+游戏中有三档速度，根据`(float)iVar1 * 0.5 + 1.0`可以看出、分别对应 1.0、1.5、2.0。
+
+它是动画的加速，当选择技能时，仍会set timeScale 为 1.0。
+
+之前的加速方案是BattleUpdate时设置timeScale，几乎每帧触发因此可以实现常态加速所有。但因此会导致技能选择的时间被压缩。
+
+看过代码之后发现可以直接把 SetGameSpeed 整个换掉。
+
+先说当时没看懂的两个偏移：`TypeInfo + 0xb8` 解引用出来就是 IL2CPP 类的
+`static_fields` 指针（0xb8 是这个 Unity 版本 Il2CppClass 里 static_fields 的偏移，
+Ghidra 替我们标好了）。所以 `+4` 是 int gameSpeed，`+8` 是那个 byte 锁。
+bridge 里不用硬编码 0xb8 拿类，但拿 static_fields 这块内存还是得自己
+`cfg.handle.add(0xb8).readPointer()`，字段名是 backing field 不好猜，按偏移最稳。
+
+最外层那个 `if (+8 的 byte == 0)` 就是关键：**锁=0 才写档位速度，锁=1 直接 return**。
+当时以为这锁只管慢动作，先加了个只读诊断 hook 了 SetGameSpeed，打了一场
+（logs/20260910_000145），结果挺出乎意料：
+
+- 进 SetGameSpeed 时 curTimeScale **三次全是 1**。我一直以为演出是 <1 的慢动作，
+  其实根本不是——这游戏偷懒，QTE、放技能播动画、选技能、开场加载，统统是
+  **直接 set 回 1.0 正常速度**，根本没有什么 0.3 慢镜。
+- SetGameSpeed 不是切档时调一次，而是每次这些「1x 时段」**结束后用来恢复档位**的。
+  三次调用：开场（锁=1，不写）、QTE 完美回调后（锁=0，写回 2）、普攻演出完（锁=0，写回 2）。
+- 放技能那段动画期间一条 SetGameSpeed 都没有，timeScale 就停在游戏设的 1。
+
+所以游戏最高档(2)体感慢的真相：只有「没人操作、自动推进」那段是 2，其余全是 1。
+我们旧方案看门狗每帧无脑顶 2，等于连选技能菜单的思考时间也 2x 了，菜单一闪而过。
+
+那就顺着游戏的意图来，replacement SetGameSpeed：
+
+```typescript
+const staticFields = image.class("TSKBattleConfig").handle.add(0xb8).readPointer();
+image.class("TSKBattleConfig").method("SetGameSpeed").implementation = function () {
+  const locked = staticFields.add(0x8).readU8() !== 0;
+  if (locked) return;                  // 和原方法一样：演出/开场中啥也不干
+  if (self.enabled) {
+    setTimeScale.invoke(self.speed);   // 把 gameSpeed*0.5+1（最高才2）换成自己的倍率
+  } else {
+    setTimeScale.invoke(staticFields.add(0x4).readS32() * 0.5 + 1.0); // 禁用就复刻原生
+  }
+};
+```
+
+不碰 +4 的 gameSpeed（要同步服务器），也没去 hook set_timeScale——后者是 float 参数，
+x64 下走 **xmm 寄存器不在 args 里**，onEnter 的 args[0] 拿到的是 rcx 整数槽，读出来是垃圾
+（和上面 bool/int 的栈槽坑不是一回事，这是浮点寄存器坑）。SetGameSpeed 无参，清爽得多。
+
+光替换它有个小缺口：注入后在面板临时改倍率，要等下一次「演出结束调 SetGameSpeed」才生效。
+所以 BattleUpdate 上还留了个兜底，但学乖了——只在 `cur >= 1.25`（确定是高速段）时才往目标值
+纠正，cur<=1（演出/菜单=1、暂停=0）一律不碰。这样面板拖倍率空闲段立即生效，又不会再吞菜单。
+
+效果：空闲推进想多快多快（3x 都行，突破游戏上限 2），QTE/技能动画/选技能菜单全是正常 1x。
+注意选 2x 的话体感跟游戏自带最高档几乎没区别（本来分段就一样），mod 的价值得选 3x 才看得出来。
+
