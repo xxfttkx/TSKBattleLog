@@ -45,6 +45,26 @@ PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
 
 
+def _read_app_version() -> str:
+    """工具版本号（不带 v 前缀）。唯一来源是 package.json 的 version；
+    PyInstaller 打包后仓库文件不在包里，读 CI 构建时生成的 version.txt
+    （exe 同级一份用户可见，bundle 内 _MEIPASS 一份兜底），读不到返回 unknown。"""
+    candidates = [ROOT_DIR / "version.txt"]
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(meipass) / "version.txt")
+    candidates.append(ROOT_DIR / "package.json")
+    for path in candidates:
+        try:
+            if path.suffix == ".json":
+                return str(json.loads(path.read_text(
+                    encoding="utf-8"))["version"])
+            return path.read_text(encoding="utf-8").strip()
+        except Exception:
+            continue
+    return "unknown"
+
+
 def _get_process_exe_path(pid: int):
     """按 pid 取进程 exe 完整路径（Windows，纯 ctypes 标准库）。失败返回 None。"""
     try:
@@ -646,6 +666,12 @@ class App(tk.Tk):
         ttk.Button(lf_dump, text="打开游戏所在目录",
                    command=self._open_game_dir).pack(anchor="w")
 
+        # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
+        ttk.Label(
+            settings_inner, text=f"版本 v{_read_app_version()}",
+            foreground="#999",
+        ).pack(anchor="e", pady=(10, 0))
+
         # Windows 滚轮滚动设置页（递归绑到 canvas 内所有控件，含 Label/按钮）
         def _on_settings_wheel(event):
             settings_canvas.yview_scroll(int(-event.delta / 120), "units")
@@ -1141,7 +1167,7 @@ class App(tk.Tk):
             path = ICON_CACHE_DIR / fname
             if not path.exists():
                 req = urllib.request.Request(
-                    url, headers={"User-Agent": "Mozilla/5.0 FridaTestControl"})
+                    url, headers={"User-Agent": "Mozilla/5.0 TSKBattleLog"})
                 with urllib.request.urlopen(req, timeout=20) as r:
                     data = r.read()
                 if len(data) < 100:

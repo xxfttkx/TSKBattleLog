@@ -1,6 +1,6 @@
 ---
 name: "add-gui-preference"
-description: "给 FridaTest 控制面板 control.py 的「设置」页添加一项本机个人偏好设置（持久化到 gui_config.json）。当用户想把某个因人而异的显示/行为参数做成可配置（如字号、彩色、倍速、开关）时调用；不适用于可分享的内容配置（mods/char_skill/trace_config）。"
+description: "给 TSKBattleLog 控制面板 control.py 的「设置」页添加一项本机个人偏好设置（持久化到 gui_config.json）。当用户想把某个因人而异的显示/行为参数做成可配置（如字号、彩色、倍速、开关）时调用；不适用于可分享的内容配置（mods/char_skill/trace_config）。"
 ---
 
 # 给控制面板添加一项 GUI 个人偏好设置

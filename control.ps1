@@ -1,4 +1,4 @@
-# FridaTest Control Panel launcher (PowerShell 5 compatible, ASCII-only to avoid encoding issues)
+# TSKBattleLog Control Panel launcher (PowerShell 5 compatible, ASCII-only to avoid encoding issues)
 # Runs: npm run build -> checks deps -> launches Python control panel (waits for the game process and injects)
 
 Set-Location $PSScriptRoot

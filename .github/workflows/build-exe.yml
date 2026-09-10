@@ -1,20 +1,87 @@
 name: Build Windows EXE
 
 on:
-  # 手动触发（Actions 页面点 Run workflow，可选 tag）
+  # 手动触发（Actions 页面点 Run workflow，可选 tag；留空则按 package.json
+  # 版本判定：该版本未发布过就发，已发布则整个构建任务跳过）
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version tag (e.g. v1.0.0), empty = artifact only"
+        description: "Release version tag (e.g. v1.1.1), empty = auto by package.json"
         required: false
         default: ""
   # 推送 v* tag 时自动构建并发布 Release
   push:
     tags:
       - "v*"
+    # push main 后比对 package.json 版本与远端已有 tag：
+    # 版本号变了（远端还没有 v{version}）才构建发版，没变则跳过
+    branches:
+      - "main"
 
 jobs:
+  # 轻量探测：决定本次运行的版本号/Release tag，以及是否需要构建发版。
+  # 普通 push（版本未变）只跑这一个 ubuntu 任务，不占用 Windows 构建机。
+  detect:
+    name: Detect version change
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      should_release: ${{ steps.ver.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+
+          # 查 GitHub：200=目标已存在，404=不存在（需要发版）
+          api_get() {
+            curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/$1"
+          }
+
+          if [ "$REF_TYPE" = "tag" ]; then
+            # 推 v* tag：以 tag 名为准。注意自动发版时 action 会创建 tag，
+            # 该 tag 的 push 事件会再次触发本流程，因此必须查 Release 是否已存在，
+            # 已存在则跳过（防重复构建）；只推了 tag 还没 Release 才发布。
+            version="${REF_NAME#v}"
+            tag="v$version"
+            code="$(api_get "releases/tags/$tag")"
+            echo "release $tag lookup -> HTTP $code"
+            [ "$code" = "404" ] && should="true" || should="false"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            # 手动填了版本号：去掉可选 v 前缀后强制发版（显式意图，允许重发覆盖）
+            version="${INPUT_VERSION#v}"
+            tag="v$version"
+            should="true"
+          else
+            # main push（或手动未填版本）：版本唯一来源 package.json，
+            # 远端已有同名 tag 说明这个版本发过了，跳过
+            version="$(python3 -c 'import json;print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+            tag="v$version"
+            code="$(api_get "git/ref/tags/$tag")"
+            echo "tag $tag lookup -> HTTP $code"
+            [ "$code" = "404" ] && should="true" || should="false"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "should_release=$should" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true'
     runs-on: windows-latest
     # 创建 Release 需要写 contents 权限（新仓库 GITHUB_TOKEN 默认只读）
     permissions:
@@ -37,6 +104,14 @@ jobs:
       # 1) 构建 agent.js（esbuild）
       - name: Build agent.js
         run: npm ci && npm run build
+
+      # 1.5) 写 version.txt（版本号由 detect 任务统一裁定，与 Release tag 同源；
+      #      打进 bundle 同时放进 release 目录，控制面板设置页据此显示版本）
+      - name: Write version.txt
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ needs.detect.outputs.version }}
+        run: Set-Content -Path version.txt -Value $env:APP_VERSION -NoNewline
 
       # 2) 预生成 mod 元数据（打包后无 .ts 源码可解析）
       - name: Generate mod manifest
@@ -79,6 +154,7 @@ jobs:
           --windowed
           --onedir
           --add-data "dist/agent.js;."
+          --add-data "version.txt;."
           --hidden-import frida
           control.py
 
@@ -89,6 +165,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item -Recurse -Force dist/TSKBattleLog/* release/
           Copy-Item -Force mod_manifest.json release/
+          Copy-Item -Force version.txt release/
           foreach ($f in @("mods.json","trace_config.json","char_skill.json")) {
             if (Test-Path $f) { Copy-Item -Force $f release/ }
           }
@@ -116,14 +193,12 @@ jobs:
           retention-days: 30
 
       # 6) 创建 GitHub Release 并附 zip
-      #    触发方式：推 v* tag，或手动触发时填写 version 输入框
+      #    能跑到本 job 即代表需要发版（detect 判定版本是新的，或推了 v* tag，
+      #    或手动指定了版本）；softprops 会自动创建对应 tag
       - name: Create Release
-        if: >-
-          startsWith(github.ref, 'refs/tags/v') ||
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
         uses: softprops/action-gh-release@v2
         with:
-          # 推 tag 时用 tag 名；手动触发时用 version 输入（自动创建该 tag）
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.version }}
+          tag_name: ${{ needs.detect.outputs.tag }}
+          name: TSKBattleLog ${{ needs.detect.outputs.tag }}
           files: TSKBattleLog-windows-x64.zip
           generate_release_notes: true
