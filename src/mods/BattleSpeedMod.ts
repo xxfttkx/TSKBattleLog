@@ -18,8 +18,10 @@ import { Mod } from "../mod";
  * 寄存器、onEnter 读 args 拿不到 float 的坑）。
  *
  * 另挂 TSKBattleMain.BattleUpdate（战斗驱动循环，~37fps，游戏线程内 invoke）
- * 做轻量兜底：仅当处于高速段（timeScale≥1.25）且偏离目标值时才纠正，让运行时
- * 改倍率即时生效；timeScale≤1（演出/选技能=1、暂停=0）一律不碰。
+ * 做兜底，判据是 ignoreChangeSpeed 锁本身而非 timeScale 当前值：锁=0（空闲可高速）
+ * 且非暂停时每帧维持目标值——即使进战斗首个空闲段游戏没调 SetGameSpeed、cur 还
+ * 停在 1 也能立即提速（旧门槛 cur>=1.25 会「卡在 1 永远提不上来」，已废）；
+ * 锁=1（开场/演出/选技能）、timeScale=0（暂停）一律不碰。
  * 战斗结算 InitializeResult 无条件写回 1，避免倍率残留到主城/菜单。
  *
  * 倍率由宿主通过 battleSpeed 消息运行时下发（面板「设置」页下拉框，属个人偏好，
@@ -89,7 +91,15 @@ export class BattleSpeedMod implements Mod {
     // mod 禁用时复刻原生档位值，行为与未装 mod 一致。
     cfg.method("SetGameSpeed").implementation = function (): void {
       try {
-        if (readLocked()) return;
+        const locked = readLocked();
+        if (self.enabled) {
+          // 临时诊断：SetGameSpeed 一场只调几次，直接打印，定位锁值/是否写倍率
+          log(
+            `[speed-diag] SetGameSpeed: locked=${locked ? 1 : 0} -> ` +
+              (locked ? "不动（演出/开场）" : `写 ${self.speed}x`),
+          );
+        }
+        if (locked) return;
         if (self.enabled) {
           setTimeScale.invoke(self.speed);
         } else {
@@ -100,16 +110,33 @@ export class BattleSpeedMod implements Mod {
       }
     };
 
-    // 轻量兜底：BattleUpdate 每帧（~37fps，游戏线程内）仅在高速段维持目标倍率，
-    // 让宿主运行时改倍率即时生效。timeScale≥1.25 才算高速段（档位 1.5/2 或自定义
-    // ≥1.5）；演出/选技能(=1)、暂停(=0) 一律不碰。
+    // 兜底（锁权威）：BattleUpdate 每帧（~37fps）读 ignoreChangeSpeed 锁。
+    // 锁=0=游戏允许档位速度（空闲推进），维持目标倍率——不看 cur 当前值，
+    // 这样进战斗首个空闲段即使游戏没调 SetGameSpeed、cur 还停在 1 也能立即提速，
+    // 不会再像旧门槛 cur>=1.25 那样「卡在 1 就永远提不上来」；
+    // 锁=1=开场/演出/选技能，不碰，保持游戏设的 1；cur=0 暂停不碰。
+    // 临时诊断：仅在「锁翻转」或「速度段变化」时打印，避免每帧刷屏。
     const battleMain = image.class("TSKBattleMain");
+    let lastLocked: boolean | null = null;
+    let lastBucket = -999;
     Interceptor.attach(battleMain.method("BattleUpdate").virtualAddress, {
       onEnter() {
-        if (!self.enabled) return;
         try {
           const cur = getTimeScale.invoke() as number;
-          if (cur >= 1.25 && Math.abs(cur - self.speed) > 1e-6) {
+          const locked = readLocked();
+          const bucket = cur === 0 ? -1 : Math.round(cur * 10);
+          if (locked !== lastLocked || bucket !== lastBucket) {
+            log(
+              `[speed-diag] 状态: locked=${locked ? 1 : 0} curTimeScale=${cur} ` +
+                `target=${self.speed} enabled=${self.enabled ? 1 : 0}`,
+            );
+            lastLocked = locked;
+            lastBucket = bucket;
+          }
+
+          if (!self.enabled) return;
+          if (cur === 0) return; // 暂停
+          if (!locked && Math.abs(cur - self.speed) > 1e-6) {
             setTimeScale.invoke(self.speed);
           }
         } catch {
