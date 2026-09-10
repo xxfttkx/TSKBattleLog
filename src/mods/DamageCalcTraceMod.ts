@@ -3,8 +3,7 @@ import {
   log,
   parseArgument,
   getNameByTSKBattleNote,
-  hookMethodReturn,
-  convertArg,
+  readFloatReturn,
 } from "../utils";
 import {
   Mod,
@@ -40,100 +39,126 @@ export class DamageCalcTraceMod implements Mod {
       this.handleLotterySkillAction,
     );
 
-    const verbose = () => this.enabled && this.enterCalc;
-
-    hookMethodReturn(
-      image.class("TSKBattleCalculationManager").method("FluctuationOffset"),
-      "float",
-      [],
-      (ret) => {
+    // 各伤害系数都是 float 返回值（x64 走 XMM0）。
+    // frida 17.16+ 起 onLeave 的 CpuContext 直接暴露 xmm 寄存器，
+    // 用纯 Interceptor.attach 监听即可，无需再替换 implementation 转发原函数。
+    // quiet=true：enter/return 噪声日志交给本 mod 自己打印；mod.enabled
+    // 守卫由 traceMethodByName 负责，计算期间守卫见各 handler 的 enterCalc。
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "FluctuationOffset",
+      this,
+      undefined,
+      (_c, _m, _retval, _inv, ctx) => {
         if (this.enterCalc) {
-          log("FluctuationOffset =", ret.toFixed(2));
+          log("FluctuationOffset =", readFloatReturn(ctx).toFixed(2));
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleCalculationManager").method("RushOffset"),
-      "float",
-      ["int", "pointer", "int"],
-      (ret) => {
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "RushOffset",
+      this,
+      undefined,
+      (_c, _m, _retval, _inv, ctx) => {
         if (this.enterCalc) {
-          log("RushOffset =", ret.toFixed(2));
+          log("RushOffset =", readFloatReturn(ctx).toFixed(2));
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleCalculationManager").method("AttributeOffset"),
-      "float",
-      ["int", "pointer", "int"],
-      (ret, args) => {
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "AttributeOffset",
+      this,
+      (_cls, _m, args, _ctx, invocation) => {
+        // private static float AttributeOffset(AbilityCompatibility compatibility, TSKBattleNote note, int beforeRushCount) { }
+        // static 方法无 this：args[0] 就是第一个真实参数 compatibility，
+        // 小值域枚举按字节掩码读，暂存到 invocation 供 onLeave 打印
+        (invocation as any)._compatibility = args[0].toInt32() & 0xff;
+      },
+      (_c, _m, _retval, invocation, ctx) => {
         if (this.enterCalc) {
-          const compatibility = args[0];
+          const compatibility = (invocation as any)._compatibility as number;
           log(
-            `AttributeOffset = ${ret.toFixed(2)} (compatibility=${
-              AbilityCompatibility[compatibility]
-            })`,
+            `AttributeOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
+              `(compatibility=${AbilityCompatibility[compatibility]})`,
           );
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleCalculationManager").method("CriticalOffset"),
-      "float",
-      ["bool", "pointer", "int", "int"],
-      (ret, args) => {
+    // private static float CriticalOffset(bool isCritilal, TSKBattleNote note, int criticalUpValue = 0, int beforeRushCount = 0) { }
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "CriticalOffset",
+      this,
+      (_cls, _m, args, _ctx, invocation) => {
+        // bool 参数高 24 位不可信，按字节掩码读取后暂存
+        (invocation as any)._isCritical = (args[0].toInt32() & 0xff) !== 0;
+      },
+      (_c, _m, _retval, invocation, ctx) => {
         if (this.enterCalc) {
-          const isCritilal = args[0];
+          const isCritical = (invocation as any)._isCritical as boolean;
           log(
-            `CriticalOffset = ${ret.toFixed(2)} (isCritical=${
-              isCritilal == 1 ? "true" : "false"
-            })`,
+            `CriticalOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
+              `(isCritical=${isCritical ? "true" : "false"})`,
           );
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleCalculationManager").method("DownOffset"),
-      "float",
-      ["pointer", "pointer"],
-      (ret, args) => {
+    traceMethodByName(
+      image,
+      "TSKBattleCalculationManager",
+      "DownOffset",
+      this,
+      undefined,
+      (_c, _m, _retval, _inv, ctx) => {
         if (this.enterCalc) {
-          log(`DownOffset = ${ret.toFixed(2)}`);
+          log(`DownOffset = ${readFloatReturn(ctx).toFixed(2)}`);
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleNote").method("GetDamageRateValue"),
-      "int64",
-      ["pointer", "int64", "int", "int", "pointer"],
-      (ret, args) => {
+    traceMethodByName(
+      image,
+      "TSKBattleNote",
+      "GetDamageRateValue",
+      this,
+      (_cls, _m, args, _ctx, invocation) => {
+        // 实例方法：args[0]=this，args[1]=伤害基数(int64)，onLeave 时算易伤倍率
+        (invocation as any)._damageBase = args[1];
+      },
+      (_c, _m, retval, invocation) => {
         if (this.enterCalc) {
-          const damage = convertArg(args[0]);
-          const damageNum = Number(damage);
+          const damage = Number((invocation as any)._damageBase);
+          const after = Number(retval);
           log(
-            `GetDamageRateValue = ${damage} -> ${ret} (易伤: ${(
-              ret / damageNum
-            ).toFixed(2)})`,
+            `GetDamageRateValue = ${damage} -> ${after} ` +
+              `(易伤: ${(after / damage).toFixed(2)})`,
           );
         }
       },
-      verbose,
+      true,
     );
-    hookMethodReturn(
-      image.class("TSKBattleNote").method("GetPassiveDamageRate"),
-      "int",
-      ["pointer", "int", "int", "pointer"],
-      (ret, args) => {
+    traceMethodByName(
+      image,
+      "TSKBattleNote",
+      "GetPassiveDamageRate",
+      this,
+      undefined,
+      (_c, _m, retval) => {
         if (this.enterCalc) {
-          log(`GetPassiveDamageRate = ${ret}`);
+          log(`GetPassiveDamageRate = ${Number(retval)}`);
         }
       },
-      verbose,
+      true,
     );
   }
 
@@ -179,11 +204,7 @@ export class DamageCalcTraceMod implements Mod {
     );
   };
 
-  private handleCaluculationNormalDamageLeave: MethodLeaveHandler = (
-    _cls,
-    _method,
-    _retval,
-  ) => {
+  private handleCaluculationNormalDamageLeave: MethodLeaveHandler = () => {
     this.enterCalc = false;
   };
 
@@ -192,7 +213,9 @@ export class DamageCalcTraceMod implements Mod {
     _method,
     args,
   ) => {
-    const nowTurnCount = parseInt(args[5].toString(), 16);
+    // 第 6 个参数(int)在栈槽，直接按整数读；勿用 parseInt(ptr.toString(),16)
+    // ——那是把指针值当地址解析的错误读法
+    const nowTurnCount = args[5].toInt32();
     log(`LotterySkillAction: nowTurnCount = ${nowTurnCount}`);
   };
 

@@ -8,7 +8,7 @@
     "frida-il2cpp-bridge": "^0.13.1"
   },
   "devDependencies": {
-    "@types/frida-gum": "^19.8.0",
+    "@types/frida-gum": "^19.10.0",
     "@types/node": "^26.1.0",
     "esbuild": "^0.28.1",
     "typescript": "^6.0.3"

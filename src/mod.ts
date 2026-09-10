@@ -16,6 +16,8 @@ export type MethodLeaveHandler = (
   retval: InvocationReturnValue,
   /** Interceptor 的 InvocationContext，可读取 onEnter 阶段暂存的字段 */
   invocation: InvocationContext,
+  /** Interceptor 的 CpuContext；x86/x64 下浮点返回值在 context.xmm0（readFloatReturn） */
+  context: CpuContext,
 ) => void;
 
 export interface Mod {
@@ -102,8 +104,10 @@ export function traceMethodByName(
     },
     onLeave(retval) {
       if (onLeave) {
+        const self = this as any;
+        const ctx: CpuContext = self.context ?? self;
         const guardedLeave = mod ? guarded(mod, onLeave) : onLeave;
-        guardedLeave(cls, method, retval, this as InvocationContext);
+        guardedLeave(cls, method, retval, self as InvocationContext, ctx);
       }
       if (!quiet && (mod === undefined || mod.enabled)) {
         log(logReturn(retval));

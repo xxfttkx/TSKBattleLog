@@ -144,6 +144,17 @@ function intBitsToFloat(hex: string): number {
   return view.getFloat32(0, true);
 }
 
+/**
+ * 从 onLeave 的 CpuContext 读 float 返回值。
+ * Win/Linux x86 与 x64 ABI 下，float/double 返回值走 XMM0（低 32 位是 float，
+ * 低 64 位是 double），Interceptor 的 retval 只反映 RAX，读浮点必须用本函数。
+ * 依赖 frida 17.16+（CpuContext 暴露 xmm 寄存器）。
+ */
+function readFloatReturn(ctx: CpuContext): number {
+  if (!("xmm0" in ctx)) return NaN;
+  return new Float32Array(ctx.xmm0, 0, 1)[0];
+}
+
 function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
   // note: TSKBattleNote
   const unitData = note.field("<UnitData>k__BackingField")
@@ -270,98 +281,6 @@ function getAutoUseSkillIndex(unitName: string, characterName: string): number {
   return skillMap.get(name) ?? skillMap.get(unitName) ?? -1;
 }
 
-// hookMethodReturn 的详细日志开关
-let debug = false;
-
-/**
- * 替换 method.implementation，用 NativeFunction 调用原实现并拦截返回值。
- * verbose: 可选的详细日志开关（配合 debug 使用）
- */
-function hookMethodReturn(
-  method: Il2Cpp.Method,
-  returnType: NativeFunctionReturnType,
-  argTypes: NativeFunctionArgumentType[],
-  handler?: (ret: any, args: any[]) => any,
-  verbose?: () => boolean,
-) {
-  if (!method) {
-    log("[hookMethodReturn] method is undefined");
-    return;
-  }
-  const original = new NativeFunction(
-    method.virtualAddress,
-    returnType,
-    argTypes,
-  ) as any;
-  const isStatic = method.isStatic;
-  // args 中不含this
-  method.implementation = function (...args: any[]) {
-    const expectedArgsNum = isStatic ? argTypes.length : argTypes.length - 1;
-    debug &&
-      verbose?.() &&
-      log(
-        `${method.name} args:`,
-        args.map((x) => typeof x + ":" + x),
-      );
-    if (expectedArgsNum !== args.length) {
-      log(
-        `[${method.name}] arg count mismatch: expected ${expectedArgsNum}, got ${args.length}, fallback`,
-      );
-      // 走原 bridge implementation
-      return method.invoke(...args);
-    }
-    const nativeArgs = args.map(convertArg);
-    debug &&
-      verbose?.() &&
-      log(
-        `${method.name} nativeArgs:`,
-        nativeArgs.map((x) => `${typeof x}:${x}`),
-      );
-    var ret: any;
-    try {
-      if (method.isStatic) {
-        ret = original(...nativeArgs);
-      } else {
-        ret = original(this.handle, ...nativeArgs);
-      }
-    } catch (e) {
-      // convertArg 转换失败或参数类型不匹配时，回退到 bridge 原生调用
-      log(`[${method.name}] original() call failed: ${e}, fallback to invoke`);
-      return method.invoke(...args) as any;
-    }
-
-    const result = handler?.(ret, nativeArgs);
-
-    return (result ?? ret) as any;
-  };
-}
-
-function convertArg(arg: any): any {
-  // bool
-  if (typeof arg === "boolean") {
-    return arg ? 1 : 0;
-  }
-  // Il2Cpp.Object
-  if (arg instanceof Il2Cpp.Object) {
-    return arg.handle;
-  }
-
-  // ValueType (enum / struct)
-  if (arg instanceof Il2Cpp.ValueType) {
-    return arg.handle.readS32();
-  }
-
-  // frida-il2cpp-bridge Int64 / UInt64
-  if (
-    arg?.constructor?.name === "Int64" ||
-    arg?.constructor?.name === "UInt64"
-  ) {
-    return BigInt(arg.toString());
-  }
-
-  return arg;
-}
-
 export {
   log,
   logDebug,
@@ -375,7 +294,6 @@ export {
   convertValue,
   dumpIl2CppObject,
   getAutoUseSkillIndex,
-  hookMethodReturn,
-  convertArg,
+  readFloatReturn,
   sendHost,
 };

@@ -168,9 +168,11 @@ export class BattleLogMod implements Mod {
   };
 
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {
-    const hp = parseInt(args[1].toString(), 16);
-    const maxHp = parseInt(args[2].toString(), 16);
-    const stun = parseInt(args[3].toString(), 16);
+    // x64 寄存器槽位高位不可信：int 参数直接 toInt32()，
+    // 勿用 parseInt(ptr.toString(),16)——那是把寄存器值当地址解析
+    const hp = args[1].toInt32();
+    const maxHp = args[2].toInt32();
+    const stun = args[3].toInt32();
     // x64 栈槽高位一律不可信（与 bool 参数同一规则）：type/mode 值域 ⊆ 0~7，
     // 只读低 8 位；overHealRate 是 Int32（20000 > 255），读低 32 位
     // 踩坑记录见 notes/archive.md

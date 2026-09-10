@@ -4,7 +4,7 @@
   "backtrace": false,
   "battle-log": true,
   "battle-speed": true,
-  "damage-calc-trace": false,
+  "damage-calc-trace": true,
   "field-watch": false,
   "qte-perfect": true,
   "trace-config": false,
