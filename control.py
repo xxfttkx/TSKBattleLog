@@ -222,7 +222,10 @@ class FridaBridge:
             return
         try:
             self.script.post(
-                {"type": "battleSpeed", "payload": {"speed": self.battle_speed}})
+                {"type": "battleSpeed", "payload": {
+                    "speed": self.battle_speed,
+                    "force": self.battle_speed_force,
+                }})
         except Exception as e:
             self._log_internal(f"[bridge] 下发 battleSpeed 失败: {e}")
 
@@ -345,6 +348,7 @@ class App(tk.Tk):
         self._build_ui()
         # 下拉框初值来自 gui_config（个人偏好），同步给 bridge 供握手下发
         self.bridge.battle_speed = self._read_battle_speed()
+        self.bridge.battle_speed_force = self._read_battle_speed_force()
         self._load_mods_json_defaults()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -520,12 +524,33 @@ class App(tk.Tk):
             value=f"{self._read_battle_speed():g}x")
         speed_combo = ttk.Combobox(
             speed_row, textvariable=self.battle_speed_var,
-            values=["1x", "1.5x", "2x", "3x"], width=5,
+            values=["1x", "1.5x", "2x", "3x", "4x", "5x"], width=5,
             state="readonly", justify="center",
         )
         speed_combo.pack(side="left")
         speed_combo.bind("<<ComboboxSelected>>",
                          lambda _e: self._on_battle_speed_change())
+        ttk.Label(
+            speed_row, text="2x 对应游戏中的最高速度设置",
+            foreground="#666",
+        ).pack(side="left", padx=(8, 0))
+
+        # 全局加速开关（个人偏好，默认关）：开启=每帧锁定 timeScale，
+        # 选 QTE / EX 时也一起加速
+        self.battle_speed_force_var = tk.BooleanVar(
+            value=self._read_battle_speed_force())
+        ttk.Checkbutton(
+            lf_speed,
+            text="全局加速：选 QTE / EX 时也一起加速",
+            variable=self.battle_speed_force_var,
+            command=self._on_battle_speed_force_toggle,
+        ).pack(anchor="w", pady=(8, 0))
+        ttk.Label(
+            lf_speed,
+            text="默认关闭：仅空闲自动推进加速，菜单与演出保持正常速度；"
+                 "开启后等同全程锁定倍率（普通选技能菜单也会变快）。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(2, 0))
 
         # 日志外观：字号 / 是否彩色（本机显示偏好）
         lf_log = ttk.LabelFrame(
@@ -746,6 +771,22 @@ class App(tk.Tk):
             pass
         return 2.0
 
+    def _on_battle_speed_force_toggle(self):
+        """全局加速开关：同步 bridge + 持久化 + 已注入则随 battleSpeed 即时下发"""
+        force = bool(self.battle_speed_force_var.get())
+        self.bridge.battle_speed_force = force
+        self._save_gui_config()
+        if self._started:
+            self.bridge.post_battle_speed()
+
+    def _read_battle_speed_force(self) -> bool:
+        """读 gui_config.json 的 battleSpeedForce（个人偏好），缺失/损坏回退 False"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("battleSpeedForce", False))
+        except Exception:
+            return False
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
         # 注入后复选框已冻结，本回调不会再触发。
@@ -840,6 +881,11 @@ class App(tk.Tk):
             try:
                 cfg["battleSpeed"] = float(
                     self.battle_speed_var.get().rstrip("x"))
+            except Exception:
+                pass
+            try:
+                cfg["battleSpeedForce"] = bool(
+                    self.battle_speed_force_var.get())
             except Exception:
                 pass
             try:

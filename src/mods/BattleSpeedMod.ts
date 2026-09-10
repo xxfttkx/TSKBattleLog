@@ -1,5 +1,6 @@
 import { log } from "../utils";
 import { Mod } from "../mod";
+import { buildMethodIndex, resolveMethod } from "../debug/MethodResolver";
 
 /**
  * 战斗倍速（修改型）。
@@ -22,6 +23,9 @@ import { Mod } from "../mod";
  * 且非暂停时每帧维持目标值——即使进战斗首个空闲段游戏没调 SetGameSpeed、cur 还
  * 停在 1 也能立即提速（旧门槛 cur>=1.25 会「卡在 1 永远提不上来」，已废）；
  * 锁=1（开场/演出/选技能）、timeScale=0（暂停）一律不碰。
+ *
+ * forceSpeed 全局开关（面板，默认关）：开启后兜底无视锁，每帧锁定 timeScale=speed，
+ * 等同旧看门狗——EX 选择与大招演出全程加速（普通选技能菜单/QTE/开场也会一并变快）。
  * 战斗结算 InitializeResult 无条件写回 1，避免倍率残留到主城/菜单。
  *
  * 倍率由宿主通过 battleSpeed 消息运行时下发（面板「设置」页下拉框，属个人偏好，
@@ -38,6 +42,14 @@ export class BattleSpeedMod implements Mod {
   /** 目标倍速：默认 2.0，宿主可通过 applyConfig 运行时下发（1.0~10.0） */
   speed = 2.0;
 
+  /**
+   * 全局模式（宿主 battleSpeed 消息 {force} 下发，个人偏好，默认关）。
+   * 关：仅锁=0 的空闲推进段加速，演出/选技能/QTE 保持 1x；
+   * 开：BattleUpdate 每帧无视锁锁定 timeScale=speed（旧看门狗行为），
+   *     EX 选择与大招演出、连普通选技能菜单/QTE/开场都一起加速。
+   */
+  forceSpeed = false;
+
   /** 宿主下发倍率（battleSpeed 消息 {speed}）。onLoad 前后均可调用。 */
   applyConfig(speed: number): void {
     if (typeof speed !== "number" || !isFinite(speed)) return;
@@ -45,6 +57,17 @@ export class BattleSpeedMod implements Mod {
     if (clamped !== this.speed) {
       log(`[battle-speed] 倍率: ${this.speed} -> ${clamped}`);
       this.speed = clamped;
+    }
+  }
+
+  /** 宿主下发全局模式开关（battleSpeed 消息 {force}）。onLoad 前后均可。 */
+  applyForceConfig(force: boolean): void {
+    const v = !!force;
+    if (v !== this.forceSpeed) {
+      log(
+        `[battle-speed] 全局加速: ${this.forceSpeed ? "开" : "关"} -> ${v ? "开" : "关"}`,
+      );
+      this.forceSpeed = v;
     }
   }
 
@@ -110,11 +133,12 @@ export class BattleSpeedMod implements Mod {
       }
     };
 
-    // 兜底（锁权威）：BattleUpdate 每帧（~37fps）读 ignoreChangeSpeed 锁。
-    // 锁=0=游戏允许档位速度（空闲推进），维持目标倍率——不看 cur 当前值，
-    // 这样进战斗首个空闲段即使游戏没调 SetGameSpeed、cur 还停在 1 也能立即提速，
-    // 不会再像旧门槛 cur>=1.25 那样「卡在 1 就永远提不上来」；
-    // 锁=1=开场/演出/选技能，不碰，保持游戏设的 1；cur=0 暂停不碰。
+    // 兜底：BattleUpdate 每帧（~37fps）维持目标倍率。
+    //  - forceSpeed 关（默认）：读 ignoreChangeSpeed 锁，锁=0（空闲推进）才维持；
+    //    锁=1（开场/演出/选技能）、cur=0（暂停）不碰。不看 cur 当前值，所以进战斗
+    //    首个空闲段即使游戏没调 SetGameSpeed、cur 还停在 1 也能立即提速。
+    //  - forceSpeed 开（全局）：无视锁，只要非暂停每帧锁定 timeScale=speed（旧看门狗），
+    //    EX 选择+大招演出、连普通选技能菜单/QTE/开场都一起加速。
     // 临时诊断：仅在「锁翻转」或「速度段变化」时打印，避免每帧刷屏。
     const battleMain = image.class("TSKBattleMain");
     let lastLocked: boolean | null = null;
@@ -128,15 +152,16 @@ export class BattleSpeedMod implements Mod {
           if (locked !== lastLocked || bucket !== lastBucket) {
             log(
               `[speed-diag] 状态: locked=${locked ? 1 : 0} curTimeScale=${cur} ` +
-                `target=${self.speed} enabled=${self.enabled ? 1 : 0}`,
+                `target=${self.speed} force=${self.forceSpeed ? 1 : 0} ` +
+                `enabled=${self.enabled ? 1 : 0}`,
             );
             lastLocked = locked;
             lastBucket = bucket;
           }
 
-          if (!self.enabled) return;
-          if (cur === 0) return; // 暂停
-          if (!locked && Math.abs(cur - self.speed) > 1e-6) {
+          if (!self.enabled || cur === 0) return; // 禁用 / 暂停不碰
+          const shouldHold = self.forceSpeed || !locked;
+          if (shouldHold && Math.abs(cur - self.speed) > 1e-6) {
             setTimeScale.invoke(self.speed);
           }
         } catch {
@@ -160,8 +185,80 @@ export class BattleSpeedMod implements Mod {
       },
     );
 
+    // TODO【临时 EX 诊断，定位后删除】全局观察 timeScale：set_timeScale 钩子 +
+    // 100ms 轮询，两路都不依赖 BattleUpdate，专查 EX 演出期间 timeScale 到底变没变。
+    this.armExDiagnostic(getTimeScale, setTimeScale, readLocked);
+
     log(
-      `[battle-speed] armed: 空闲推进 ${this.speed}x（演出/选技能/QTE 保持 1x，结算恢复 1）`,
+      `[battle-speed] armed: ${this.speed}x force=${this.forceSpeed ? 1 : 0}` +
+        `（关：空闲推进加速、演出/选技能/QTE 1x；开：全程锁定；结算恢复 1）`,
+    );
+  }
+
+  /**
+   * 【临时，定位后删除】EX 演出速度探针：
+   *  1) Interceptor 挂 set_timeScale：onEnter 记调用者，onLeave 读「已生效的新值」
+   *     （float 参数在 xmm，onEnter 的 args 读不到，故在 onLeave 用 get_timeScale 读），
+   *     值变化才打印，带调用者反解；
+   *  2) setInterval 100ms 在 Il2Cpp.perform 里轮询 timeScale + 锁——即使 EX 演出
+   *     期间 TSKBattleMain.BattleUpdate 不跑也能看到 timeScale 变化。
+   * 判读：EX 演出时若轮询一直是 3 但画面 1x → 演出不读 timeScale（跟 gameSpeed 走）；
+   *       若轮询掉到 1 → 有人显式 set 回 1，看 [ex-diag] 的 by 调用者。
+   */
+  private armExDiagnostic(
+    getTimeScale: Il2Cpp.Method,
+    setTimeScale: Il2Cpp.Method,
+    readLocked: () => boolean,
+  ): void {
+    try {
+      buildMethodIndex();
+    } catch {
+      /* 索引构建失败也不影响轮询 */
+    }
+
+    let lastSetVal = -999;
+    let pendingCaller: NativePointer | null = null;
+    Interceptor.attach(setTimeScale.virtualAddress, {
+      onEnter() {
+        pendingCaller = this.returnAddress;
+      },
+      onLeave() {
+        try {
+          const v = getTimeScale.invoke() as number;
+          if (Math.abs(v - lastSetVal) > 1e-6) {
+            lastSetVal = v;
+            log(
+              `[ex-diag] set_timeScale -> ${v}  by ${resolveMethod(
+                pendingCaller ?? this.returnAddress,
+              )}`,
+            );
+          }
+        } catch {
+          /* ignore */
+        }
+      },
+    });
+
+    let lastPollVal = -999;
+    let lastPollLock: boolean | null = null;
+    setInterval(() => {
+      Il2Cpp.perform(() => {
+        try {
+          const v = getTimeScale.invoke() as number;
+          const lk = readLocked();
+          if (Math.abs(v - lastPollVal) > 1e-6 || lk !== lastPollLock) {
+            lastPollVal = v;
+            lastPollLock = lk;
+            log(`[ex-poll] timeScale=${v} locked=${lk ? 1 : 0}`);
+          }
+        } catch {
+          /* 场景切换等瞬间读取失败，忽略 */
+        }
+      });
+    }, 100);
+
+    log(
+      "[ex-diag] armed：请进战斗手动放一次完整 EX（选 EX → 选目标 → 大招演出）",
     );
   }
 

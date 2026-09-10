@@ -471,4 +471,13 @@ if (!locked && Math.abs(cur - target) > 1e-6) {
 教训：**判断「现在处于什么阶段」要读游戏自己的状态标志，别用你正要修改的那个值
 反推。** 后者是结果不是原因，拿结果当门闩只会把自己闩在门外。
 
+### 补充
+进入一趟EX选择的调用情况如下：
+```
+[13:00:30.421] [speed-diag] 状态: locked=1 curTimeScale=1 target=3 enabled=1
+[13:00:31.123] [TSKBattleLog] [バニーサンタ] 蘭美 Normal -> ["バグリンα"] "バグリンα": 1 hit, damage=58343, crit=1, sv=1.00
+[13:00:31.791] [speed-diag] SetGameSpeed: locked=0 -> 写 3x
+[13:00:31.822] [speed-diag] 状态: locked=0 curTimeScale=3 target=3 enabled=1
+[13:00:34.930] [TSKBattleLog] [バニーサンタ] 蘭美 Ex -> ["バグリンα"] "バグリンα": 9 hits, damage=869207, crit=4, sv=1.05
+```
 
