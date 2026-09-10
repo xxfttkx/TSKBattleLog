@@ -22,6 +22,23 @@ export class DamageCalcTraceMod implements Mod {
   /** CaluculationNormalDamage 执行期间的守卫标志，限定 Offset 系列日志只在计算期间输出 */
   private enterCalc = false;
 
+  /**
+   * 一次 CaluculationNormalDamage 内各 Offset 的已打印标志。
+   * 游戏内部会对部分系数（Attribute/Critical/Down）二次求值，
+   * 两次结果相同，每次外层计算只保留第一次调用的输出；
+   * 进入外层计算时整体重置（与 enterCalc 同一单线程假设）。
+   */
+  private offsetPrinted: Record<
+    "fluctuation" | "rush" | "attribute" | "critical" | "down",
+    boolean
+  > = {
+    fluctuation: false,
+    rush: false,
+    attribute: false,
+    critical: false,
+    down: false,
+  };
+
   onLoad(image: Il2Cpp.Image): void {
     traceMethodByName(
       image,
@@ -51,7 +68,8 @@ export class DamageCalcTraceMod implements Mod {
       this,
       undefined,
       (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc) {
+        if (this.enterCalc && !this.offsetPrinted.fluctuation) {
+          this.offsetPrinted.fluctuation = true;
           log("FluctuationOffset =", readFloatReturn(ctx).toFixed(2));
         }
       },
@@ -64,7 +82,8 @@ export class DamageCalcTraceMod implements Mod {
       this,
       undefined,
       (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc) {
+        if (this.enterCalc && !this.offsetPrinted.rush) {
+          this.offsetPrinted.rush = true;
           log("RushOffset =", readFloatReturn(ctx).toFixed(2));
         }
       },
@@ -82,7 +101,8 @@ export class DamageCalcTraceMod implements Mod {
         (invocation as any)._compatibility = args[0].toInt32() & 0xff;
       },
       (_c, _m, _retval, invocation, ctx) => {
-        if (this.enterCalc) {
+        if (this.enterCalc && !this.offsetPrinted.attribute) {
+          this.offsetPrinted.attribute = true;
           const compatibility = (invocation as any)._compatibility as number;
           log(
             `AttributeOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
@@ -103,7 +123,8 @@ export class DamageCalcTraceMod implements Mod {
         (invocation as any)._isCritical = (args[0].toInt32() & 0xff) !== 0;
       },
       (_c, _m, _retval, invocation, ctx) => {
-        if (this.enterCalc) {
+        if (this.enterCalc && !this.offsetPrinted.critical) {
+          this.offsetPrinted.critical = true;
           const isCritical = (invocation as any)._isCritical as boolean;
           log(
             `CriticalOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
@@ -120,7 +141,8 @@ export class DamageCalcTraceMod implements Mod {
       this,
       undefined,
       (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc) {
+        if (this.enterCalc && !this.offsetPrinted.down) {
+          this.offsetPrinted.down = true;
           log(`DownOffset = ${readFloatReturn(ctx).toFixed(2)}`);
         }
       },
@@ -168,6 +190,14 @@ export class DamageCalcTraceMod implements Mod {
     args,
   ) => {
     this.enterCalc = true;
+    // 新一轮外层计算：各系数去重标志复位
+    this.offsetPrinted = {
+      fluctuation: false,
+      rush: false,
+      attribute: false,
+      critical: false,
+      down: false,
+    };
     const attack = new Il2Cpp.Object(args[0]); //TSKBattleNote
     const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
     const beforeRushCount = args[2].toInt32();
