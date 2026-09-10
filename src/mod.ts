@@ -28,6 +28,12 @@ export interface Mod {
   /** 运行时开关：初始化后由宿主或 mods.json 控制 */
   enabled: boolean;
   onLoad(image: Il2Cpp.Image): void;
+  /**
+   * 可选：宿主「诊断日志」全局开关翻转时回调（setDebug 消息广播给所有 mod）。
+   * onLoad 前后均可能调用；需要装/拆重型探针的 mod 据此响应。
+   * 普通细粒度日志直接用 utils 的 logDebug（自带全局门控），无需实现本方法。
+   */
+  applyDebugConfig?(on: boolean): void;
 }
 
 // dumpArgs 类方法的统一处理器

@@ -11,7 +11,7 @@
  * 全量排序有几百毫秒~秒级启动开销。只在需要的调试场景启用即可。
  */
 
-import { log } from "../utils";
+import { log, logDebug } from "../utils";
 
 type MethodInfo = {
   start: NativePointer;
@@ -50,7 +50,9 @@ export function buildMethodIndex(): void {
 
   methods = collected;
   built = true;
-  log(`[debug] indexed ${methods.length} IL2CPP methods (addr->name resolver ready)`);
+  logDebug(
+    `indexed ${methods.length} IL2CPP methods (addr->name resolver ready)`,
+  );
 }
 
 /** 将任意地址反解为最近的 IL2CPP 方法 + 偏移。找不到则返回原地址字符串。 */

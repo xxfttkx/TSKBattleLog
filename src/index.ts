@@ -1,5 +1,5 @@
 import "frida-il2cpp-bridge";
-import { log, sendHost } from "./utils";
+import { log, sendHost, setDebugLog } from "./utils";
 import { Mod, publishModList } from "./mod";
 import { BattleLogMod } from "./mods/BattleLogMod";
 import { QteMod } from "./mods/QteMod";
@@ -129,6 +129,17 @@ Il2Cpp.perform(() => {
       if (typeof cfg.force === "boolean") speedMod?.applyForceConfig(cfg.force);
     } else {
       speedMod?.applyConfig(Number(cfg));
+    }
+  });
+
+  // 全局诊断日志开关（宿主面板「诊断日志」勾选，个人偏好）：翻转全局门控后
+  // 广播给所有 mod——普通 logDebug 日志靠门控自动生效，需要装/拆重型探针的
+  // mod（如 battle-speed）实现 Mod.applyDebugConfig 响应。onLoad 前后均可。
+  armRecv("setDebug", (on: boolean) => {
+    const v = !!on;
+    setDebugLog(v);
+    for (const mod of mods) {
+      mod.applyDebugConfig?.(v);
     }
   });
 

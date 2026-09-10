@@ -152,6 +152,10 @@ class FridaBridge:
         self.pid = None  # 注入目标进程 pid（找到后回填，供解析游戏目录）
         # 战斗倍速目标值：GUI 下拉框同步写入，握手时随初始配置一起下发
         self.battle_speed = 2.0
+        # 全局加速开关：True=每帧锁定 timeScale（选技能/QTE/EX 选择与演出都加速）
+        self.battle_speed_force = False
+        # 全局诊断日志开关：True=agent 所有 mod 的 logDebug 输出 + 重型探针
+        self.debug_log = False
 
     def start(self):
         self.thread = threading.Thread(target=self._run, daemon=True)
@@ -229,6 +233,16 @@ class FridaBridge:
         except Exception as e:
             self._log_internal(f"[bridge] 下发 battleSpeed 失败: {e}")
 
+    def post_debug_log(self):
+        """下发全局诊断开关给所有 mod（setDebug 广播，运行时可多次调用）"""
+        if self.script is None:
+            return
+        try:
+            self.script.post(
+                {"type": "setDebug", "payload": bool(self.debug_log)})
+        except Exception as e:
+            self._log_internal(f"[bridge] 下发 setDebug 失败: {e}")
+
     # ------- 内部 -------
 
     def _run(self):
@@ -301,10 +315,12 @@ class FridaBridge:
                 # 顺序：initMods（onLoad 挂 hook）→ charSkill（模块级技能表）
                 # → traceConfig（applyConfig 要求 onLoad 已执行）→ battleSpeed
                 # （battle-speed 目标倍率，目标值类配置，onLoad 前后均可）
+                # → setDebug（全局诊断开关，广播给所有 mod）
                 self.post_init_mods()
                 self.post_char_skill()
                 self.post_trace_config()
                 self.post_battle_speed()
+                self.post_debug_log()
             elif msg_type == "unitList":
                 self.ui_queue.put(("unitList", payload))
             elif msg_type == "buffData":
@@ -349,6 +365,7 @@ class App(tk.Tk):
         # 下拉框初值来自 gui_config（个人偏好），同步给 bridge 供握手下发
         self.bridge.battle_speed = self._read_battle_speed()
         self.bridge.battle_speed_force = self._read_battle_speed_force()
+        self.bridge.debug_log = self._read_debug_log()
         self._load_mods_json_defaults()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -500,12 +517,29 @@ class App(tk.Tk):
             "<B1-Motion>",
             lambda e: self.after_idle(self._update_log_follow))
 
-        # ---- Tab 3：设置（各 mod 的具体参数 / 工具入口）----
+        # ---- Tab 3：设置（Canvas 滚动容器，内容超高时滚轮/滚动条可下拉） ----
         settings_tab = ttk.Frame(self.notebook)
         self.notebook.add(settings_tab, text="设置")
 
-        settings_inner = ttk.Frame(settings_tab, padding=(12, 10))
-        settings_inner.pack(fill="both", expand=True)
+        settings_canvas = tk.Canvas(settings_tab, highlightthickness=0)
+        settings_scrollbar = ttk.Scrollbar(
+            settings_tab, orient="vertical",
+            command=settings_canvas.yview)
+        settings_inner = ttk.Frame(settings_canvas, padding=(12, 10))
+        settings_inner.bind(
+            "<Configure>",
+            lambda e: settings_canvas.configure(
+                scrollregion=settings_canvas.bbox("all")),
+        )
+        settings_canvas.create_window(
+            (0, 0), window=settings_inner, anchor="nw", tags="inner")
+        settings_canvas.bind(
+            "<Configure>",
+            lambda e: settings_canvas.itemconfigure("inner", width=e.width),
+        )
+        settings_canvas.configure(yscrollcommand=settings_scrollbar.set)
+        settings_canvas.pack(side="left", fill="both", expand=True)
+        settings_scrollbar.pack(side="right", fill="y")
 
         # battle-speed：战斗倍速（从工具栏迁入，属本机个人偏好）
         lf_speed = ttk.LabelFrame(
@@ -574,6 +608,23 @@ class App(tk.Tk):
             log_row, text="彩色日志", variable=self.log_color_var,
             command=self._on_log_color_toggle,
         ).pack(side="left", padx=(20, 0))
+
+        # 全局诊断日志开关（所有 mod 共用，agent setDebug 消息广播）
+        debug_row = ttk.Frame(lf_log)
+        debug_row.pack(anchor="w", pady=(8, 0))
+        self.debug_log_var = tk.BooleanVar(value=self._read_debug_log())
+        ttk.Checkbutton(
+            debug_row, text="诊断日志（全部 mod 的详细排查输出）",
+            variable=self.debug_log_var,
+            command=self._on_debug_log_toggle,
+        ).pack(side="left")
+        ttk.Label(
+            lf_log,
+            text="默认关闭，日常使用保持安静；排查问题时开启，日志以紫色 [debug] 行显示。\n"
+                 "部分重型探针首次开启要构建方法索引，agent 可能卡约 1 秒，关闭即拆除。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(2, 0))
+
         # 启动即按配置应用一次
         self._apply_log_font_size(self._read_log_font_size())
         self._apply_log_colors(self._read_log_color())
@@ -594,6 +645,18 @@ class App(tk.Tk):
                   foreground="#0a7").pack(anchor="w", pady=(0, 6))
         ttk.Button(lf_dump, text="打开游戏所在目录",
                    command=self._open_game_dir).pack(anchor="w")
+
+        # Windows 滚轮滚动设置页（递归绑到 canvas 内所有控件，含 Label/按钮）
+        def _on_settings_wheel(event):
+            settings_canvas.yview_scroll(int(-event.delta / 120), "units")
+
+        def _bind_settings_wheel(widget):
+            widget.bind("<MouseWheel>", _on_settings_wheel)
+            for child in widget.winfo_children():
+                _bind_settings_wheel(child)
+
+        _bind_settings_wheel(settings_inner)
+        settings_canvas.bind("<MouseWheel>", _on_settings_wheel)
 
     # ---- 游戏目录（unit-list-dump 等导出文件落点） ----
 
@@ -787,6 +850,22 @@ class App(tk.Tk):
         except Exception:
             return False
 
+    def _on_debug_log_toggle(self):
+        """全局诊断日志开关：同步 bridge + 持久化 + 已注入则 setDebug 即时广播"""
+        on = bool(self.debug_log_var.get())
+        self.bridge.debug_log = on
+        self._save_gui_config()
+        if self._started:
+            self.bridge.post_debug_log()
+
+    def _read_debug_log(self) -> bool:
+        """读 gui_config.json 的 debugLog（个人偏好），缺失/损坏回退 False"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("debugLog", False))
+        except Exception:
+            return False
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
         # 注入后复选框已冻结，本回调不会再触发。
@@ -819,6 +898,7 @@ class App(tk.Tk):
         "loader": "#66ccff",   # loader 前缀
         "bridge": "#ffcc66",   # bridge / agent-error 前缀
         "err": "#ff6666",      # 错误
+        "dbg": "#c586c0",      # [debug] 诊断日志（全局诊断开关开启时）
     }
 
     def _apply_log_font_size(self, size: int):
@@ -886,6 +966,11 @@ class App(tk.Tk):
             try:
                 cfg["battleSpeedForce"] = bool(
                     self.battle_speed_force_var.get())
+            except Exception:
+                pass
+            try:
+                cfg["debugLog"] = bool(
+                    self.debug_log_var.get())
             except Exception:
                 pass
             try:
@@ -1235,6 +1320,8 @@ class App(tk.Tk):
         msg_tags = ("m",)
         if error:
             msg_tags = ("err",)
+        elif message.startswith("[debug]"):
+            msg_tags = ("dbg",)
         elif message.startswith("[loader]"):
             msg_tags = ("loader",)
         elif message.startswith("[bridge]") or message.startswith(

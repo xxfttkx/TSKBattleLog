@@ -44,7 +44,29 @@ function log(...args: any[]) {
   sendHost("log", { time, message });
 }
 
-function dumpArray(ptr: NativePointer, type: string): string {
+// ===== 全局诊断日志开关（宿主 setDebug 消息控制，默认关）=====
+// 所有 mod 共用：细粒度排查日志一律走 logDebug，开关关时零输出。
+let debugLogEnabled = false;
+
+/** 宿主翻转全局诊断开关（index.ts 的 setDebug 消息调用） */
+function setDebugLog(on: boolean): void {
+  debugLogEnabled = !!on;
+}
+
+/** 诊断日志当前是否开启（需要按开关决定装/拆探针等重行为时用） */
+function isDebugLog(): boolean {
+  return debugLogEnabled;
+}
+
+/**
+ * 诊断日志：仅全局开关开启时输出。自动带统一前缀 [debug]，
+ * 宿主面板据此打特殊颜色；调用方消息里不用再写 [debug]。
+ */
+function logDebug(...args: any[]) {
+  if (debugLogEnabled) log("[debug]", ...args);
+}
+
+function dumpArray(ptr: NativePointer): string {
   if (ptr.isNull()) {
     return "null";
   }
@@ -77,7 +99,7 @@ function dumpArgs(method: Il2Cpp.Method, args: InvocationArguments) {
     const type = p.type.name;
     let value: unknown;
     if (type.endsWith("[]")) {
-      value = dumpArray(arg, type);
+      value = dumpArray(arg);
     } else {
       switch (type) {
         case "System.Boolean":
@@ -150,16 +172,6 @@ function saveJson(fileName: string, data: any[]) {
   const file = new FridaFile(fileName, "w");
 
   file.write(JSON.stringify(data, null, 2));
-
-  file.close();
-}
-
-function saveFile(fileName: string, content: string) {
-  const FridaFile = (globalThis as any).File;
-
-  const file = new FridaFile(fileName, "w");
-
-  file.write(content);
 
   file.close();
 }
@@ -352,6 +364,9 @@ function convertArg(arg: any): any {
 
 export {
   log,
+  logDebug,
+  setDebugLog,
+  isDebugLog,
   dumpArgs,
   parseArgument,
   getNameByTSKBattleNote,
