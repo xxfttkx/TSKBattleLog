@@ -68,8 +68,8 @@ export class BattleSpeedMod implements Mod {
   applyConfig(speed: number): void {
     if (typeof speed !== "number" || !isFinite(speed)) return;
     const clamped = Math.min(10, Math.max(1, speed));
+    log(`[battle-speed] 倍率: ${clamped}`);
     if (clamped !== this.speed) {
-      log(`[battle-speed] 倍率: ${this.speed} -> ${clamped}`);
       this.speed = clamped;
     }
   }
@@ -77,10 +77,8 @@ export class BattleSpeedMod implements Mod {
   /** 宿主下发全局模式开关（battleSpeed 消息 {force}）。onLoad 前后均可。 */
   applyForceConfig(force: boolean): void {
     const v = !!force;
+    log(`[battle-speed] 全局加速: ${v ? "开" : "关"}`);
     if (v !== this.forceSpeed) {
-      log(
-        `[battle-speed] 全局加速: ${this.forceSpeed ? "开" : "关"} -> ${v ? "开" : "关"}`,
-      );
       this.forceSpeed = v;
     }
   }
@@ -92,7 +90,7 @@ export class BattleSpeedMod implements Mod {
    */
   applyDebugConfig(on: boolean): void {
     const v = !!on;
-    log(`[battle-speed] 诊断日志: ${v ? "关 -> 开" : "开 -> 关"}`);
+    log(`[battle-speed] 诊断日志: ${v ? "开" : "关"}`);
     if (this.loaded) this.setExProbes(v);
   }
 
