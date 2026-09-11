@@ -114,17 +114,41 @@ export class BattleSpeedMod implements Mod {
     //   +0x4 = int  gameSpeed（三档 0/1/2，服务器同步，只读不改）
     //   +0x8 = byte ignoreChangeSpeed（锁：0=应用档位/可恢复高速，1=演出/开场中不应用）
     const cfg = image.class("TSKBattleConfig");
-    const staticFields = cfg.handle.add(0xb8).readPointer();
-    const readLocked = (): boolean => {
+    // 静态字段指针必须惰性解析，不能在 onLoad 时一次缓存：
+    // IL2CPP 类的 static_fields 内存在类首次使用时才分配。若注入时游戏还在
+    // 主菜单（TSKBattleConfig 尚未初始化），这里读到 NULL 并缓存，之后所有
+    // 读取都走 catch→true，表现为「整场恒锁、倍速永不生效」（2026-09-11 首战 bug）。
+    // 拿到非空指针后缓存——IL2CPP 分配后地址在进程生命周期内稳定。
+    let staticFields: NativePointer = NULL;
+    const resolveStaticFields = (): NativePointer => {
+      if (!staticFields.isNull()) return staticFields;
       try {
-        return staticFields.add(0x8).readU8() !== 0;
+        const p = cfg.handle.add(0xb8).readPointer();
+        if (!p.isNull()) {
+          staticFields = p;
+          if (isDebugLog()) {
+            logDebug(`[speed] TSKBattleConfig 静态字段已分配: ${p}`);
+          }
+        }
       } catch {
-        return true; // 读不到按「锁住」处理，宁可不写也不打断演出
+        /* 类尚未初始化，下一帧再试 */
+      }
+      return staticFields;
+    };
+    const readLocked = (): boolean => {
+      const sf = resolveStaticFields();
+      if (sf.isNull()) return true; // 类未初始化：按「锁住」处理，宁可不写也不打断演出
+      try {
+        return sf.add(0x8).readU8() !== 0;
+      } catch {
+        return true;
       }
     };
     const readGameSpeed = (): number => {
+      const sf = resolveStaticFields();
+      if (sf.isNull()) return 2;
       try {
-        return staticFields.add(0x4).readS32();
+        return sf.add(0x4).readS32();
       } catch {
         return 2;
       }
