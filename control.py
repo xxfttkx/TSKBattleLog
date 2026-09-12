@@ -1507,10 +1507,10 @@ class App(tk.Tk):
         unison_total = snap.get("unisonDamageTotal", "0")
         dlg["info"].configure(
             text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
-                 f"    协奏 {unison_total}    "
+                 f"    Unison伤害 {unison_total}    "
                  f"（分组 {len(snap.get('groups', []))} / "
-                 f"Unison {len(snap.get('unison', []))} / "
-                 f"回合分隔 {len(turns)}）",
+                 f"Unison次数 {len(snap.get('unison', []))} / "
+                 f"当前回合数 {len(turns)}）",
         )
 
     def _on_battle_log_select(self):
@@ -1542,7 +1542,7 @@ class App(tk.Tk):
             dlg["detail_info"].configure(
                 text=f"Unison Attack[{obj.get('name', '')}]    "
                      f"伤害 {obj.get('damage', '')}"
-                     f"（协奏伤害不经 CaluculationNormalDamage，无系数明细）")
+                     f"（Unison伤害不经 CaluculationNormalDamage，无系数明细）")
             return
 
         # group：逐段展开全部入参与系数
@@ -1570,7 +1570,7 @@ class App(tk.Tk):
                 if attr else "-"
             )
             critco_txt = (
-                f"{critco['value']:.2f}({'暴击' if critco['isCritical'] else '普攻'})"
+                f"{critco['value']:.2f}"
                 if critco else "-"
             )
             if rate:
