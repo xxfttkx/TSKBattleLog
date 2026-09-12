@@ -1621,7 +1621,7 @@ class App(tk.Tk):
                 if attr else "-"
             )
             critco_txt = (
-                f"{critco['value']:.2f}({'暴击' if critco['isCritical'] else '普攻'})"
+                f"{critco['value']:.2f}"
                 if critco else "-"
             )
             if rate:
