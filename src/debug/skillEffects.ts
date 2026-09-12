@@ -12,12 +12,11 @@ export interface SkillEffectInfo {
 }
 
 /**
- * 数据版 skillEffectList 读取（DamageCalcTraceMod.logSkillEffectList 的
- * 无日志版本），供宿主 GUI 按需查询单位 buff。
+ * 数据版 skillEffectList 读取（只返回数据、不打日志），
+ * 供宿主 GUI 按需查询单位 buff。
  */
 export function getSkillEffects(unit: Il2Cpp.Object): SkillEffectInfo[] {
-  const skillEffectList = unit.field("skillEffectList")
-    .value as Il2Cpp.Object;
+  const skillEffectList = unit.field("skillEffectList").value as Il2Cpp.Object;
   if (skillEffectList.isNull()) return [];
 
   const size = skillEffectList.field("_size").value as number;
