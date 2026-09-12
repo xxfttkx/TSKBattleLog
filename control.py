@@ -1420,12 +1420,12 @@ class App(tk.Tk):
                   lambda _e: self._on_battle_log_select())
 
     def _configure_detail_columns(self, detail: ttk.Treeview, mode: str):
-        """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 角色/伤害两列"""
+        """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 发起者/伤害两列"""
         if mode == "unison":
             cols = ("name", "damage")
             detail.configure(columns=cols)
             for c, t_, w, anchor in (
-                ("name", "Unison 角色", 260, "w"),
+                ("name", "Unison 发起者", 260, "w"),
                 ("damage", "伤害", 120, "e"),
             ):
                 detail.heading(c, text=t_)
@@ -1548,8 +1548,8 @@ class App(tk.Tk):
             text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
                  f"    Unison伤害 {unison_total}    "
                  f"（技能分组 {len(snap.get('groups', []))} / "
-                 f"Unison {unison_count} / "
-                 f"回合分隔 {len(turns)}）",
+                 f"Unison次数 {unison_count} / "
+                 f"当前回合数 {len(turns)}）",
         )
 
     def _on_battle_log_select(self):
