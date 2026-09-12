@@ -61,7 +61,7 @@ export interface TurnRecord {
   percents: { name: string; percent: string }[];
 }
 
-/** Unison（协奏）伤害事件（不走技能分组，单独成时间线条目） */
+/** Unison 伤害事件（不走技能分组，单独成时间线条目；玩家圈通用 Unison 叫法，不翻译） */
 export interface UnisonEvent {
   seq: number;
   turn: number;
@@ -377,10 +377,7 @@ export class TSKBattleLog {
     return {
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {
-        const total = g.segments.reduce(
-          (acc, s) => acc + s.damage,
-          BigInt(0),
-        );
+        const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
         return {
           seq: g.seq,
           turn: g.turn,

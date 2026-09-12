@@ -1399,30 +1399,17 @@ class App(tk.Tk):
             tree.heading(c, text=t_)
             tree.column(c, width=w, anchor=anchor)
         tree.tag_configure("turn", foreground="#888888")
+        tree.tag_configure("unison", foreground="#a855f7")
         tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
 
         detail_info = ttk.Label(top, text="", foreground="#1a5fb4",
                                 font=("", 9, "bold"))
         detail_info.pack(anchor="w", padx=8)
 
-        dcols = ("seg", "damage", "crit", "dtype", "fluc", "rush",
+        dcols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                  "attr", "critco", "down", "rate", "passive")
         detail = ttk.Treeview(top, columns=dcols, show="headings", height=8)
-        for c, t_, w, anchor in (
-            ("seg", "段#", 40, "center"),
-            ("damage", "伤害", 90, "e"),
-            ("crit", "暴击", 55, "center"),
-            ("dtype", "落地类型", 70, "center"),
-            ("fluc", "乱数", 55, "center"),
-            ("rush", "Rush", 55, "center"),
-            ("attr", "属性克制", 130, "w"),
-            ("critco", "暴击系数", 105, "center"),
-            ("down", "Down", 55, "center"),
-            ("rate", "易伤(before→after ×倍率)", 200, "w"),
-            ("passive", "被动", 60, "center"),
-        ):
-            detail.heading(c, text=t_)
-            detail.column(c, width=w, anchor=anchor)
+        self._configure_detail_columns(detail, "coeffs")
         detail.pack(fill="both", expand=True, padx=8, pady=(2, 8))
 
         dlg = {"top": top, "info": info, "tree": tree,
@@ -1431,6 +1418,38 @@ class App(tk.Tk):
         self._blog_dialog = dlg
         tree.bind("<<TreeviewSelect>>",
                   lambda _e: self._on_battle_log_select())
+
+    def _configure_detail_columns(self, detail: ttk.Treeview, mode: str):
+        """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 角色/伤害两列"""
+        if mode == "unison":
+            cols = ("name", "damage")
+            detail.configure(columns=cols)
+            for c, t_, w, anchor in (
+                ("name", "Unison 角色", 260, "w"),
+                ("damage", "伤害", 120, "e"),
+            ):
+                detail.heading(c, text=t_)
+                detail.column(c, width=w, anchor=anchor)
+        else:
+            cols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
+                    "attr", "critco", "down", "rate", "passive")
+            detail.configure(columns=cols)
+            for c, t_, w, anchor in (
+                ("seg", "段#", 40, "center"),
+                ("damage", "伤害", 90, "e"),
+                ("crit", "暴击", 55, "center"),
+                ("dtype", "落地类型", 70, "center"),
+                ("sv", "技能倍率", 70, "center"),
+                ("fluc", "乱数", 55, "center"),
+                ("rush", "Rush", 55, "center"),
+                ("attr", "属性克制", 130, "w"),
+                ("critco", "暴伤倍率", 105, "center"),
+                ("down", "Stun伤害倍率", 105, "center"),
+                ("rate", "易伤(before→after ×倍率)", 200, "w"),
+                ("passive", "被动", 60, "center"),
+            ):
+                detail.heading(c, text=t_)
+                detail.column(c, width=w, anchor=anchor)
 
     def _apply_battle_log_data(self, payload: dict):
         dlg = self._blog_dialog
@@ -1460,9 +1479,23 @@ class App(tk.Tk):
             items.append((int(u.get("seq", 0)), "unison", u))
         items.sort(key=lambda x: x[0])
 
+        # 合并同回合内连续的 Unison 段为一次 Unison（addDamageNote 里每次
+        # Unison 前都 flushGroups，故连续 seq 的 unison 必属同一次）
+        merged: list[tuple[int, str, dict]] = []
+        for seq, kind, obj in items:
+            if kind == "unison" and merged and merged[-1][1] == "unison_comb" \
+                    and merged[-1][2].get("turn") == obj.get("turn"):
+                merged[-1][2]["segs"].append(obj)
+            elif kind == "unison":
+                merged.append((seq, "unison_comb",
+                               {"turn": obj.get("turn"), "segs": [obj]}))
+            else:
+                merged.append((seq, kind, obj))
+
         turns = snap.get("turns", [])
         cur_turn = 0
-        for _seq, kind, obj in items:
+        unison_count = 0
+        for _seq, kind, obj in merged:
             turn = int(obj.get("turn", 0))
             while turn > cur_turn and cur_turn < len(turns):
                 rec = turns[cur_turn]
@@ -1493,13 +1526,19 @@ class App(tk.Tk):
                         f"{float(obj.get('skillValue', 0)):.2f}",
                     ),
                 )
-            else:
+            else:  # unison_comb
+                unison_count += 1
+                segs = obj.get("segs", [])
+                names = " / ".join(s.get("name", "?") for s in segs)
+                total = sum(int(s.get("damage", 0)) for s in segs)
                 iid = tree.insert(
                     "", "end",
                     values=(
-                        turn, obj.get("name", ""), "Unison Attack",
-                        1, obj.get("damage", ""), "", "",
+                        turn, "Unison",
+                        f"{names} · {len(segs)}段",
+                        len(segs), total, "", "",
                     ),
+                    tags=("unison",),
                 )
             dlg["rows"][iid] = (kind, obj)
 
@@ -1508,9 +1547,9 @@ class App(tk.Tk):
         dlg["info"].configure(
             text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
                  f"    Unison伤害 {unison_total}    "
-                 f"（分组 {len(snap.get('groups', []))} / "
-                 f"Unison次数 {len(snap.get('unison', []))} / "
-                 f"当前回合数 {len(turns)}）",
+                 f"（技能分组 {len(snap.get('groups', []))} / "
+                 f"Unison {unison_count} / "
+                 f"回合分隔 {len(turns)}）",
         )
 
     def _on_battle_log_select(self):
@@ -1528,6 +1567,10 @@ class App(tk.Tk):
             return
         kind, obj = entry
 
+        # 默认恢复系数明细列（Unison 行会自行切到两列模式）
+        if kind != "unison_comb":
+            self._configure_detail_columns(detail, "coeffs")
+
         if kind == "turn":
             percents = "  ".join(
                 f"{p.get('name', '')}({p.get('percent', '')})"
@@ -1538,11 +1581,19 @@ class App(tk.Tk):
                      f"累计伤害 {obj.get('total')}    {percents}")
             return
 
-        if kind == "unison":
+        if kind == "unison_comb":
+            segs = obj.get("segs", [])
+            names = " / ".join(s.get("name", "?") for s in segs)
+            total = sum(int(s.get("damage", 0)) for s in segs)
+            self._configure_detail_columns(detail, "unison")
             dlg["detail_info"].configure(
-                text=f"Unison Attack[{obj.get('name', '')}]    "
-                     f"伤害 {obj.get('damage', '')}"
-                     f"（Unison伤害不经 CaluculationNormalDamage，无系数明细）")
+                text=f"Unison：{names}    共 {len(segs)} 段    "
+                     f"合计伤害 {total}（不经 CaluculationNormalDamage，无系数明细）")
+            for s in segs:
+                detail.insert(
+                    "", "end",
+                    values=(s.get("name", "?"), s.get("damage", "")),
+                )
             return
 
         # group：逐段展开全部入参与系数
@@ -1570,7 +1621,7 @@ class App(tk.Tk):
                 if attr else "-"
             )
             critco_txt = (
-                f"{critco['value']:.2f}"
+                f"{critco['value']:.2f}({'暴击' if critco['isCritical'] else '普攻'})"
                 if critco else "-"
             )
             if rate:
@@ -1589,6 +1640,7 @@ class App(tk.Tk):
                     s.get("damage", ""),
                     s.get("isCritical", "-"),
                     s.get("damageType", "-"),
+                    _f2(s.get("skillValue")),
                     _f2(co.get("fluctuation")),
                     _f2(co.get("rush")),
                     attr_txt,
