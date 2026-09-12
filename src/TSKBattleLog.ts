@@ -1,6 +1,7 @@
 import { TSKBattleNote } from "./TSKBattleNote";
 import { dumpArgs, log, dumpObject, getAutoUseSkillIndex } from "./utils";
 import { skillMap } from "./common";
+import type { CalcCoeffs } from "./debug/damageCoeffs";
 
 enum DamageType {
   Normal = "Normal",
@@ -25,10 +26,21 @@ export interface CalcSegment {
   /** 落地后由 Set*DamageValue 回填 */
   isCritical?: string;
   damageType?: string;
+  /** 外层计算入参/攻击方快照（battle-log enter 采集） */
+  baseAttack?: number;
+  attack?: number;
+  crit?: number;
+  criticalUp?: number;
+  targetCount?: number;
+  teamType?: string;
+  /** 各乘区系数（damageCoeffs 采集器产出） */
+  coeffs?: CalcCoeffs | null;
 }
 
 /** 同一次技能动作的多段伤害分组（同攻击者/回合/kind/目标，multipleCount 连续） */
 export interface SkillGroup {
+  /** 全局创建序号，用于时间线排序 */
+  seq: number;
   attackerAddress: string;
   attackerName: string;
   kind: string;
@@ -39,6 +51,62 @@ export interface SkillGroup {
   segments: CalcSegment[];
   /** 是否已输出汇总日志 */
   printed?: boolean;
+}
+
+/** 回合切换点记录（含当时各角色伤害占比快照） */
+export interface TurnRecord {
+  from: number;
+  to: number;
+  total: string;
+  percents: { name: string; percent: string }[];
+}
+
+/** Unison（协奏）伤害事件（不走技能分组，单独成时间线条目） */
+export interface UnisonEvent {
+  seq: number;
+  turn: number;
+  name: string;
+  damage: string;
+}
+
+/** 发给宿主的可序列化战斗日志快照（bigint 一律转字符串） */
+export interface BattleLogSnapshot {
+  turns: TurnRecord[];
+  groups: {
+    seq: number;
+    turn: number;
+    attackerName: string;
+    kind: string;
+    defenderName: string;
+    skillValue: number;
+    hits: number;
+    crits: number;
+    totalDamage: string;
+    segments: {
+      attackerAddress: string;
+      defenderAddress: string;
+      defenderName: string;
+      damage: string;
+      kind: string;
+      isCritical?: string;
+      damageType?: string;
+      beforeRushCount: number;
+      rushCount: number;
+      multipleCount: number;
+      skillValue: number;
+      baseAttack?: number;
+      attack?: number;
+      crit?: number;
+      criticalUp?: number;
+      targetCount?: number;
+      teamType?: string;
+      coeffs?: CalcCoeffs | null;
+    }[];
+  }[];
+  unison: UnisonEvent[];
+  damageTotal: string;
+  unisonDamageTotal: string;
+  turnCount: number;
 }
 
 export class TSKBattleLog {
@@ -54,6 +122,12 @@ export class TSKBattleLog {
   private skillGroups: SkillGroup[] = [];
   /** 当前正在输出的攻击者，用于检测攻击者切换并 flush 分组 */
   private currentAttacker?: string;
+  /** 回合切换记录（宿主时间线用） */
+  private turnRecords: TurnRecord[] = [];
+  /** Unison 伤害事件（宿主时间线用） */
+  private unisonEvents: UnisonEvent[] = [];
+  /** 全局事件序号（分组/Unison 共用，保证时间线排序） */
+  private eventSeq = 0;
 
   constructor() {}
 
@@ -66,6 +140,9 @@ export class TSKBattleLog {
     this.calcQueue.clear();
     this.skillGroups = [];
     this.currentAttacker = undefined;
+    this.turnRecords = [];
+    this.unisonEvents = [];
+    this.eventSeq = 0;
   }
 
   onTurnChange(oldVal: number, newVal: number): void {
@@ -75,13 +152,21 @@ export class TSKBattleLog {
     const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}    damageTotal=${this.damageTotal}`;
     log(msg);
     this.logs.push(msg);
+    const percents: { name: string; percent: string }[] = [];
     let damageMsg = ``;
     for (const note of this.notes) {
       const percentage = this.getDamagePercentage(note.damage);
       damageMsg += `${note.characterName}(${percentage}) `;
+      percents.push({ name: note.characterName, percent: percentage });
     }
     log(damageMsg);
     this.logs.push(damageMsg);
+    this.turnRecords.push({
+      from: oldVal,
+      to: newVal,
+      total: this.damageTotal.toString(),
+      percents,
+    });
   }
 
   init(notes: Il2Cpp.Array<Il2Cpp.Object>): void {
@@ -155,6 +240,7 @@ export class TSKBattleLog {
       );
     if (!group || seg.multipleCount === 0) {
       group = {
+        seq: this.eventSeq++,
         attackerAddress: seg.attackerAddress,
         attackerName: note.getName(),
         kind: seg.kind,
@@ -234,6 +320,12 @@ export class TSKBattleLog {
       this.flushGroups();
       this.currentAttacker = address;
       this.unisonDamageTotal += damageBigInt;
+      this.unisonEvents.push({
+        seq: this.eventSeq++,
+        turn: this.turnCount,
+        name: note.getName(),
+        damage: damageBigInt.toString(),
+      });
       log(
         `[TSKBattleLog] Unison Attack[${note.getName()}]: damage=${damageBigInt}`,
       );
@@ -278,5 +370,53 @@ export class TSKBattleLog {
     if (this.damageTotal === BigInt(0)) return "0%";
     const value = Number(damage) / Number(this.damageTotal);
     return `${(value * 100).toFixed(0)}%`;
+  }
+
+  /** 当前战斗的可序列化快照（宿主「战斗日志」窗口按需拉取） */
+  snapshot(): BattleLogSnapshot {
+    return {
+      turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
+      groups: this.skillGroups.map((g) => {
+        const total = g.segments.reduce(
+          (acc, s) => acc + s.damage,
+          BigInt(0),
+        );
+        return {
+          seq: g.seq,
+          turn: g.turn,
+          attackerName: g.attackerName,
+          kind: g.kind,
+          defenderName: g.defenderName,
+          skillValue: g.skillValue,
+          hits: g.segments.length,
+          crits: g.segments.filter((s) => s.isCritical === "True").length,
+          totalDamage: total.toString(),
+          segments: g.segments.map((s) => ({
+            attackerAddress: s.attackerAddress,
+            defenderAddress: s.defenderAddress,
+            defenderName: s.defenderName,
+            damage: s.damage.toString(),
+            kind: s.kind,
+            isCritical: s.isCritical,
+            damageType: s.damageType,
+            beforeRushCount: s.beforeRushCount,
+            rushCount: s.rushCount,
+            multipleCount: s.multipleCount,
+            skillValue: s.skillValue,
+            baseAttack: s.baseAttack,
+            attack: s.attack,
+            crit: s.crit,
+            criticalUp: s.criticalUp,
+            targetCount: s.targetCount,
+            teamType: s.teamType,
+            coeffs: s.coeffs ?? null,
+          })),
+        };
+      }),
+      unison: this.unisonEvents.map((u) => ({ ...u })),
+      damageTotal: this.damageTotal.toString(),
+      unisonDamageTotal: this.unisonDamageTotal.toString(),
+      turnCount: this.turnCount,
+    };
   }
 }

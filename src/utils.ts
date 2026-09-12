@@ -1,7 +1,12 @@
 import { skillMap } from "./common";
 
 // ===== 宿主通信：向外部 control.py 宿主推送事件 =====
-type HostMessageType = "log" | "modList" | "unitList" | "buffData";
+type HostMessageType =
+  | "log"
+  | "modList"
+  | "unitList"
+  | "buffData"
+  | "battleLogData";
 
 function sendHost(type: HostMessageType, payload: any) {
   try {

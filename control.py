@@ -45,6 +45,11 @@ PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
 
 
+def _f2(v) -> str:
+    """战斗日志系数：数字保留两位，缺失（None）显示 -"""
+    return f"{v:.2f}" if isinstance(v, (int, float)) else "-"
+
+
 def _read_app_version() -> str:
     """工具版本号（不带 v 前缀）。唯一来源是 package.json 的 version；
     PyInstaller 打包后仓库文件不在包里，读 CI 构建时生成的 version.txt
@@ -345,6 +350,8 @@ class FridaBridge:
                 self.ui_queue.put(("unitList", payload))
             elif msg_type == "buffData":
                 self.ui_queue.put(("buffData", payload))
+            elif msg_type == "battleLogData":
+                self.ui_queue.put(("battleLogData", payload))
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
@@ -379,6 +386,7 @@ class App(tk.Tk):
         self.unit_photos: dict[str, ImageTk.PhotoImage] = {}  # 保引用防 GC
         self.enemy_buttons: dict[str, ttk.Button] = {}  # 敌人紧凑文字按钮
         self._buff_dialog: dict | None = None
+        self._blog_dialog: dict | None = None  # 战斗日志窗口
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
@@ -413,6 +421,10 @@ class App(tk.Tk):
 
         ttk.Button(
             toolbar, text="重载配置", command=self._reload_trace_config
+        ).pack(side="left", padx=4)
+
+        ttk.Button(
+            toolbar, text="战斗日志", command=self._on_click_battle_log
         ).pack(side="left", padx=4)
 
         # 隐藏/显示角色头像栏和敌人条（专注看日志时用）
@@ -1049,6 +1061,8 @@ class App(tk.Tk):
                     self._apply_unit_list(data)
                 elif kind == "buffData":
                     self._apply_buff_data(data)
+                elif kind == "battleLogData":
+                    self._apply_battle_log_data(data)
                 elif kind == "unitIconReady":
                     self._apply_unit_icon(*data)
                 elif kind == "unitIconFailed":
@@ -1332,6 +1346,258 @@ class App(tk.Tk):
                 it.get("effectValue", ""), it.get("value2", ""),
                 it.get("value3", ""), it.get("value4", ""), it.get("value5", ""),
             ))
+
+    # ---- 战斗日志窗口 ----
+
+    def _on_click_battle_log(self):
+        if self.bridge.script is None:
+            messagebox.showinfo("提示", "尚未注入，无法查看战斗日志")
+            return
+        self._open_battle_log_dialog()
+        self._refresh_battle_log()
+
+    def _refresh_battle_log(self):
+        if self._blog_dialog is None:
+            return
+        self._blog_dialog["info"].configure(text="读取中...")
+        self.bridge.post({"type": "battleLogRequest"})
+
+    def _open_battle_log_dialog(self):
+        if self._blog_dialog is not None:
+            try:
+                self._blog_dialog["top"].lift()
+                return
+            except Exception:
+                pass
+        top = tk.Toplevel(self)
+        top.title("战斗日志")
+        top.geometry("1080x620")
+        top.attributes("-topmost", self._always_top)
+
+        header = ttk.Frame(top)
+        header.pack(fill="x", padx=8, pady=(6, 2))
+        info = ttk.Label(header, text="读取中...", foreground="#1a5fb4",
+                         font=("", 10, "bold"))
+        info.pack(side="left")
+        ttk.Button(header, text="刷新",
+                   command=self._refresh_battle_log).pack(side="right")
+
+        ttk.Label(top, text="时间线（回合分隔 / 技能分组 / Unison），点击行查看段详情",
+                  foreground="#666").pack(anchor="w", padx=8)
+
+        cols = ("turn", "attacker", "action", "hits", "damage", "crits", "sv")
+        tree = ttk.Treeview(top, columns=cols, show="headings", height=12)
+        for c, t_, w, anchor in (
+            ("turn", "回合", 50, "center"),
+            ("attacker", "攻击者", 180, "w"),
+            ("action", "动作", 300, "w"),
+            ("hits", "段数", 45, "center"),
+            ("damage", "伤害", 100, "e"),
+            ("crits", "暴击", 45, "center"),
+            ("sv", "倍率", 55, "center"),
+        ):
+            tree.heading(c, text=t_)
+            tree.column(c, width=w, anchor=anchor)
+        tree.tag_configure("turn", foreground="#888888")
+        tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
+
+        detail_info = ttk.Label(top, text="", foreground="#1a5fb4",
+                                font=("", 9, "bold"))
+        detail_info.pack(anchor="w", padx=8)
+
+        dcols = ("seg", "damage", "crit", "dtype", "fluc", "rush",
+                 "attr", "critco", "down", "rate", "passive")
+        detail = ttk.Treeview(top, columns=dcols, show="headings", height=8)
+        for c, t_, w, anchor in (
+            ("seg", "段#", 40, "center"),
+            ("damage", "伤害", 90, "e"),
+            ("crit", "暴击", 55, "center"),
+            ("dtype", "落地类型", 70, "center"),
+            ("fluc", "乱数", 55, "center"),
+            ("rush", "Rush", 55, "center"),
+            ("attr", "属性克制", 130, "w"),
+            ("critco", "暴击系数", 105, "center"),
+            ("down", "Down", 55, "center"),
+            ("rate", "易伤(before→after ×倍率)", 200, "w"),
+            ("passive", "被动", 60, "center"),
+        ):
+            detail.heading(c, text=t_)
+            detail.column(c, width=w, anchor=anchor)
+        detail.pack(fill="both", expand=True, padx=8, pady=(2, 8))
+
+        dlg = {"top": top, "info": info, "tree": tree,
+               "detail": detail, "detail_info": detail_info,
+               "rows": {}}
+        self._blog_dialog = dlg
+        tree.bind("<<TreeviewSelect>>",
+                  lambda _e: self._on_battle_log_select())
+
+    def _apply_battle_log_data(self, payload: dict):
+        dlg = self._blog_dialog
+        if dlg is None:
+            return
+        if payload.get("error"):
+            dlg["info"].configure(text=f"读取失败: {payload['error']}",
+                                  foreground="#c0392b")
+            return
+        dlg["info"].configure(foreground="#1a5fb4")
+        self._render_battle_log(dlg, payload)
+
+    def _render_battle_log(self, dlg: dict, snap: dict):
+        tree: ttk.Treeview = dlg["tree"]
+        for row in tree.get_children():
+            tree.delete(row)
+        dlg["rows"].clear()
+        detail = dlg["detail"]
+        for row in detail.get_children():
+            detail.delete(row)
+        dlg["detail_info"].configure(text="")
+
+        items: list[tuple[int, str, dict]] = []
+        for g in snap.get("groups", []):
+            items.append((int(g.get("seq", 0)), "group", g))
+        for u in snap.get("unison", []):
+            items.append((int(u.get("seq", 0)), "unison", u))
+        items.sort(key=lambda x: x[0])
+
+        turns = snap.get("turns", [])
+        cur_turn = 0
+        for _seq, kind, obj in items:
+            turn = int(obj.get("turn", 0))
+            while turn > cur_turn and cur_turn < len(turns):
+                rec = turns[cur_turn]
+                iid = tree.insert(
+                    "", "end",
+                    values=(
+                        "",
+                        f"── turn {rec.get('from')} -> {rec.get('to')}"
+                        f"    累计伤害 {rec.get('total')}",
+                        "", "", "", "", "",
+                    ),
+                    tags=("turn",),
+                )
+                dlg["rows"][iid] = ("turn", rec)
+                cur_turn += 1
+            if turn > cur_turn:
+                cur_turn = turn
+            if kind == "group":
+                iid = tree.insert(
+                    "", "end",
+                    values=(
+                        turn,
+                        obj.get("attackerName", ""),
+                        f"{obj.get('kind', '')} -> {obj.get('defenderName', '')}",
+                        obj.get("hits", 0),
+                        obj.get("totalDamage", ""),
+                        obj.get("crits", 0),
+                        f"{float(obj.get('skillValue', 0)):.2f}",
+                    ),
+                )
+            else:
+                iid = tree.insert(
+                    "", "end",
+                    values=(
+                        turn, obj.get("name", ""), "Unison Attack",
+                        1, obj.get("damage", ""), "", "",
+                    ),
+                )
+            dlg["rows"][iid] = (kind, obj)
+
+        total = snap.get("damageTotal", "0")
+        unison_total = snap.get("unisonDamageTotal", "0")
+        dlg["info"].configure(
+            text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
+                 f"    协奏 {unison_total}    "
+                 f"（分组 {len(snap.get('groups', []))} / "
+                 f"Unison {len(snap.get('unison', []))} / "
+                 f"回合分隔 {len(turns)}）",
+        )
+
+    def _on_battle_log_select(self):
+        dlg = self._blog_dialog
+        if dlg is None:
+            return
+        sel = dlg["tree"].selection()
+        detail: ttk.Treeview = dlg["detail"]
+        for row in detail.get_children():
+            detail.delete(row)
+        if not sel:
+            return
+        entry = dlg["rows"].get(sel[0])
+        if entry is None:
+            return
+        kind, obj = entry
+
+        if kind == "turn":
+            percents = "  ".join(
+                f"{p.get('name', '')}({p.get('percent', '')})"
+                for p in obj.get("percents", [])
+            )
+            dlg["detail_info"].configure(
+                text=f"回合 {obj.get('from')} -> {obj.get('to')}    "
+                     f"累计伤害 {obj.get('total')}    {percents}")
+            return
+
+        if kind == "unison":
+            dlg["detail_info"].configure(
+                text=f"Unison Attack[{obj.get('name', '')}]    "
+                     f"伤害 {obj.get('damage', '')}"
+                     f"（协奏伤害不经 CaluculationNormalDamage，无系数明细）")
+            return
+
+        # group：逐段展开全部入参与系数
+        segs = obj.get("segments", [])
+        first = segs[0] if segs else {}
+        dlg["detail_info"].configure(
+            text=(
+                f"{obj.get('attackerName', '')} {obj.get('kind', '')} -> "
+                f"{obj.get('defenderName', '')}    "
+                f"基础ATK={first.get('baseAttack', '-')}  "
+                f"当前ATK={first.get('attack', '-')}  "
+                f"暴击={first.get('crit', '-')}  "
+                f"criticalUp={first.get('criticalUp', '-')}  "
+                f"目标数={first.get('targetCount', '-')}  "
+                f"队伍={first.get('teamType', '-')}"
+            )
+        )
+        for s in segs:
+            co = s.get("coeffs") or {}
+            attr = co.get("attribute")
+            critco = co.get("critical")
+            rate = co.get("damageRate")
+            attr_txt = (
+                f"{attr['value']:.2f} ({attr['compatibility']})"
+                if attr else "-"
+            )
+            critco_txt = (
+                f"{critco['value']:.2f}({'暴击' if critco['isCritical'] else '普攻'})"
+                if critco else "-"
+            )
+            if rate:
+                r = rate.get("rate")
+                r_txt = (
+                    f"{rate.get('before')}→{rate.get('after')} ×{r:.2f}"
+                    if isinstance(r, (int, float)) and r == r else "-"
+                )  # NaN 自检 r == r
+            else:
+                r_txt = "-"
+            passive = co.get("passive")
+            detail.insert(
+                "", "end",
+                values=(
+                    int(s.get("multipleCount", 0)) + 1,
+                    s.get("damage", ""),
+                    s.get("isCritical", "-"),
+                    s.get("damageType", "-"),
+                    _f2(co.get("fluctuation")),
+                    _f2(co.get("rush")),
+                    attr_txt,
+                    critco_txt,
+                    _f2(co.get("down")),
+                    r_txt,
+                    passive if passive is not None else "-",
+                ),
+            )
 
     # ---- 日志渲染 ----
 

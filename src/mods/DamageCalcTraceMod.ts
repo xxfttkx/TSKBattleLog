@@ -1,53 +1,25 @@
-import { AttackType, TeamType, AbilityCompatibility } from "../common";
+import { log } from "../utils";
+import { Mod, MethodEnterHandler, traceMethodByName } from "../mod";
 import {
-  log,
-  parseArgument,
-  getNameByTSKBattleNote,
-  readFloatReturn,
-} from "../utils";
-import {
-  Mod,
-  MethodEnterHandler,
-  MethodLeaveHandler,
-  traceMethodByName,
-} from "../mod";
+  damageCoeffs,
+  CalcCoeffs,
+  CalcInputSnapshot,
+} from "../debug/damageCoeffs";
 
-/** 伤害公式分析（调试工具）：CaluculationNormalDamage 期间输出各系数偏移 */
+/**
+ * 伤害公式分析（调试工具）：控制台文本视图。
+ *
+ * 系数 hook 与数据采集统一在 battle-log 的 damageCoeffs 采集器里（一份 hook，
+ * 数据进 CalcSegment 供宿主详情面板），本 mod 只订阅采集完成事件打印文本，
+ * 不再自行 hook 任何伤害计算方法。
+ */
 export class DamageCalcTraceMod implements Mod {
   name = "damage-calc-trace";
   category = "调试" as const;
   description = "打印伤害计算相关的各个参数";
   enabled = true;
 
-  /** CaluculationNormalDamage 执行期间的守卫标志，限定 Offset 系列日志只在计算期间输出 */
-  private enterCalc = false;
-
-  /**
-   * 一次 CaluculationNormalDamage 内各 Offset 的已打印标志。
-   * 游戏内部会对部分系数（Attribute/Critical/Down）二次求值，
-   * 两次结果相同，每次外层计算只保留第一次调用的输出；
-   * 进入外层计算时整体重置（与 enterCalc 同一单线程假设）。
-   */
-  private offsetPrinted: Record<
-    "fluctuation" | "rush" | "attribute" | "critical" | "down",
-    boolean
-  > = {
-    fluctuation: false,
-    rush: false,
-    attribute: false,
-    critical: false,
-    down: false,
-  };
-
   onLoad(image: Il2Cpp.Image): void {
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "CaluculationNormalDamage",
-      this,
-      this.handleCaluculationNormalDamage,
-      this.handleCaluculationNormalDamageLeave,
-    );
     traceMethodByName(
       image,
       "TSKBattleAI",
@@ -56,187 +28,69 @@ export class DamageCalcTraceMod implements Mod {
       this.handleLotterySkillAction,
     );
 
-    // 各伤害系数都是 float 返回值（x64 走 XMM0）。
-    // frida 17.16+ 起 onLeave 的 CpuContext 直接暴露 xmm 寄存器，
-    // 用纯 Interceptor.attach 监听即可，无需再替换 implementation 转发原函数。
-    // quiet=true：enter/return 噪声日志交给本 mod 自己打印；mod.enabled
-    // 守卫由 traceMethodByName 负责，计算期间守卫见各 handler 的 enterCalc。
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "FluctuationOffset",
-      this,
-      undefined,
-      (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc && !this.offsetPrinted.fluctuation) {
-          this.offsetPrinted.fluctuation = true;
-          log("FluctuationOffset =", readFloatReturn(ctx).toFixed(2));
-        }
-      },
-      true,
-    );
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "RushOffset",
-      this,
-      undefined,
-      (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc && !this.offsetPrinted.rush) {
-          this.offsetPrinted.rush = true;
-          log("RushOffset =", readFloatReturn(ctx).toFixed(2));
-        }
-      },
-      true,
-    );
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "AttributeOffset",
-      this,
-      (_cls, _m, args, _ctx, invocation) => {
-        // private static float AttributeOffset(AbilityCompatibility compatibility, TSKBattleNote note, int beforeRushCount) { }
-        // static 方法无 this：args[0] 就是第一个真实参数 compatibility，
-        // 小值域枚举按字节掩码读，暂存到 invocation 供 onLeave 打印
-        (invocation as any)._compatibility = args[0].toInt32() & 0xff;
-      },
-      (_c, _m, _retval, invocation, ctx) => {
-        if (this.enterCalc && !this.offsetPrinted.attribute) {
-          this.offsetPrinted.attribute = true;
-          const compatibility = (invocation as any)._compatibility as number;
-          log(
-            `AttributeOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
-              `(compatibility=${AbilityCompatibility[compatibility]})`,
-          );
-        }
-      },
-      true,
-    );
-    // private static float CriticalOffset(bool isCritilal, TSKBattleNote note, int criticalUpValue = 0, int beforeRushCount = 0) { }
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "CriticalOffset",
-      this,
-      (_cls, _m, args, _ctx, invocation) => {
-        // bool 参数高 24 位不可信，按字节掩码读取后暂存
-        (invocation as any)._isCritical = (args[0].toInt32() & 0xff) !== 0;
-      },
-      (_c, _m, _retval, invocation, ctx) => {
-        if (this.enterCalc && !this.offsetPrinted.critical) {
-          this.offsetPrinted.critical = true;
-          const isCritical = (invocation as any)._isCritical as boolean;
-          log(
-            `CriticalOffset = ${readFloatReturn(ctx).toFixed(2)} ` +
-              `(isCritical=${isCritical ? "true" : "false"})`,
-          );
-        }
-      },
-      true,
-    );
-    traceMethodByName(
-      image,
-      "TSKBattleCalculationManager",
-      "DownOffset",
-      this,
-      undefined,
-      (_c, _m, _retval, _inv, ctx) => {
-        if (this.enterCalc && !this.offsetPrinted.down) {
-          this.offsetPrinted.down = true;
-          log(`DownOffset = ${readFloatReturn(ctx).toFixed(2)}`);
-        }
-      },
-      true,
-    );
-    traceMethodByName(
-      image,
-      "TSKBattleNote",
-      "GetDamageRateValue",
-      this,
-      (_cls, _m, args, _ctx, invocation) => {
-        // 实例方法：args[0]=this，args[1]=伤害基数(int64)，onLeave 时算易伤倍率
-        (invocation as any)._damageBase = args[1];
-      },
-      (_c, _m, retval, invocation) => {
-        if (this.enterCalc) {
-          const damage = Number((invocation as any)._damageBase);
-          const after = Number(retval);
-          log(
-            `GetDamageRateValue = ${damage} -> ${after} ` +
-              `(易伤: ${(after / damage).toFixed(2)})`,
-          );
-        }
-      },
-      true,
-    );
-    traceMethodByName(
-      image,
-      "TSKBattleNote",
-      "GetPassiveDamageRate",
-      this,
-      undefined,
-      (_c, _m, retval) => {
-        if (this.enterCalc) {
-          log(`GetPassiveDamageRate = ${Number(retval)}`);
-        }
-      },
-      true,
-    );
+    damageCoeffs.subscribe((coeffs, inputs, finalDamage) => {
+      if (!this.enabled) return;
+      this.printCalc(coeffs, inputs, finalDamage);
+    });
   }
 
-  private handleCaluculationNormalDamage: MethodEnterHandler = (
-    _cls,
-    _method,
-    args,
-  ) => {
-    this.enterCalc = true;
-    // 新一轮外层计算：各系数去重标志复位
-    this.offsetPrinted = {
-      fluctuation: false,
-      rush: false,
-      attribute: false,
-      critical: false,
-      down: false,
-    };
-    const attack = new Il2Cpp.Object(args[0]); //TSKBattleNote
-    const defence = new Il2Cpp.Object(args[1]); //TSKBattleNote
-    const beforeRushCount = args[2].toInt32();
-    const rushCount = args[3].toInt32();
-    const skillValue = parseArgument(args[4], "float") as number;
-    const kind = AttackType[parseArgument(args[8], "enum") as number];
-    const criticalUp = parseArgument(args[9], "int");
-    const targetCount = parseArgument(args[10], "int");
-    const multipleCount = parseArgument(args[11], "int");
-
-    const baseAttack = attack.method("GetBaseAttack").invoke() as number;
-    const atk = attack.method("GetAttack").invoke(false) as number;
-    const crt = attack.method("GetCritical").invoke() as number;
-
+  /** 一次 CaluculationNormalDamage 完成后的控制台输出（顺序沿用旧版） */
+  private printCalc(
+    coeffs: CalcCoeffs,
+    i: CalcInputSnapshot,
+    finalDamage: string,
+  ): void {
     log(
-      `[CaluculationNormalDamage]: beforeRushCount=${beforeRushCount} rushCount=${rushCount} skillValue=${skillValue}`,
+      `[CaluculationNormalDamage]: beforeRushCount=${i.beforeRushCount} rushCount=${i.rushCount} skillValue=${i.skillValue}`,
     );
     log(
-      `[CaluculationNormalDamage]: kind=${kind} criticalUp=${criticalUp} targetCount=${targetCount} multipleCount=${multipleCount}`,
+      `[CaluculationNormalDamage]: kind=${i.kind} criticalUp=${i.criticalUp} targetCount=${i.targetCount} multipleCount=${i.multipleCount}`,
     );
-
-    const teamPtr = attack.handle.add(0x28).readPointer();
-    const team = new Il2Cpp.Object(teamPtr);
-    const teamType = team.handle.add(0x28).readS32();
-    log(`attack teamType=${TeamType[teamType]}`);
-
+    log(`attack teamType=${i.teamType}`);
     log(
-      `[CaluculationNormalDamage]: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`,
+      `[CaluculationNormalDamage]: baseAttack=${i.baseAttack} attack=${i.attack}(ignore charge) critical=${i.critical}`,
     );
+    const rate =
+      i.baseAttack > 0 ? (i.attack / i.baseAttack).toFixed(2) : "N/A";
     log(
-      `${getNameByTSKBattleNote(attack)}: ATK倍率=${(atk / baseAttack).toFixed(
-        2,
-      )} attack=${atk}(ignore charge) skillValue=${skillValue.toFixed(2)}`,
+      `${i.attackerName}: ATK倍率=${rate} attack=${i.attack}(ignore charge) skillValue=${i.skillValue.toFixed(2)}`,
     );
-  };
 
-  private handleCaluculationNormalDamageLeave: MethodLeaveHandler = () => {
-    this.enterCalc = false;
-  };
+    if (coeffs.fluctuation !== undefined) {
+      log(`FluctuationOffset = ${coeffs.fluctuation.toFixed(2)}`);
+    }
+    if (coeffs.rush !== undefined) {
+      log(`RushOffset = ${coeffs.rush.toFixed(2)}`);
+    }
+    if (coeffs.attribute) {
+      log(
+        `AttributeOffset = ${coeffs.attribute.value.toFixed(2)} ` +
+          `(compatibility=${coeffs.attribute.compatibility})`,
+      );
+    }
+    if (coeffs.critical) {
+      log(
+        `CriticalOffset = ${coeffs.critical.value.toFixed(2)} ` +
+          `(isCritical=${coeffs.critical.isCritical})`,
+      );
+    }
+    if (coeffs.down !== undefined) {
+      log(`DownOffset = ${coeffs.down.toFixed(2)}`);
+    }
+    if (coeffs.passive !== undefined) {
+      log(`GetPassiveDamageRate = ${coeffs.passive}`);
+    }
+    if (coeffs.damageRate) {
+      const r = Number.isNaN(coeffs.damageRate.rate)
+        ? "N/A"
+        : coeffs.damageRate.rate.toFixed(2);
+      log(
+        `GetDamageRateValue = ${coeffs.damageRate.before} -> ${coeffs.damageRate.after} ` +
+          `(易伤: ${r})`,
+      );
+    }
+    log(`CaluculationNormalDamage return: ${finalDamage}`);
+  }
 
   private handleLotterySkillAction: MethodEnterHandler = (
     _cls,

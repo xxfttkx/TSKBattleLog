@@ -182,6 +182,22 @@ Il2Cpp.perform(() => {
     }
   });
 
+  // 宿主点击「战斗日志」按钮：返回 battle-log 的当前战斗快照
+  armRecv("battleLogRequest", () => {
+    const mod = mods.find((m) => m.name === "battle-log") as
+      | BattleLogMod
+      | undefined;
+    if (!mod || !mod.enabled) {
+      sendHost("battleLogData", { error: "battle-log mod 未启用" });
+      return;
+    }
+    try {
+      sendHost("battleLogData", mod.snapshot());
+    } catch (e) {
+      sendHost("battleLogData", { error: String(e) });
+    }
+  });
+
   // 向宿主上报 mod 清单
   publishModList(mods);
 });

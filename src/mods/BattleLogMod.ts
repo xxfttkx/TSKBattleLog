@@ -1,6 +1,6 @@
-import { AttackType, BattleMode } from "../common";
+import { AttackType, BattleMode, TeamType } from "../common";
 import { log, getNameByTSKBattleNote, parseArgument, sendHost } from "../utils";
-import { TSKBattleLog, CalcSegment } from "../TSKBattleLog";
+import { TSKBattleLog, BattleLogSnapshot, CalcSegment } from "../TSKBattleLog";
 import {
   Mod,
   MethodEnterHandler,
@@ -9,6 +9,7 @@ import {
   dumpArgsHandler,
 } from "../mod";
 import { gaugeViewOnTop } from "../debug/gaugeTop";
+import { damageCoeffs, CalcInputSnapshot } from "../debug/damageCoeffs";
 
 /** 战斗伤害统计（观察型） */
 export class BattleLogMod implements Mod {
@@ -82,6 +83,10 @@ export class BattleLogMod implements Mod {
 
     // 回合计数：hook BattleUpdate，对比 turnCount 变化
     this.setupTurnCountHook(image);
+
+    // 伤害系数采集器（5 Offset + 易伤 + 被动），数据挂到 CalcSegment.coeffs，
+    // 同时向订阅者（damage-calc-trace 控制台视图）广播
+    damageCoeffs.install(image, this);
   }
 
   private setupTurnCountHook(image: Il2Cpp.Image): void {
@@ -133,15 +138,53 @@ export class BattleLogMod implements Mod {
   ) => {
     const ctx = invocation as any;
     ctx._calcAttackerAddr = args[0].toString();
+    const attack = new Il2Cpp.Object(args[0]);
     const defence = new Il2Cpp.Object(args[1]);
     ctx._calcDefenderAddr = args[1].toString();
     ctx._calcDefenderName = getNameByTSKBattleNote(defence);
     ctx._calcKind =
       AttackType[parseArgument(args[8], "enum") as number] ?? "Unknown";
-    ctx._calcBeforeRush = args[2].toInt32();
-    ctx._calcRush = args[3].toInt32();
-    ctx._calcMultiple = parseArgument(args[11], "int") as number;
-    ctx._calcSkillValue = parseArgument(args[4], "float") as number;
+    const beforeRushCount = args[2].toInt32();
+    const rushCount = args[3].toInt32();
+    const skillValue = parseArgument(args[4], "float") as number;
+    const criticalUp = parseArgument(args[9], "int") as number;
+    const targetCount = parseArgument(args[10], "int") as number;
+    const multipleCount = parseArgument(args[11], "int") as number;
+    ctx._calcBeforeRush = beforeRushCount;
+    ctx._calcRush = rushCount;
+    ctx._calcMultiple = multipleCount;
+    ctx._calcSkillValue = skillValue;
+
+    // 外层入参/攻击方快照（详情面板 + 控制台订阅者用）。
+    // 注意：begin() 必须在这些 invoke 之后——若 getter 内部恰好调用
+    // GetDamageRateValue，bag 尚未建立，采集钩子会直接忽略，不会污染。
+    const baseAttack = attack.method("GetBaseAttack").invoke() as number;
+    const atk = attack.method("GetAttack").invoke(false) as number;
+    const crt = attack.method("GetCritical").invoke() as number;
+    let teamType = "Unknown";
+    try {
+      const teamPtr = attack.handle.add(0x28).readPointer();
+      teamType = TeamType[teamPtr.add(0x28).readS32()] ?? "Unknown";
+    } catch {
+      /* 个别调用链 team 可能缺失 */
+    }
+    const inputs: CalcInputSnapshot = {
+      beforeRushCount,
+      rushCount,
+      skillValue,
+      kind: ctx._calcKind,
+      criticalUp,
+      targetCount,
+      multipleCount,
+      baseAttack,
+      attack: atk,
+      critical: crt,
+      teamType,
+      attackerName: getNameByTSKBattleNote(attack),
+    };
+    ctx._calcInputs = inputs;
+    // 系数 bag 最后打开：onEnter 返回后游戏函数体才开始调用 7 个系数方法
+    damageCoeffs.begin();
   };
 
   private handleCalcDamageLeave: MethodLeaveHandler = (
@@ -151,10 +194,15 @@ export class BattleLogMod implements Mod {
     invocation,
   ) => {
     const ctx = invocation as any;
+    const finalDamage = BigInt(retval.toString());
+    // 系数 bag 收口（同时通知 damage-calc-trace 订阅者）
+    const coeffs = ctx._calcInputs
+      ? damageCoeffs.end(ctx._calcInputs as CalcInputSnapshot, finalDamage)
+      : undefined;
     if (ctx._calcAttackerAddr === undefined) return;
     const seg: CalcSegment = {
       attackerAddress: ctx._calcAttackerAddr,
-      damage: BigInt(retval.toString()),
+      damage: finalDamage,
       kind: ctx._calcKind,
       defenderAddress: ctx._calcDefenderAddr,
       defenderName: ctx._calcDefenderName,
@@ -163,9 +211,21 @@ export class BattleLogMod implements Mod {
       multipleCount: ctx._calcMultiple,
       skillValue: ctx._calcSkillValue,
       turn: this.tskBattleLog.turnCount,
+      baseAttack: ctx._calcInputs?.baseAttack,
+      attack: ctx._calcInputs?.attack,
+      crit: ctx._calcInputs?.critical,
+      criticalUp: ctx._calcInputs?.criticalUp,
+      targetCount: ctx._calcInputs?.targetCount,
+      teamType: ctx._calcInputs?.teamType,
+      coeffs,
     };
     this.tskBattleLog.addCalcSegment(seg);
   };
+
+  /** 宿主「战斗日志」窗口按需拉取当前战斗快照 */
+  snapshot(): BattleLogSnapshot {
+    return this.tskBattleLog.snapshot();
+  }
 
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {
     // x64 寄存器槽位高位不可信：int 参数直接 toInt32()，
