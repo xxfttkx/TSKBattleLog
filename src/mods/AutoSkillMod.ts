@@ -21,12 +21,6 @@ export class AutoSkillMod implements Mod {
   private handleLotterySkill: MethodEnterHandler = (_cls, _method, args) => {
     // args[2] = TSKBattleNote
     const unit = new Il2Cpp.Object(args[2]);
-    const baseAttack = unit.method("GetBaseAttack").invoke() as number;
-    const atk = unit.method("GetAttack").invoke(false) as number;
-    const crt = unit.method("GetCritical").invoke() as number;
-    log(
-      `LotterySkill: baseAttack=${baseAttack} attack=${atk}(ignore charge) critical=${crt}`,
-    );
 
     const selectPattern = new Il2Cpp.Object(args[1]);
 
@@ -39,11 +33,7 @@ export class AutoSkillMod implements Mod {
     const characterName = (
       unitData.field("<CharacterName>k__BackingField").value as Il2Cpp.String
     ).content;
-    const hp = unitData.field("<HP>k__BackingField").value;
-    const attack = unitData.field("<Attack>k__BackingField").value;
-    const critical = unitData.field("<Critical>k__BackingField").value;
     const name = `[${unitName}] ${characterName}`;
-    log(`${name}: hp=${hp} attack=${attack} critical=${critical}`);
 
     const skillId = getAutoUseSkillIndex(unitName ?? "", characterName ?? "");
     if (skillId != -1) {
