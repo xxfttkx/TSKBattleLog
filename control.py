@@ -55,16 +55,26 @@ def _pct(v) -> str:
     return f"{v / 100:.1f}%" if isinstance(v, (int, float)) else "-"
 
 
-# 角色属性 AttrType -> 颜色（取自游戏官方属性图标主色，降亮度保证白底可读）
+# 角色属性 AttrType（TSKBattleUnit.<AttrType>k__BackingField，offset 0x34）
 # 1=炎 2=水 3=雷 4=光 5=闇
-ATTR_COLORS = {
-    1: "#ad3400",  # 炎 红橙
-    2: "#399aad",  # 水 青蓝
-    3: "#79ad22",  # 雷 黄绿
-    4: "#ad9c34",  # 光 暗金
-    5: "#8256ad",  # 闇 紫
+_ATTR_ICON_BASE = "https://twinklestarknights.wikiru.jp/attach2"
+# id -> (中文名, 文字颜色, 官方图标 URL)。颜色取自官方图标主色并降亮度，保证白底可读
+ATTR_INFO = {
+    1: ("炎", "#ad3400",
+        f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30312E706E67.png"),
+    2: ("水", "#399aad",
+        f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30322E706E67.png"),
+    3: ("雷", "#79ad22",
+        f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30332E706E67.png"),
+    4: ("光", "#ad9c34",
+        f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30342E706E67.png"),
+    5: ("闇", "#8256ad",
+        f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30352E706E67.png"),
 }
-ATTR_NAMES = {1: "炎", 2: "水", 3: "雷", 4: "光", 5: "闇"}
+ATTR_COLORS = {k: v[1] for k, v in ATTR_INFO.items()}
+ATTR_NAMES = {k: v[0] for k, v in ATTR_INFO.items()}
+ATTR_ICON_URLS = {k: v[2] for k, v in ATTR_INFO.items()}
+DEFAULT_ATTR_COLOR = "#555555"  # 未知/0 属性兜底灰
 
 
 def attr_color(attr) -> str:
@@ -72,8 +82,8 @@ def attr_color(attr) -> str:
     try:
         a = int(attr)
     except (TypeError, ValueError):
-        return "#555555"
-    return ATTR_COLORS.get(a, "#555555")
+        return DEFAULT_ATTR_COLOR
+    return ATTR_COLORS.get(a, DEFAULT_ATTR_COLOR)
 
 
 def attr_tag(attr) -> str:
@@ -1495,7 +1505,7 @@ class App(tk.Tk):
             tree.column(c, width=w, anchor=anchor)
         tree.tag_configure("turn", foreground="#888888")
         tree.tag_configure("unison", foreground="#000000")
-        tree.tag_configure("attr0", foreground="#555555")
+        tree.tag_configure("attr0", foreground=DEFAULT_ATTR_COLOR)
         for _a, _c in ATTR_COLORS.items():
             tree.tag_configure(f"attr{_a}", foreground=_c)
         tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
@@ -1556,7 +1566,7 @@ class App(tk.Tk):
                 detail.heading(c, text=t_)
                 detail.column(c, width=w, anchor=anchor)
         # 统一注册属性色 tag（coeffs/unison 两种布局共用）
-        detail.tag_configure("attr0", foreground="#555555")
+        detail.tag_configure("attr0", foreground=DEFAULT_ATTR_COLOR)
         for _a, _c in ATTR_COLORS.items():
             detail.tag_configure(f"attr{_a}", foreground=_c)
 
