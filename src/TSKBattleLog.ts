@@ -15,8 +15,12 @@ export interface CalcSegment {
   damage: bigint;
   /** AttackType：Normal / Ex / ... */
   kind: string;
+  /** 攻击者属性 AttrType：1=炎 2=水 3=雷 4=光 5=闇 */
+  attackerAttr: number;
   defenderAddress: string;
   defenderName: string;
+  /** 防御者属性 AttrType */
+  defenderAttr: number;
   beforeRushCount: number;
   rushCount: number;
   /** 多段序号，从 0 开始 */
@@ -43,9 +47,11 @@ export interface SkillGroup {
   seq: number;
   attackerAddress: string;
   attackerName: string;
+  attackerAttr: number;
   kind: string;
   defenderAddress: string;
   defenderName: string;
+  defenderAttr: number;
   skillValue: number;
   turn: number;
   segments: CalcSegment[];
@@ -66,6 +72,7 @@ export interface UnisonEvent {
   seq: number;
   turn: number;
   name: string;
+  attr: number;
   damage: string;
 }
 
@@ -76,8 +83,10 @@ export interface BattleLogSnapshot {
     seq: number;
     turn: number;
     attackerName: string;
+    attackerAttr: number;
     kind: string;
     defenderName: string;
+    defenderAttr: number;
     skillValue: number;
     hits: number;
     crits: number;
@@ -243,9 +252,11 @@ export class TSKBattleLog {
         seq: this.eventSeq++,
         attackerAddress: seg.attackerAddress,
         attackerName: note.getName(),
+        attackerAttr: seg.attackerAttr,
         kind: seg.kind,
         defenderAddress: seg.defenderAddress,
         defenderName: seg.defenderName,
+        defenderAttr: seg.defenderAttr,
         skillValue: seg.skillValue,
         turn: seg.turn,
         segments: [],
@@ -324,6 +335,7 @@ export class TSKBattleLog {
         seq: this.eventSeq++,
         turn: this.turnCount,
         name: note.getName(),
+        attr: note.getAttr(),
         damage: damageBigInt.toString(),
       });
       log(
@@ -377,16 +389,15 @@ export class TSKBattleLog {
     return {
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {
-        const total = g.segments.reduce(
-          (acc, s) => acc + s.damage,
-          BigInt(0),
-        );
+        const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
         return {
           seq: g.seq,
           turn: g.turn,
           attackerName: g.attackerName,
+          attackerAttr: g.attackerAttr,
           kind: g.kind,
           defenderName: g.defenderName,
+          defenderAttr: g.defenderAttr,
           skillValue: g.skillValue,
           hits: g.segments.length,
           crits: g.segments.filter((s) => s.isCritical === "True").length,

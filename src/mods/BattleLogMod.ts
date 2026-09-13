@@ -1,5 +1,13 @@
 import { AttackType, BattleMode, TeamType } from "../common";
-import { log, getNameByTSKBattleNote, parseArgument, sendHost } from "../utils";
+import {
+  log,
+  logDebug,
+  isDebugLog,
+  getNameByTSKBattleNote,
+  getAttrByTSKBattleNote,
+  parseArgument,
+  sendHost,
+} from "../utils";
 import { TSKBattleLog, BattleLogSnapshot, CalcSegment } from "../TSKBattleLog";
 import {
   Mod,
@@ -142,6 +150,14 @@ export class BattleLogMod implements Mod {
     const defence = new Il2Cpp.Object(args[1]);
     ctx._calcDefenderAddr = args[1].toString();
     ctx._calcDefenderName = getNameByTSKBattleNote(defence);
+    ctx._calcAttackerAttr = getAttrByTSKBattleNote(attack);
+    ctx._calcDefenderAttr = getAttrByTSKBattleNote(defence);
+    if (isDebugLog()) {
+      logDebug(
+        `[battle-log] attr attacker=${ctx._calcAttackerAttr}` +
+          ` defender=${ctx._calcDefenderAttr}`,
+      );
+    }
     ctx._calcKind =
       AttackType[parseArgument(args[8], "enum") as number] ?? "Unknown";
     const beforeRushCount = args[2].toInt32();
@@ -204,8 +220,10 @@ export class BattleLogMod implements Mod {
       attackerAddress: ctx._calcAttackerAddr,
       damage: finalDamage,
       kind: ctx._calcKind,
+      attackerAttr: ctx._calcAttackerAttr ?? 0,
       defenderAddress: ctx._calcDefenderAddr,
       defenderName: ctx._calcDefenderName,
+      defenderAttr: ctx._calcDefenderAttr ?? 0,
       beforeRushCount: ctx._calcBeforeRush,
       rushCount: ctx._calcRush,
       multipleCount: ctx._calcMultiple,

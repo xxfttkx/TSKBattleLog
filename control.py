@@ -55,6 +55,42 @@ def _pct(v) -> str:
     return f"{v / 100:.1f}%" if isinstance(v, (int, float)) else "-"
 
 
+# 角色属性 AttrType -> 颜色（白底可读）。1=炎 2=水 3=雷 4=光 5=闇
+ATTR_COLORS = {
+    1: "#c0392b",  # 炎 红
+    2: "#2980b9",  # 水 蓝
+    3: "#27ae60",  # 雷 绿
+    4: "#b8860b",  # 光 暗金
+    5: "#7d3c98",  # 闇 紫
+}
+ATTR_NAMES = {1: "炎", 2: "水", 3: "雷", 4: "光", 5: "闇"}
+
+
+def attr_color(attr) -> str:
+    """属性值 -> 颜色 hex，未知/0/None 返回默认灰"""
+    try:
+        a = int(attr)
+    except (TypeError, ValueError):
+        return "#555555"
+    return ATTR_COLORS.get(a, "#555555")
+
+
+def attr_tag(attr) -> str:
+    """属性值 -> Treeview tag 名，始终返回已注册的 tag（0 也兜底灰色）"""
+    try:
+        a = int(attr)
+    except (TypeError, ValueError):
+        a = 0
+    return f"attr{a}" if a in ATTR_COLORS else "attr0"
+
+
+def attr_name(attr) -> str:
+    try:
+        return ATTR_NAMES.get(int(attr), "?")
+    except (TypeError, ValueError):
+        return "?"
+
+
 def _read_app_version() -> str:
     """工具版本号（不带 v 前缀）。唯一来源是 package.json 的 version；
     PyInstaller 打包后仓库文件不在包里，读 CI 构建时生成的 version.txt
@@ -1458,6 +1494,9 @@ class App(tk.Tk):
             tree.column(c, width=w, anchor=anchor)
         tree.tag_configure("turn", foreground="#888888")
         tree.tag_configure("unison", foreground="#a855f7")
+        tree.tag_configure("attr0", foreground="#555555")
+        for _a, _c in ATTR_COLORS.items():
+            tree.tag_configure(f"attr{_a}", foreground=_c)
         tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
 
         # 单行富文本（ttk.Label 不支持行内多色），attacker/defender 分色
@@ -1494,7 +1533,11 @@ class App(tk.Tk):
                 ("damage", "伤害", 120, "e"),
             ):
                 detail.heading(c, text=t_)
-                detail.column(c, width=w, anchor=anchor)
+            detail.column(c, width=w, anchor=anchor)
+        # 统一注册属性色 tag（coeffs/unison 两种布局共用）
+        detail.tag_configure("attr0", foreground="#555555")
+        for _a, _c in ATTR_COLORS.items():
+            detail.tag_configure(f"attr{_a}", foreground=_c)
         else:
             cols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                     "attr", "critco", "down", "rate", "passive")
@@ -1514,7 +1557,11 @@ class App(tk.Tk):
                 ("passive", "被动", 60, "center"),
             ):
                 detail.heading(c, text=t_)
-                detail.column(c, width=w, anchor=anchor)
+            detail.column(c, width=w, anchor=anchor)
+        # 统一注册属性色 tag（coeffs/unison 两种布局共用）
+        detail.tag_configure("attr0", foreground="#555555")
+        for _a, _c in ATTR_COLORS.items():
+            detail.tag_configure(f"attr{_a}", foreground=_c)
 
     def _apply_battle_log_data(self, payload: dict):
         dlg = self._blog_dialog
@@ -1590,6 +1637,7 @@ class App(tk.Tk):
                         obj.get("crits", 0),
                         f"{float(obj.get('skillValue', 0)):.2f}",
                     ),
+                    tags=(attr_tag(obj.get("attackerAttr")),),
                 )
             else:  # unison_comb
                 unison_count += 1
@@ -1659,12 +1707,18 @@ class App(tk.Tk):
                 detail.insert(
                     "", "end",
                     values=(s.get("name", "?"), s.get("damage", "")),
+                    tags=(attr_tag(s.get("attr")),),
                 )
             return
 
         # group：逐段展开全部入参与系数
         segs = obj.get("segments", [])
         first = segs[0] if segs else {}
+        # 按攻防双方属性动态着色（attacker/defender tag 颜色实时重配）
+        dlg["detail_info"].tag_configure(
+            "attacker", foreground=attr_color(obj.get("attackerAttr")))
+        dlg["detail_info"].tag_configure(
+            "defender", foreground=attr_color(obj.get("defenderAttr")))
         self._set_blog_detail_info(
             (obj.get('attackerName', ''), "attacker"),
             (f" {obj.get('kind', '')} -> ", None),

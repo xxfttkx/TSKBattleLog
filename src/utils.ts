@@ -169,6 +169,30 @@ function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
   return `[${name_0}] ${name_1}`;
 }
 
+/**
+ * 读取 TSKBattleNote 对应的属性（AttrType）。
+ * 字段路径：note.<UnitData> (TSKBattleUnit) -> <AttrType>k__BackingField
+ * 取值：1=炎 2=水 3=雷 4=光 5=闇，读取失败返回 0。
+ * 优先用 field 名（元数据可靠），失败回退 offset。
+ */
+function getAttrByTSKBattleNote(note: Il2Cpp.Object): number {
+  try {
+    const unitData = note.field("<UnitData>k__BackingField")
+      .value as Il2Cpp.Object;
+    const attr = unitData.field("<AttrType>k__BackingField").value as number;
+    if (typeof attr === "number") return attr;
+  } catch {
+    /* field 读取失败，回退 offset */
+  }
+  try {
+    const unit = note.handle.add(0x20).readPointer();
+    if (unit.isNull()) return 0;
+    return unit.add(0x34).readS32();
+  } catch {
+    return 0;
+  }
+}
+
 function dumpObject(obj: Il2Cpp.Object) {
   log(`\n===== ${obj.class.name} =====`);
 
@@ -294,6 +318,7 @@ export {
   dumpArgs,
   parseArgument,
   getNameByTSKBattleNote,
+  getAttrByTSKBattleNote,
   dumpObject,
   saveJson,
   convertValue,

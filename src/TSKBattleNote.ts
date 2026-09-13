@@ -13,6 +13,9 @@ export class TSKBattleNote {
   /** 伤害 */
   damage: bigint;
 
+  /** 属性 AttrType：1=炎 2=水 3=雷 4=光 5=闇，0=未知 */
+  attr: number;
+
   ex: number;
   exUp: number;
   hp: number;
@@ -31,6 +34,17 @@ export class TSKBattleNote {
     this.hp = unitData.field("<HP>k__BackingField").value as number;
     this.atk = unitData.field("<Attack>k__BackingField").value as number;
     this.critical = unitData.field("<Critical>k__BackingField").value as number;
+    // AttrType：1=炎 2=水 3=雷 4=光 5=闇。优先 field 名，失败回退 offset 0x34
+    try {
+      this.attr = unitData.field("<AttrType>k__BackingField").value as number;
+      if (typeof this.attr !== "number") this.attr = 0;
+    } catch {
+      try {
+        this.attr = unitData.handle.add(0x34).readS32();
+      } catch {
+        this.attr = 0;
+      }
+    }
   }
 
   addDamage(damage: bigint): void {
@@ -42,6 +56,7 @@ export class TSKBattleNote {
     this.characterName = "";
     this.address = "";
     this.damage = BigInt(0);
+    this.attr = 0;
     this.ex = 0;
     this.exUp = 0;
     this.hp = 0;
@@ -55,7 +70,7 @@ export class TSKBattleNote {
         this.atk
       } critical=${
         this.critical
-      } 通常攻击回复EX: ${this.getNormalAttackExRate()}`
+      } 通常攻击回复EX: ${this.getNormalAttackExRate()}`,
     );
   }
 
@@ -69,5 +84,9 @@ export class TSKBattleNote {
 
   getName(): string {
     return `[${this.unitName}] ${this.characterName}`;
+  }
+
+  getAttr(): number {
+    return this.attr;
   }
 }
