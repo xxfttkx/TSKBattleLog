@@ -50,6 +50,11 @@ def _f2(v) -> str:
     return f"{v:.2f}" if isinstance(v, (int, float)) else "-"
 
 
+def _pct(v) -> str:
+    """暴击率等内部刻度值转百分比：4920 -> 49.2%，缺失显示 -"""
+    return f"{v / 100:.1f}%" if isinstance(v, (int, float)) else "-"
+
+
 def _read_app_version() -> str:
     """工具版本号（不带 v 前缀）。唯一来源是 package.json 的 version；
     PyInstaller 打包后仓库文件不在包里，读 CI 构建时生成的 version.txt
@@ -1647,7 +1652,7 @@ class App(tk.Tk):
                 f"{obj.get('defenderName', '')}    "
                 f"基础ATK={first.get('baseAttack', '-')}  "
                 f"当前ATK={first.get('attack', '-')}  "
-                f"暴击={first.get('crit', '-')}  "
+                f"暴击={_pct(first.get('crit'))}  "
                 f"criticalUp={first.get('criticalUp', '-')}  "
                 f"目标数={first.get('targetCount', '-')}  "
                 f"队伍={first.get('teamType', '-')}"
