@@ -60,8 +60,8 @@ ATTR_COLORS = {
     1: "#c0392b",  # 炎 红
     2: "#2980b9",  # 水 蓝
     3: "#27ae60",  # 雷 绿
-    4: "#b8860b",  # 光 暗金
-    5: "#7d3c98",  # 闇 紫
+    4: "#e0a800",  # 光 鲜艳金黄
+    5: "#4a235a",  # 闇 深沉紫黑
 }
 ATTR_NAMES = {1: "炎", 2: "水", 3: "雷", 4: "光", 5: "闇"}
 
@@ -1493,7 +1493,7 @@ class App(tk.Tk):
             tree.heading(c, text=t_)
             tree.column(c, width=w, anchor=anchor)
         tree.tag_configure("turn", foreground="#888888")
-        tree.tag_configure("unison", foreground="#a855f7")
+        tree.tag_configure("unison", foreground="#000000")
         tree.tag_configure("attr0", foreground="#555555")
         for _a, _c in ATTR_COLORS.items():
             tree.tag_configure(f"attr{_a}", foreground=_c)
