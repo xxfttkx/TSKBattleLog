@@ -387,6 +387,7 @@ class App(tk.Tk):
         self.enemy_buttons: dict[str, ttk.Button] = {}  # 敌人紧凑文字按钮
         self._buff_dialog: dict | None = None
         self._blog_dialog: dict | None = None  # 战斗日志窗口
+        self._blog_last_geom: str | None = None  # 关闭前的几何，供持久化
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
@@ -1019,6 +1020,18 @@ class App(tk.Tk):
                 cfg["logColor"] = bool(self.log_color_var.get())
             except Exception:
                 pass
+            # 战斗日志窗口几何：开着取实时值，已关取关闭前暂存值
+            try:
+                blog_geom = None
+                if self._blog_dialog is not None \
+                        and self._blog_dialog["top"].winfo_exists():
+                    blog_geom = self._blog_dialog["top"].geometry()
+                elif self._blog_last_geom:
+                    blog_geom = self._blog_last_geom
+                if blog_geom:
+                    cfg["battleLogGeometry"] = blog_geom
+            except Exception:
+                pass
             GUI_CONFIG.write_text(
                 json.dumps(cfg, indent=2, ensure_ascii=False),
                 encoding="utf-8",
@@ -1362,17 +1375,46 @@ class App(tk.Tk):
         self._blog_dialog["info"].configure(text="读取中...")
         self.bridge.post({"type": "battleLogRequest"})
 
-    def _open_battle_log_dialog(self):
-        if self._blog_dialog is not None:
+    def _read_battle_log_geometry(self) -> str | None:
+        """战斗日志窗口上次的几何（WxH+X+Y），缺失/损坏返回 None"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            geom = cfg.get("battleLogGeometry")
+            return geom if isinstance(geom, str) and geom else None
+        except Exception:
+            return None
+
+    def _on_battle_log_close(self):
+        """关闭战斗日志窗口：先存几何再销毁，保证下次恢复位置大小"""
+        dlg = self._blog_dialog
+        if dlg is not None:
             try:
-                self._blog_dialog["top"].lift()
-                return
+                self._blog_last_geom = dlg["top"].geometry()
+                dlg["top"].destroy()
             except Exception:
                 pass
+        self._blog_dialog = None
+        self._save_gui_config()
+
+    def _open_battle_log_dialog(self):
+        if self._blog_dialog is not None:
+            top_old = self._blog_dialog["top"]
+            try:
+                if top_old.winfo_exists():
+                    # 最小化的窗口光 lift 不会还原，先 deiconify
+                    top_old.deiconify()
+                    top_old.lift()
+                    return
+            except Exception:
+                pass
+            self._blog_dialog = None  # 引用已死，走重建
         top = tk.Toplevel(self)
         top.title("战斗日志")
-        top.geometry("1080x620")
+        geom = self._read_battle_log_geometry()
+        top.geometry(geom or "1080x620")
+        top.minsize(640, 360)
         top.attributes("-topmost", self._always_top)
+        top.protocol("WM_DELETE_WINDOW", self._on_battle_log_close)
 
         header = ttk.Frame(top)
         header.pack(fill="x", padx=8, pady=(6, 2))

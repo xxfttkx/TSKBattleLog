@@ -377,7 +377,10 @@ export class TSKBattleLog {
     return {
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {
-        const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
+        const total = g.segments.reduce(
+          (acc, s) => acc + s.damage,
+          BigInt(0),
+        );
         return {
           seq: g.seq,
           turn: g.turn,
