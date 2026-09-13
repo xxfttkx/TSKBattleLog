@@ -1663,6 +1663,23 @@ class App(tk.Tk):
                 )
             dlg["rows"][iid] = (kind, obj)
 
+        # 尾部残留补插：最后一条回合记录之后若没有新行（如战斗恰在回合切换后
+        # 结束），上面的 while 没机会被驱动，最后几条分隔行会丢失
+        while cur_turn < len(turns):
+            rec = turns[cur_turn]
+            iid = tree.insert(
+                "", "end",
+                values=(
+                    "",
+                    f"── turn {rec.get('from')} -> {rec.get('to')}"
+                    f"    累计伤害 {rec.get('total')}",
+                    "", "", "", "", "",
+                ),
+                tags=("turn",),
+            )
+            dlg["rows"][iid] = ("turn", rec)
+            cur_turn += 1
+
         total = snap.get("damageTotal", "0")
         unison_total = snap.get("unisonDamageTotal", "0")
         dlg["info"].configure(
