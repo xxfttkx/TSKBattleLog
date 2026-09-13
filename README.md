@@ -20,12 +20,17 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 
 *Skill Effects window (opens on unit click): live stats — ATK / CRT / NoteCount / EX_UP — plus a detail/summary buff table*
 
+![Battle Log window](screenshots/gui_战斗日志.png)
+
+*Battle Log window: battle timeline — turn separators with cumulative damage, per-attacker skill groups (colored by attribute), Unison events — with a per-segment damage coefficient detail panel*
+
 ## Features
 
 - Real-time battle event logging with millisecond timestamps
 - Per-unit damage tracking with post-battle ranking
 - Multi-hit skill grouping (per attacker / turn / kind / segment) with crit count and skill multiplier
 - Unison damage tracking
+- Battle Log window: battle timeline (turn separators with cumulative damage, per-attacker skill groups colored by attribute, Unison events) with a per-segment detail panel showing damage coefficients — fluctuation / rush / attribute / critical / down / vulnerability rate / passive
 - Configurable auto-battle skill selection via `char_skill.json`
 - Config-driven debug observation points and IL2CPP backtraces via `trace_config.json`
 - Mod loader with runtime enable/disable and a floating control panel
@@ -74,6 +79,7 @@ Panel features:
 - Log viewer with **清空 / 复制日志 / 打开日志目录**; logs are also auto-saved to `logs/` (8 KB buffer, flushed on close)
 - 5000-line ring buffer; older lines are dropped automatically
 - Player avatar bar (48 px wiki icons) and a compact enemy name strip above it. Clicking any unit opens a **Skill Effects** window showing live buffs (detail / summary toggle) plus ATK (base), CRT, NoteCount, EX rate and normal-attack EX gain.
+- **战斗日志** button: opens the Battle Log window (on-demand snapshot, refresh to pull the latest; window size/position remembered)
 
 ### Method B: Headless injection (console only)
 
@@ -102,12 +108,11 @@ Every feature is its own mod under `src/mods/`. `mods.json` holds the default en
 
 | Key                 | Category | Description                                                                                                  |
 |---------------------|----------|--------------------------------------------------------------------------------------------------------------|
-| `battle-log`        | Observer | Prints battle-related info (damage stats, multi-hit grouping, turns, post-battle summary)                    |
+| `battle-log`        | Observer | Prints battle-related info (damage stats, multi-hit grouping, turns, post-battle summary); powers the Battle Log window with per-segment damage coefficient details |
 | `unit-list-dump`    | Observer | On filtering/sorting in the character screen, exports all unit attributes to `unit_list.json`                |
 | `qte-perfect`       | Modifier | Forces the battle-start QTE result to PERFECT                                                                |
 | `auto-skill`        | Modifier | In auto mode, picks EX1/EX2 automatically per `char_skill.json`                                              |
 | `avatar-clarity`    | Modifier | Keeps character avatar UI (buff icons, awakening indicators) fully opaque during normal gameplay via a native CModule hook on `CanvasGroup.set_alpha` |
-| `damage-calc-trace` | Debug    | Prints damage calculation parameters — very verbose                                                          |
 | `trace-config`      | Debug    | Bulk-registers arg-dump trace points from `trace_config.json` (edit JSON, then press reload on the panel)    |
 | `backtrace`         | Debug    | Prints an IL2CPP call stack on entry of methods listed in `trace_config.json`                                |
 | `field-watch`       | Debug    | Watches fields of a given class, logging the writer method + call stack on change                            |
