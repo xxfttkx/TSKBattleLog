@@ -1,5 +1,5 @@
 import { AbilityCompatibility } from "../common";
-import { log, readFloatReturn } from "../utils";
+import { readFloatReturn } from "../utils";
 import { Mod, traceMethodByName } from "../mod";
 
 /** 一次 CaluculationNormalDamage 内采集到的各乘区系数 */
@@ -36,13 +36,6 @@ export interface CalcInputSnapshot {
   attackerName: string;
 }
 
-export type CalcEndListener = (
-  coeffs: CalcCoeffs,
-  inputs: CalcInputSnapshot,
-  /** 外层方法最终返回值（该段最终伤害，int64 转字符串） */
-  finalDamage: string,
-) => void;
-
 interface Bag {
   fluctuation?: number;
   rush?: number;
@@ -61,15 +54,13 @@ interface Bag {
  *
  * 7 个系数方法都在 CaluculationNormalDamage 函数体内被同步调用，因此用
  * begin()/end() 包住外层调用即可完成关联，无需按线程 id 映射；用栈而非单
- * bag 是为了容忍理论上的嵌套调用。游戏内部会对部分系数二次求值，bag 全部
- * 采用「第一次调用为准」（两次结果相同，旧 DamageCalcTraceMod 的去重口径）。
+ * bag 是为了容忍理论上的嵌套调用。游戏内部会对部分系数二次求值（两次结果
+ * 相同），bag 全部采用「第一次调用为准」。
  *
- * 采集由 battle-log 驱动（数据进 CalcSegment）；控制台文本视图
- * （damage-calc-trace）通过 subscribe 复用同一份数据，不重复 hook。
+ * 采集由 battle-log 驱动（数据进 CalcSegment，宿主「战斗日志」窗口展示）。
  */
 class DamageCoeffCollector {
   private stack: Bag[] = [];
-  private listeners: CalcEndListener[] = [];
   private installed = false;
 
   /** 注册 7 个系数 hook（quiet），只装一次；mod 为驱动方（battle-log） */
@@ -203,32 +194,11 @@ class DamageCoeffCollector {
     this.stack.push({});
   }
 
-  /** 外层 onLeave：弹出 bag 物化为系数，通知订阅者，返回给数据管线 */
-  end(
-    inputs: CalcInputSnapshot,
-    finalDamage: bigint | string,
-  ): CalcCoeffs | undefined {
+  /** 外层 onLeave：弹出 bag 物化为系数，返回给数据管线 */
+  end(): CalcCoeffs | undefined {
     const bag = this.stack.pop();
     if (!bag) return undefined;
-    const coeffs = materialize(bag);
-    const damageStr =
-      typeof finalDamage === "bigint" ? finalDamage.toString() : finalDamage;
-    for (const listener of [...this.listeners]) {
-      try {
-        listener(coeffs, inputs, damageStr);
-      } catch (e) {
-        log(`[damageCoeffs] listener error: ${e}`);
-      }
-    }
-    return coeffs;
-  }
-
-  /** 订阅一次外层计算完成事件（控制台视图等）；返回取消订阅函数 */
-  subscribe(fn: CalcEndListener): () => void {
-    this.listeners.push(fn);
-    return () => {
-      this.listeners = this.listeners.filter((f) => f !== fn);
-    };
+    return materialize(bag);
   }
 
   private top(): Bag | undefined {

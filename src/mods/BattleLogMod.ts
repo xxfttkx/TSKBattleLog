@@ -77,7 +77,7 @@ export class BattleLogMod implements Mod {
     // traceMethodByName(image, "TSKBattleSkillManager", "SetSkillEffect", dumpArgsHandler);
     // traceMethodByName(image, "TSKBattleTeam", "StartSkillDamage", dumpArgsHandler);
 
-    // CaluculationNormalDamage：quiet hook（进出日志由 damage-calc-trace 打印），
+    // CaluculationNormalDamage：quiet hook，
     // 仅采集段细节（防守方/多段序号/skillValue）供 Set*DamageValue 落地时关联
     traceMethodByName(
       image,
@@ -92,8 +92,7 @@ export class BattleLogMod implements Mod {
     // 回合计数：hook BattleUpdate，对比 turnCount 变化
     this.setupTurnCountHook(image);
 
-    // 伤害系数采集器（5 Offset + 易伤 + 被动），数据挂到 CalcSegment.coeffs，
-    // 同时向订阅者（damage-calc-trace 控制台视图）广播
+    // 伤害系数采集器（5 Offset + 易伤 + 被动），数据挂到 CalcSegment.coeffs
     damageCoeffs.install(image, this);
   }
 
@@ -211,10 +210,8 @@ export class BattleLogMod implements Mod {
   ) => {
     const ctx = invocation as any;
     const finalDamage = BigInt(retval.toString());
-    // 系数 bag 收口（同时通知 damage-calc-trace 订阅者）
-    const coeffs = ctx._calcInputs
-      ? damageCoeffs.end(ctx._calcInputs as CalcInputSnapshot, finalDamage)
-      : undefined;
+    // 系数 bag 收口，物化为系数挂到本段
+    const coeffs = ctx._calcInputs ? damageCoeffs.end() : undefined;
     if (ctx._calcAttackerAddr === undefined) return;
     const seg: CalcSegment = {
       attackerAddress: ctx._calcAttackerAddr,

@@ -4,7 +4,6 @@ import { Mod, publishModList } from "./mod";
 import { BattleLogMod } from "./mods/BattleLogMod";
 import { QteMod } from "./mods/QteMod";
 import { AutoSkillMod } from "./mods/AutoSkillMod";
-import { DamageCalcTraceMod } from "./mods/DamageCalcTraceMod";
 import { UnitListDumpMod } from "./mods/UnitListDumpMod";
 import { TraceConfigMod } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
@@ -20,7 +19,6 @@ const mods: Mod[] = [
   new BattleLogMod(),
   new QteMod(),
   new AutoSkillMod(),
-  new DamageCalcTraceMod(),
   new UnitListDumpMod(),
   new TraceConfigMod(),
   new BacktraceMod(),
