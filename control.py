@@ -1401,6 +1401,17 @@ class App(tk.Tk):
         self._blog_dialog = None
         self._save_gui_config()
 
+    def _set_blog_detail_info(self, *parts: tuple[str, str | None]):
+        """段详情说明行富文本写入：parts 为 (文本, tag) 二元组，tag=None 用默认色"""
+        if self._blog_dialog is None:
+            return
+        t: tk.Text = self._blog_dialog["detail_info"]
+        t.configure(state="normal")
+        t.delete("1.0", "end")
+        for txt, tag in parts:
+            t.insert("end", txt, (tag,) if tag else ())
+        t.configure(state="disabled")
+
     def _open_battle_log_dialog(self):
         if self._blog_dialog is not None:
             top_old = self._blog_dialog["top"]
@@ -1449,9 +1460,16 @@ class App(tk.Tk):
         tree.tag_configure("unison", foreground="#a855f7")
         tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
 
-        detail_info = ttk.Label(top, text="", foreground="#1a5fb4",
-                                font=("", 9, "bold"))
-        detail_info.pack(anchor="w", padx=8)
+        # 单行富文本（ttk.Label 不支持行内多色），attacker/defender 分色
+        detail_info = tk.Text(top, height=1, wrap="none", borderwidth=0,
+                              highlightthickness=0, takefocus=0, cursor="arrow",
+                              background=top.cget("background"),
+                              font=("", 9, "bold"))
+        detail_info.tag_configure("base", foreground="#444444")
+        detail_info.tag_configure("attacker", foreground="#1a6fd4")
+        detail_info.tag_configure("defender", foreground="#e5534b")
+        detail_info.pack(fill="x", padx=8)
+        detail_info.configure(state="disabled")
 
         dcols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                  "attr", "critco", "down", "rate", "passive")
@@ -1517,7 +1535,7 @@ class App(tk.Tk):
         detail = dlg["detail"]
         for row in detail.get_children():
             detail.delete(row)
-        dlg["detail_info"].configure(text="")
+        self._set_blog_detail_info()
 
         items: list[tuple[int, str, dict]] = []
         for g in snap.get("groups", []):
@@ -1623,9 +1641,9 @@ class App(tk.Tk):
                 f"{p.get('name', '')}({p.get('percent', '')})"
                 for p in obj.get("percents", [])
             )
-            dlg["detail_info"].configure(
-                text=f"回合 {obj.get('from')} -> {obj.get('to')}    "
-                     f"累计伤害 {obj.get('total')}    {percents}")
+            self._set_blog_detail_info(
+                (f"回合 {obj.get('from')} -> {obj.get('to')}    "
+                 f"累计伤害 {obj.get('total')}    {percents}", None))
             return
 
         if kind == "unison_comb":
@@ -1633,9 +1651,10 @@ class App(tk.Tk):
             names = " / ".join(s.get("name", "?") for s in segs)
             total = sum(int(s.get("damage", 0)) for s in segs)
             self._configure_detail_columns(detail, "unison")
-            dlg["detail_info"].configure(
-                text=f"Unison：{names}    共 {len(segs)} 段    "
-                     f"合计伤害 {total}（不经 CaluculationNormalDamage，无系数明细）")
+            self._set_blog_detail_info(
+                (f"Unison：{names}    共 {len(segs)} 段    "
+                 f"合计伤害 {total}（不经 CaluculationNormalDamage，无系数明细）",
+                 None))
             for s in segs:
                 detail.insert(
                     "", "end",
@@ -1646,17 +1665,16 @@ class App(tk.Tk):
         # group：逐段展开全部入参与系数
         segs = obj.get("segments", [])
         first = segs[0] if segs else {}
-        dlg["detail_info"].configure(
-            text=(
-                f"{obj.get('attackerName', '')} {obj.get('kind', '')} -> "
-                f"{obj.get('defenderName', '')}    "
-                f"基础ATK={first.get('baseAttack', '-')}  "
-                f"当前ATK={first.get('attack', '-')}  "
-                f"暴击={_pct(first.get('crit'))}  "
-                f"criticalUp={first.get('criticalUp', '-')}  "
-                f"目标数={first.get('targetCount', '-')}  "
-                f"队伍={first.get('teamType', '-')}"
-            )
+        self._set_blog_detail_info(
+            (obj.get('attackerName', ''), "attacker"),
+            (f" {obj.get('kind', '')} -> ", None),
+            (obj.get('defenderName', ''), "defender"),
+            (f"    基础ATK={first.get('baseAttack', '-')}  "
+             f"当前ATK={first.get('attack', '-')}  "
+             f"暴击={_pct(first.get('crit'))}  "
+             f"criticalUp={first.get('criticalUp', '-')}  "
+             f"目标数={first.get('targetCount', '-')}  "
+             f"队伍={first.get('teamType', '-')}", None),
         )
         for s in segs:
             co = s.get("coeffs") or {}

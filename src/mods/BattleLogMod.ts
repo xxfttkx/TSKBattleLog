@@ -128,7 +128,7 @@ export class BattleLogMod implements Mod {
   }
 
   // ===== CaluculationNormalDamage 段细节采集（quiet hook）=====
-
+  // public static long CaluculationNormalDamage(TSKBattleNote attack, TSKBattleNote defence, int beforeRushCount, int rushCount, float skillValue, out bool isCritical, out AbilityCompatibility compatibility, out long rate, AttackType kind, int criticalUp = 0, int targetCount = 1, int multipleCount = 0) { }
   private handleCalcDamageEnter: MethodEnterHandler = (
     _cls,
     _method,
