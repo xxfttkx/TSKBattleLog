@@ -58,17 +58,18 @@ def _pct(v) -> str:
 # 角色属性 AttrType（TSKBattleUnit.<AttrType>k__BackingField，offset 0x34）
 # 1=炎 2=水 3=雷 4=光 5=闇
 _ATTR_ICON_BASE = "https://twinklestarknights.wikiru.jp/attach2"
-# id -> (中文名, 文字颜色, 官方图标 URL)。颜色取自官方图标主色并降亮度，保证白底可读
+# id -> (中文名, 文字颜色, 官方图标 URL)。
+# 颜色：以用户指定的亮色系为基准，保持色相/饱和度、降明度到白底对比度 ~3.8:1（亮色原样在白底看不清）
 ATTR_INFO = {
-    1: ("炎", "#ad3400",
+    1: ("炎", "#fc2e00",
         f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30312E706E67.png"),
-    2: ("水", "#399aad",
+    2: ("水", "#117fff",
         f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30322E706E67.png"),
-    3: ("雷", "#79ad22",
+    3: ("雷", "#1e9650",
         f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30332E706E67.png"),
-    4: ("光", "#ad9c34",
+    4: ("光", "#a07f00",
         f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30342E706E67.png"),
-    5: ("闇", "#8256ad",
+    5: ("闇", "#8b5cf6",
         f"{_ATTR_ICON_BASE}/696D67_6174747269627574655F30352E706E67.png"),
 }
 ATTR_COLORS = {k: v[1] for k, v in ATTR_INFO.items()}
