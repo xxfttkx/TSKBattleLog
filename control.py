@@ -1533,11 +1533,7 @@ class App(tk.Tk):
                 ("damage", "伤害", 120, "e"),
             ):
                 detail.heading(c, text=t_)
-            detail.column(c, width=w, anchor=anchor)
-        # 统一注册属性色 tag（coeffs/unison 两种布局共用）
-        detail.tag_configure("attr0", foreground="#555555")
-        for _a, _c in ATTR_COLORS.items():
-            detail.tag_configure(f"attr{_a}", foreground=_c)
+                detail.column(c, width=w, anchor=anchor)
         else:
             cols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                     "attr", "critco", "down", "rate", "passive")
@@ -1557,7 +1553,7 @@ class App(tk.Tk):
                 ("passive", "被动", 60, "center"),
             ):
                 detail.heading(c, text=t_)
-            detail.column(c, width=w, anchor=anchor)
+                detail.column(c, width=w, anchor=anchor)
         # 统一注册属性色 tag（coeffs/unison 两种布局共用）
         detail.tag_configure("attr0", foreground="#555555")
         for _a, _c in ATTR_COLORS.items():
