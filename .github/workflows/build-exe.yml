@@ -101,7 +101,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      # 1) 构建 agent.js（esbuild）
+      # 1) 构建 agent.js + 生成 mod_manifest.json（npm run build；
+      #    清单由 Node 执行 mods 数组产出，GUI 注入前渲染与打包共用）
       - name: Build agent.js
         run: npm ci && npm run build
 
@@ -113,36 +114,7 @@ jobs:
           APP_VERSION: ${{ needs.detect.outputs.version }}
         run: Set-Content -Path version.txt -Value $env:APP_VERSION -NoNewline
 
-      # 2) 预生成 mod 元数据（打包后无 .ts 源码可解析）
-      - name: Generate mod manifest
-        shell: python
-        run: |
-          import json, re, pathlib
-          mods_dir = pathlib.Path("src/mods")
-          # = 后允许换行再接字符串（较长的 description）
-          pattern = re.compile(
-              r'^\s*(name|category|description)\s*=\s*(?:\n\s*)?(["\'])(.*?)\2',
-              re.MULTILINE)
-          manifest = []
-          for path in sorted(mods_dir.glob("*.ts")):
-              src = path.read_text(encoding="utf-8")
-              fields = {}
-              for m in pattern.finditer(src):
-                  key = m.group(1)
-                  if key not in fields:
-                      fields[key] = m.group(3)
-              if "name" in fields:
-                  manifest.append({
-                      "name": fields["name"],
-                      "category": fields.get("category", "观察"),
-                      "description": fields.get("description", ""),
-                  })
-          pathlib.Path("mod_manifest.json").write_text(
-              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-              encoding="utf-8")
-          print(f"manifest: {len(manifest)} mods")
-
-      # 3) 安装 Python 依赖 + PyInstaller 打包
+      # 2) 安装 Python 依赖 + PyInstaller 打包
       #    版本全部钉死：保证任意时刻构建产物可复现，升级需主动改这里验证。
       #    教训：浮动的 frida==17.* 在 2026-09 自动吃到刚发布的 17.18.0，
       #    其 wheel 比 17.17.0 大约 7.4MB，包体积从 ~59MB 被动涨到 ~67MB。
@@ -161,13 +133,13 @@ jobs:
           --hidden-import frida
           control.py
 
-      # 4) 组装发布目录：exe + 用户可编辑的 json 配置
+      # 3) 组装发布目录：exe + 用户可编辑的 json 配置
       - name: Assemble release folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item -Recurse -Force dist/TSKBattleLog/* release/
-          Copy-Item -Force mod_manifest.json release/
+          Copy-Item -Force dist/mod_manifest.json release/
           Copy-Item -Force version.txt release/
           foreach ($f in @("mods.json","trace_config.json","char_skill.json")) {
             if (Test-Path $f) { Copy-Item -Force $f release/ }
@@ -180,7 +152,7 @@ jobs:
             Set-Content -Path release/trace_config.json -Value '{"trace":[],"backtrace":[],"backtraceDepth":5}'
           }
 
-      # 5) 压缩 zip 供 Release 附件使用
+      # 4) 压缩 zip 供 Release 附件使用
       - name: Zip release folder
         shell: pwsh
         run: |
@@ -195,7 +167,7 @@ jobs:
           path: release/
           retention-days: 30
 
-      # 6) 创建 GitHub Release 并附 zip
+      # 5) 创建 GitHub Release 并附 zip
       #    能跑到本 job 即代表需要发版（detect 判定版本是新的，或推了 v* tag，
       #    或手动指定了版本）；softprops 会自动创建对应 tag
       - name: Create Release

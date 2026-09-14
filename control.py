@@ -176,14 +176,22 @@ _CLASS_FIELD_RE = re.compile(
 
 
 def _parse_mod_manifest() -> list[dict]:
-    # 打包模式：读取 CI 预生成的 mod_manifest.json（exe 旁无 .ts 源码可解析）
+    # 打包模式：CI 打包生成的 mod_manifest.json（exe 旁无 node/.ts 可用）
     manifest_json = ROOT_DIR / "mod_manifest.json"
     if manifest_json.is_file():
         try:
             return json.loads(manifest_json.read_text(encoding="utf-8"))
         except Exception:
             pass
-    # 开发模式：从 src/mods/*.ts 正则提取
+    # 开发模式：npm run build 由 Node 执行 mods 数组生成（权威来源，
+    # 与 index.ts 共用 createMods 注册表）
+    dev_manifest = ROOT_DIR / "dist" / "mod_manifest.json"
+    if dev_manifest.is_file():
+        try:
+            return json.loads(dev_manifest.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    # 兜底：manifest 缺失（未 build 的全新工作区）才退回源码正则
     if not MODS_DIR.is_dir():
         return []
     result: list[dict] = []

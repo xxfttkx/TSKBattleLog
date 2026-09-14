@@ -14,3 +14,18 @@ esbuild.build({
     format: "iife",
     target: "es2020"
 }).catch(() => process.exit(1));
+
+// 第 3 步：生成 mod 元数据清单（Node 执行 mods 数组，单一事实源；
+// control.py 注入前渲染 MODs 页与 CI 打包共用，源码正则解析已废弃）
+esbuild.build({
+    entryPoints: ["src/modManifest.ts"],
+    bundle: true,
+    outfile: "dist/modManifest.js",
+    platform: "node",
+    format: "cjs",
+    target: "es2020"
+}).then(() => {
+    const out = execSync("node dist/modManifest.js").toString();
+    require("fs").writeFileSync("dist/mod_manifest.json", out);
+    console.log("mod_manifest.json generated");
+}).catch(() => process.exit(1));

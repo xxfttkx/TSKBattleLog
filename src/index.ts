@@ -2,30 +2,16 @@ import "frida-il2cpp-bridge";
 import { log, sendHost, setDebugLog } from "./utils";
 import { Mod, publishModList } from "./mod";
 import { BattleLogMod } from "./mods/BattleLogMod";
-import { QteMod } from "./mods/QteMod";
-import { AutoSkillMod } from "./mods/AutoSkillMod";
-import { UnitListDumpMod } from "./mods/UnitListDumpMod";
-import { TraceConfigMod } from "./mods/TraceConfigMod";
+import { TraceConfigMod, TraceEntry } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
-import { TraceEntry } from "./mods/TraceConfigMod";
-import { FieldWatchMod } from "./mods/FieldWatchMod";
-import { AvatarClarityMod } from "./mods/AvatarClarityMod";
+import { BattleSpeedMod } from "./mods/BattleSpeedMod";
+import { createMods } from "./mods/createMods";
 import { getSkillEffects } from "./battle/skillEffects";
 import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
-import { BattleSpeedMod } from "./mods/BattleSpeedMod";
 
-const mods: Mod[] = [
-  new BattleLogMod(),
-  new QteMod(),
-  new AutoSkillMod(),
-  new UnitListDumpMod(),
-  new TraceConfigMod(),
-  new BacktraceMod(),
-  new FieldWatchMod(),
-  new AvatarClarityMod(),
-  new BattleSpeedMod(),
-];
+// 全量 mod 注册表见 mods/createMods.ts（单一事实源，构建期清单生成共用）
+const mods: Mod[] = createMods();
 
 // mod 初始开关取构建时内联的 mods.json 快照：无宿主的 frida CLI（run.ps1）模式
 // 下直接以此生效；宿主 control.py 握手后会通过 initMods 下发磁盘最新值覆盖。

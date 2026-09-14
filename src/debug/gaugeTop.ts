@@ -130,8 +130,10 @@ let guardedNativeTable: NativePointer | null = null;
 let guardedCountPtr: NativePointer | null = null;
 let fixCountPtr: NativePointer | null = null;
 let lastFixCount = 0;
-/** Initialize(args[4]) 传入的玩家队 notes List 句柄（scanNotes 的数据源） */
-let notesListHandle: NativePointer = ptr(0);
+/** Initialize(args[4]) 传入的玩家队 notes List 句柄（scanNotes 的数据源）。
+ * null=尚未挂上 hook；不能用 ptr(0) 初始化——该文件会被构建期 modManifest
+ * 打包进 Node 环境执行，frida-gum 全局在 Node 下不存在 */
+let notesListHandle: NativePointer | null = null;
 /** unitIcon 为空的提示只打一次（每场战斗重置） */
 let warnedNullIcon = false;
 
@@ -294,7 +296,7 @@ function isNativeAlive(obj: Il2Cpp.Object): boolean {
  * 卡顿主嫌疑）。invoke 只剩 apply 的父链 walk：新图标才走，看守命中即短路。
  */
 function scanNotes(tag: string): void {
-  if (notesListHandle.isNull()) return;
+  if (notesListHandle === null || notesListHandle.isNull()) return;
   let fresh = 0;
   let dead = 0;
   try {
