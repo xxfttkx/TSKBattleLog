@@ -1,7 +1,7 @@
 import { TSKBattleNote } from "./TSKBattleNote";
-import { dumpArgs, log, dumpObject, getAutoUseSkillIndex } from "./utils";
-import { skillMap } from "./common";
-import type { CalcCoeffs } from "./debug/damageCoeffs";
+import { dumpArgs, log, dumpObject, getAutoUseSkillIndex } from "../utils";
+import { skillMap } from "../common";
+import type { CalcCoeffs } from "./damageCoeffs";
 
 enum DamageType {
   Normal = "Normal",

@@ -10,7 +10,7 @@ import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { TraceEntry } from "./mods/TraceConfigMod";
 import { FieldWatchMod } from "./mods/FieldWatchMod";
 import { AvatarClarityMod } from "./mods/AvatarClarityMod";
-import { getSkillEffects } from "./debug/skillEffects";
+import { getSkillEffects } from "./battle/skillEffects";
 import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
 import { BattleSpeedMod } from "./mods/BattleSpeedMod";

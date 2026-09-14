@@ -8,7 +8,11 @@ import {
   parseArgument,
   sendHost,
 } from "../utils";
-import { TSKBattleLog, BattleLogSnapshot, CalcSegment } from "../TSKBattleLog";
+import {
+  TSKBattleLog,
+  BattleLogSnapshot,
+  CalcSegment,
+} from "../battle/TSKBattleLog";
 import {
   Mod,
   MethodEnterHandler,
@@ -17,7 +21,7 @@ import {
   dumpArgsHandler,
 } from "../mod";
 import { gaugeViewOnTop } from "../debug/gaugeTop";
-import { damageCoeffs, CalcInputSnapshot } from "../debug/damageCoeffs";
+import { damageCoeffs, CalcInputSnapshot } from "../battle/damageCoeffs";
 
 /** 战斗伤害统计（观察型） */
 export class BattleLogMod implements Mod {
