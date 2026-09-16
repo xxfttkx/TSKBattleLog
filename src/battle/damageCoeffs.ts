@@ -14,8 +14,9 @@ export interface CalcCoeffs {
   critical?: { value: number; isCritical: boolean };
   /** 击倒（Down）偏移 */
   down?: number;
-  /** 易伤：GetDamageRateValue 变换前/后与倍率 */
-  damageRate?: { before: number; after: number; rate: number };
+  /** 易伤：GetDamageRateValue 变换前/后与倍率。before/after 为 int64 原值
+   *  用 string 存（JSON 安全），rate 为浮点比值 */
+  damageRate?: { before: string; after: string; rate: number };
   /** 被动伤害率 */
   passive?: number;
 }
@@ -44,8 +45,8 @@ interface Bag {
   criticalValue?: number;
   isCritical?: boolean;
   down?: number;
-  rateBefore?: number;
-  rateAfter?: number;
+  rateBefore?: bigint;
+  rateAfter?: bigint;
   passive?: number;
 }
 
@@ -162,13 +163,15 @@ class DamageCoeffCollector {
       (_cls, _m, args) => {
         const bag = this.top();
         if (bag && bag.rateBefore === undefined) {
-          bag.rateBefore = Number(args[1]);
+          // int64 参数：NativePointer 是无符号的，用 toString() 转 BigInt
+          // 保留 64 位精度（高练度伤害可能超 2^53）
+          bag.rateBefore = BigInt(args[1].toString());
         }
       },
       (_c, _m, retval) => {
         const bag = this.top();
         if (bag && bag.rateAfter === undefined) {
-          bag.rateAfter = Number(retval);
+          bag.rateAfter = BigInt(retval.toString());
         }
       },
       true,
@@ -225,10 +228,13 @@ function materialize(bag: Bag): CalcCoeffs {
   }
   if (bag.down !== undefined) coeffs.down = bag.down;
   if (bag.rateBefore !== undefined && bag.rateAfter !== undefined) {
+    // 比值用 number 计算（浮点除法）：即使原值超 2^53，比值相对误差极小
+    const beforeNum = Number(bag.rateBefore);
+    const afterNum = Number(bag.rateAfter);
     coeffs.damageRate = {
-      before: bag.rateBefore,
-      after: bag.rateAfter,
-      rate: bag.rateBefore > 0 ? bag.rateAfter / bag.rateBefore : NaN,
+      before: bag.rateBefore.toString(),
+      after: bag.rateAfter.toString(),
+      rate: beforeNum > 0 ? afterNum / beforeNum : NaN,
     };
   }
   if (bag.passive !== undefined) coeffs.passive = bag.passive;

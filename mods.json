@@ -1,11 +1,11 @@
 {
-  "auto-skill": true,
-  "avatar-clarity": false,
-  "backtrace": false,
   "battle-log": true,
-  "battle-speed": true,
-  "field-watch": false,
   "qte-perfect": true,
+  "auto-skill": true,
+  "unit-list-dump": true,
   "trace-config": false,
-  "unit-list-dump": true
+  "backtrace": false,
+  "field-watch": false,
+  "avatar-clarity": false,
+  "battle-speed": true
 }
