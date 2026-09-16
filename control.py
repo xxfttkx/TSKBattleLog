@@ -1500,7 +1500,9 @@ class App(tk.Tk):
                   foreground="#666").pack(anchor="w", padx=8)
 
         cols = ("turn", "attacker", "action", "hits", "damage", "crits", "sv")
-        tree = ttk.Treeview(top, columns=cols, show="headings", height=12)
+        tree_frame = ttk.Frame(top)
+        tree_frame.pack(fill="both", expand=False, padx=8, pady=(2, 6))
+        tree = ttk.Treeview(tree_frame, columns=cols, show="headings", height=12)
         for c, t_, w, anchor in (
             ("turn", "回合", 50, "center"),
             ("attacker", "攻击者", 180, "w"),
@@ -1517,7 +1519,10 @@ class App(tk.Tk):
         tree.tag_configure("attr0", foreground=DEFAULT_ATTR_COLOR)
         for _a, _c in ATTR_COLORS.items():
             tree.tag_configure(f"attr{_a}", foreground=_c)
-        tree.pack(fill="both", expand=False, padx=8, pady=(2, 6))
+        tree.pack(side="left", fill="both", expand=True)
+        tree_sb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree_sb.pack(side="right", fill="y")
+        tree.configure(yscrollcommand=tree_sb.set)
 
         # 单行富文本（ttk.Label 不支持行内多色），attacker/defender 分色
         detail_info = tk.Text(top, height=1, wrap="none", borderwidth=0,
@@ -1532,9 +1537,15 @@ class App(tk.Tk):
 
         dcols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                  "attr", "critco", "down", "rate", "passive")
-        detail = ttk.Treeview(top, columns=dcols, show="headings", height=8)
+        detail_frame = ttk.Frame(top)
+        detail_frame.pack(fill="both", expand=True, padx=8, pady=(2, 8))
+        detail = ttk.Treeview(detail_frame, columns=dcols, show="headings", height=8)
         self._configure_detail_columns(detail, "coeffs")
-        detail.pack(fill="both", expand=True, padx=8, pady=(2, 8))
+        detail.pack(side="left", fill="both", expand=True)
+        detail_sb = ttk.Scrollbar(detail_frame, orient="vertical",
+                                  command=detail.yview)
+        detail_sb.pack(side="right", fill="y")
+        detail.configure(yscrollcommand=detail_sb.set)
 
         dlg = {"top": top, "info": info, "tree": tree,
                "detail": detail, "detail_info": detail_info,
