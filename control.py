@@ -1385,8 +1385,8 @@ class App(tk.Tk):
         if not info:
             dlg["desc_label"].configure(text="")
             return
-        # 第一行：枚举名 + 日文名 + id；后续行：effectValue1~5 字段含义
-        lines = [f"{enum_name}  {info.get('name', '?')}（{tid}）"]
+        # 第一行：日文名 + id + 枚举名；后续行：effectValue1~5 字段含义
+        lines = [f"{info.get('name', '?')}（{tid}）  {enum_name}"]
         for i in range(1, 6):
             desc = info.get(f"effectValue{i}", "-")
             lines.append(f"effectValue{i}: {desc}")
