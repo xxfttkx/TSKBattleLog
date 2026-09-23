@@ -167,6 +167,17 @@ def wiki_icon_url(unit_name: str, character_name: str) -> str:
     return f"{WIKI_BASE}/attach2/696D67_{hx}.png"
 
 
+def _load_effect_types() -> dict:
+    """加载 SkillEffectTypes.json（id → {name, effectValue1~5 字段含义}）。
+    文件缺失/损坏时返回空表，查询功能静默降级为只显示枚举名。"""
+    path = ROOT_DIR / "SkillEffectTypes.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return {it["id"]: it for it in data.get("items", []) if "id" in it}
+    except Exception:
+        return {}
+
+
 # ---------- mod 元数据 ----------
 # 从 src/mods/*.ts 中正则提取 Mod 类的 name/category/description 字面量，
 # 让 control.py 在未启动注入前也能拿到正确的元信息展示。
@@ -450,6 +461,7 @@ class App(tk.Tk):
         self.unit_photos: dict[str, ImageTk.PhotoImage] = {}  # 保引用防 GC
         self.enemy_buttons: dict[str, ttk.Button] = {}  # 敌人紧凑文字按钮
         self._buff_dialog: dict | None = None
+        self._effect_types = _load_effect_types()  # id → 字段含义（buff 弹窗查询用）
         self._blog_dialog: dict | None = None  # 战斗日志窗口
         self._blog_last_geom: str | None = None  # 关闭前的几何，供持久化
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
@@ -1307,7 +1319,7 @@ class App(tk.Tk):
                 pass
         top = tk.Toplevel(self)
         top.title(f"Skill Effects - {name or address}")
-        top.geometry("860x420")
+        top.geometry("1020x460")
         top.attributes("-topmost", self._always_top)
 
         header = ttk.Frame(top)
@@ -1327,18 +1339,58 @@ class App(tk.Tk):
         )
         stats_label.pack(anchor="w", padx=8, pady=(0, 2))
 
-        cols = ("type", "time", "value", "effectValue",
-                "value2", "value3", "value4", "value5")
-        widths = (300, 70, 80, 90, 70, 70, 70, 70)
+        cols = ("type", "time", "effectValue", "effectValue1",
+                "effectValue2", "effectValue3", "effectValue4", "effectValue5")
+        widths = (300, 70, 95, 95, 80, 80, 80, 80)
         tree = ttk.Treeview(top, columns=cols, show="headings")
         for c, w in zip(cols, widths):
             tree.heading(c, text=c)
             tree.column(c, width=w, anchor="center")
+        # 选中行显示该效果类型的字段含义（SkillEffectTypes.json 查询）
+        desc_label = ttk.Label(top, text="", foreground="#555",
+                               justify="left", anchor="w")
+        desc_label.pack(fill="x", padx=8, pady=(0, 6), side="bottom")
         tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        tree.bind("<<TreeviewSelect>>", self._on_buff_select)
         self._buff_dialog = {"top": top, "tree": tree, "info": info,
                              "stats_label": stats_label,
+                             "desc_label": desc_label, "row_ids": [],
                              "address": address, "mode_var": mode_var,
                              "toggle_btn": toggle_btn, "effects": None}
+
+    def _effect_type_display(self, it: dict) -> str:
+        """type 列只显示日文名（查不到则显示枚举名）"""
+        tid = it.get("t")
+        info = self._effect_types.get(tid) if isinstance(tid, int) else None
+        if info and info.get("name"):
+            return info["name"]
+        return str(it.get("type", ""))
+
+    def _on_buff_select(self, _event=None):
+        """buff 弹窗选中行 → 底部显示该效果类型的 value1~5 字段含义"""
+        dlg = self._buff_dialog
+        if dlg is None:
+            return
+        sel = dlg["tree"].selection()
+        if not sel:
+            dlg["desc_label"].configure(text="")
+            return
+        idx = dlg["tree"].index(sel[0])
+        row_ids = dlg.get("row_ids") or []
+        if idx >= len(row_ids):
+            dlg["desc_label"].configure(text="")
+            return
+        tid, enum_name = row_ids[idx]
+        info = self._effect_types.get(tid) if isinstance(tid, int) else None
+        if not info:
+            dlg["desc_label"].configure(text="")
+            return
+        # 第一行：枚举名 + 日文名 + id；后续行：effectValue1~5 字段含义
+        lines = [f"{enum_name}  {info.get('name', '?')}（{tid}）"]
+        for i in range(1, 6):
+            desc = info.get(f"effectValue{i}", "-")
+            lines.append(f"effectValue{i}: {desc}")
+        dlg["desc_label"].configure(text="\n".join(lines))
 
     def _toggle_buff_mode(self):
         dlg = self._buff_dialog
@@ -1352,37 +1404,49 @@ class App(tk.Tk):
         for row in tree.get_children():
             tree.delete(row)
         if total_mode:
-            tree.configure(columns=("type", "count", "value", "effectValue"))
+            tree.configure(columns=("type", "count", "effectValue", "effectValue1"))
             for c, w, t in (("type", 360, "type"), ("count", 70, "count"),
-                            ("value", 100, "value"),
-                            ("effectValue", 110, "effectValue")):
+                            ("effectValue", 110, "effectValue"),
+                            ("effectValue1", 110, "effectValue1")):
                 tree.heading(c, text=t)
                 tree.column(c, width=w, anchor="center")
             totals: dict[str, list] = {}
+            first_id: dict[str, tuple] = {}
             for it in dlg["effects"]:
                 t_ = it.get("type", "")
                 acc = totals.setdefault(t_, [0, 0, 0])
                 acc[0] += 1
-                acc[1] += it.get("value", 0) or 0
-                acc[2] += it.get("effectValue", 0) or 0
-            for t_, (cnt, v, ev) in sorted(
+                acc[1] += it.get("effectValue", 0) or 0
+                acc[2] += it.get("value", 0) or 0
+                first_id.setdefault(t_, (it.get("t"), t_))
+            row_ids: list = []
+            for t_, (cnt, ev, v) in sorted(
                 totals.items(), key=lambda kv: -kv[1][1]):
-                tree.insert("", "end", values=(t_, cnt, v, ev))
+                row_ids.append(first_id.get(t_, (None, t_)))
+                disp = self._effect_type_display(
+                    {"type": t_, "t": first_id[t_][0]} if first_id.get(t_) else {"type": t_})
+                tree.insert("", "end", values=(disp, cnt, ev, v))
+            dlg["row_ids"] = row_ids
         else:
-            tree.configure(columns=("type", "time", "value", "effectValue",
-                                    "value2", "value3", "value4", "value5"))
-            for c, w in zip(("type", "time", "value", "effectValue",
-                             "value2", "value3", "value4", "value5"),
-                            (300, 70, 80, 90, 70, 70, 70, 70)):
+            tree.configure(columns=("type", "time", "effectValue", "effectValue1",
+                                    "effectValue2", "effectValue3", "effectValue4",
+                                    "effectValue5"))
+            for c, w in zip(("type", "time", "effectValue", "effectValue1",
+                             "effectValue2", "effectValue3", "effectValue4",
+                             "effectValue5"),
+                            (300, 70, 95, 95, 80, 80, 80, 80)):
                 tree.heading(c, text=c)
                 tree.column(c, width=w, anchor="center")
+            row_ids = []
             for it in dlg["effects"]:
+                row_ids.append((it.get("t"), it.get("type", "")))
                 tree.insert("", "end", values=(
-                    it.get("type", ""), it.get("time", ""), it.get("value", ""),
-                    it.get("effectValue", ""), it.get("value2", ""),
-                    it.get("value3", ""), it.get("value4", ""),
-                    it.get("value5", ""),
+                    self._effect_type_display(it), it.get("time", ""),
+                    it.get("effectValue", ""), it.get("value", ""),
+                    it.get("value2", ""), it.get("value3", ""),
+                    it.get("value4", ""), it.get("value5", ""),
                 ))
+            dlg["row_ids"] = row_ids
 
     def _apply_buff_data(self, payload: dict):
         dlg = self._buff_dialog
@@ -1418,21 +1482,27 @@ class App(tk.Tk):
         dlg["mode_var"].set(False)
         dlg["toggle_btn"].configure(text="切换为汇总")
         tree = dlg["tree"]
-        tree.configure(columns=("type", "time", "value", "effectValue",
-                                "value2", "value3", "value4", "value5"))
-        for c, w in zip(("type", "time", "value", "effectValue",
-                         "value2", "value3", "value4", "value5"),
-                        (300, 70, 80, 90, 70, 70, 70, 70)):
+        tree.configure(columns=("type", "time", "effectValue", "effectValue1",
+                                "effectValue2", "effectValue3", "effectValue4",
+                                "effectValue5"))
+        for c, w in zip(("type", "time", "effectValue", "effectValue1",
+                         "effectValue2", "effectValue3", "effectValue4",
+                         "effectValue5"),
+                        (300, 70, 95, 95, 80, 80, 80, 80)):
             tree.heading(c, text=c)
             tree.column(c, width=w, anchor="center")
         for row in tree.get_children():
             tree.delete(row)
+        row_ids = []
         for it in effects:
+            row_ids.append((it.get("t"), it.get("type", "")))
             tree.insert("", "end", values=(
-                it.get("type", ""), it.get("time", ""), it.get("value", ""),
-                it.get("effectValue", ""), it.get("value2", ""),
-                it.get("value3", ""), it.get("value4", ""), it.get("value5", ""),
+                self._effect_type_display(it), it.get("time", ""),
+                it.get("effectValue", ""), it.get("value", ""),
+                it.get("value2", ""), it.get("value3", ""),
+                it.get("value4", ""), it.get("value5", ""),
             ))
+        dlg["row_ids"] = row_ids
 
     # ---- 战斗日志窗口 ----
 

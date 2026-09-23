@@ -1,7 +1,10 @@
 import { SkillType } from "../common";
 
 export interface SkillEffectInfo {
+  /** SkillType 枚举名（如 AtkUp），查不到底值时为原始字符串 */
   type: string;
+  /** SkillType 数字底值，与 SkillEffectTypes.json 的 id 同一体系，供宿主查字段含义 */
+  t: number;
   time: number;
   value: number;
   effectValue: number;
@@ -35,6 +38,9 @@ export function getSkillEffects(unit: Il2Cpp.Object): SkillEffectInfo[] {
         : String(rawType);
     out.push({
       type,
+      // 优先用底值；部分 enum 字段返回的是枚举对象（toString 给名字），
+      // Number() 会得到 NaN，此时用枚举名从 SkillType 双向反查数值
+      t: Number.isFinite(typeNum) ? typeNum : ((SkillType as any)[type] ?? -1),
       time: effect.field("<Time>k__BackingField").value as number,
       value: effect.field("<SkillValue1>k__BackingField").value as number,
       effectValue: effect.field("<SkillEffectValue>k__BackingField")

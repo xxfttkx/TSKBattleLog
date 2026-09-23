@@ -1,0 +1,3658 @@
+{
+  "items": [
+    {
+      "id": 100,
+      "name": "通常攻撃",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 101,
+      "name": "多段攻撃",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃回数",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 102,
+      "name": "HP吸収攻撃",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 103,
+      "name": "最大HP割合攻撃",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 104,
+      "name": "残りHP割合攻撃",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 105,
+      "name": "残りHP割合攻撃（自傷）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 106,
+      "name": "最大HP割合攻撃（自傷）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 107,
+      "name": "強制スタン",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "スタンCT",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 108,
+      "name": "通常攻撃（OH依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "係数(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 109,
+      "name": "多段攻撃（ラッシュ数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "攻撃回数",
+      "effectValue4": "最大倍率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 110,
+      "name": "通常攻撃（特定効果時クリダメ増加）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "クリダメ加算率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 111,
+      "name": "通常攻撃（EXゲージ依存）",
+      "effectValue1": "係数(％)",
+      "effectValue2": "-",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 112,
+      "name": "通常攻撃（ラッシュ数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "最大倍率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 113,
+      "name": "通常攻撃（OH消費）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "OH消費率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 114,
+      "name": "多段攻撃（OH消費）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃回数",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "OH消費率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 115,
+      "name": "通常攻撃（固定値）",
+      "effectValue1": "実数値",
+      "effectValue2": "1軽減・バリア無視/2有効/3:軽減のみ/4:バリアのみ",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 116,
+      "name": "通常攻撃（ノーツ位置依存）",
+      "effectValue1": "増加率(下限)(％)",
+      "effectValue2": "増加率(上限)(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 117,
+      "name": "多段攻撃（EXゲージ依存多段数増加）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃回数",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "EX消費間隔",
+      "effectValue5": "増加攻撃回数"
+    },
+    {
+      "id": 118,
+      "name": "多段攻撃（EXゲージ依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃回数",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "係数(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 119,
+      "name": "通常攻撃（スキル使用回数）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "最大倍率(％)",
+      "effectValue5": "スキル種別をビットで指定\n1:EX1/2:EX2/4:EX1\u002B/8:EX2\u002B"
+    },
+    {
+      "id": 120,
+      "name": "通常攻撃（ヒット数に応じて指定効果値減少）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "効果値番号",
+      "effectValue5": "減少値"
+    },
+    {
+      "id": 121,
+      "name": "通常攻撃（チームHP依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "最大倍率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 122,
+      "name": "通常攻撃（状態変化回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "スタン減少量",
+      "effectValue4": "最大倍率(％)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 200,
+      "name": "ノックバック",
+      "effectValue1": "基礎増加マス数（最小）",
+      "effectValue2": "基礎増加マス数（最大）",
+      "effectValue3": "基礎増加マス数減少数",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 201,
+      "name": "ノーツ移動（強制移動）",
+      "effectValue1": "移動マス数（最小）",
+      "effectValue2": "移動マス数（最大）",
+      "effectValue3": "移動マス数減少数",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 202,
+      "name": "ワープ",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "移動量",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 203,
+      "name": "ノーツ移動(201適応外時）",
+      "effectValue1": "移動マス数（最小）",
+      "effectValue2": "移動マス数（最大）",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 204,
+      "name": "ノックバック(即効果反映）",
+      "effectValue1": "基礎増加マス数（最小）",
+      "effectValue2": "基礎増加マス数（最大）",
+      "effectValue3": "基礎増加マス数減少数",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 205,
+      "name": "ワープ（指定の敵方向）",
+      "effectValue1": "移動量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 300,
+      "name": "ATKアップ",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 301,
+      "name": "CRT率アップ",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 302,
+      "name": "速度アップ",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 303,
+      "name": "重さアップ",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 304,
+      "name": "被ダメージ軽減",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 305,
+      "name": "オーラ",
+      "effectValue1": "ダメージ数",
+      "effectValue2": "1強制解除あり/2強制解除なし",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 306,
+      "name": "ダメージ吸収",
+      "effectValue1": "回復割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 307,
+      "name": "ダメージ反射",
+      "effectValue1": "ダメージ割合(％)",
+      "effectValue2": "最大ダメージ値",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 308,
+      "name": "回数バリア",
+      "effectValue1": "攻撃回数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 309,
+      "name": "挑発",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 310,
+      "name": "全状態異常耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 311,
+      "name": "毒耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 312,
+      "name": "麻痺耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 313,
+      "name": "混乱耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 314,
+      "name": "萎縮耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 315,
+      "name": "封印耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 316,
+      "name": "火傷耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 317,
+      "name": "凍傷耐性アップ",
+      "effectValue1": "増加段階",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 318,
+      "name": "HPバリア",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 319,
+      "name": "チャージ速度アップ",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 320,
+      "name": "ATKアップ（指定属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 321,
+      "name": "CRT率アップ（指定属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 322,
+      "name": "速度アップ（指定属性数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 323,
+      "name": "重さアップ（指定属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 324,
+      "name": "被ダメージ軽減（指定属性or所属数依存）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 325,
+      "name": "ATKアップ（異なる属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 326,
+      "name": "CRT率アップ（異なる属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 327,
+      "name": "速度アップ（異なる属性数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 328,
+      "name": "重さアップ（異なる属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 329,
+      "name": "被ダメージ軽減（異なる属性数依存）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 330,
+      "name": "消費EX減少（割合）",
+      "effectValue1": "EXゲージ消費減少率(％)",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 331,
+      "name": "ステルス",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 332,
+      "name": "オーラ（一定ダメージ以上）",
+      "effectValue1": "ダメージ数",
+      "effectValue2": "1強制解除あり/2強制解除なし",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 333,
+      "name": "オーラ（ノーツ一定以下）",
+      "effectValue1": "ノーツ位置",
+      "effectValue2": "1強制解除あり/2強制解除なし",
+      "effectValue3": "1以上/2以下",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 334,
+      "name": "強制移動無効化",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 335,
+      "name": "チャージ状態付与",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 336,
+      "name": "ATKアップ（減少HP依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 337,
+      "name": "ATKアップ（ATK依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 338,
+      "name": "消費EX減少（固定値）",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 339,
+      "name": "EX上昇アップ",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 340,
+      "name": "ATKアップ（指定種族数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 341,
+      "name": "CRT率アップ（指定種族数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 342,
+      "name": "速度アップ（指定種族数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 343,
+      "name": "重さアップ（指定種族数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 344,
+      "name": "被ダメージ軽減（指定種族数依存ビット指定）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "種族をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 345,
+      "name": "ノックバック無効",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 346,
+      "name": "スタンバリア",
+      "effectValue1": "-",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/上記以外:全対象",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 347,
+      "name": "バフ解除無効",
+      "effectValue1": "無効化回数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 348,
+      "name": "強制移動軽減",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 349,
+      "name": "ATKアップ（OH依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 350,
+      "name": "消費EX減少（固定値・属性依存）",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "属性ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 351,
+      "name": "消費EX減少（割合・属性依存）",
+      "effectValue1": "EXゲージ消費減少率(％)",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "属性ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 352,
+      "name": "消費EX減少（固定値・種族依存）",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 353,
+      "name": "消費EX減少（割合・種族依存）",
+      "effectValue1": "EXゲージ消費減少率(％)",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 354,
+      "name": "HPバリア（固定値）",
+      "effectValue1": "HP固定値",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 355,
+      "name": "庇護（大挑発）",
+      "effectValue1": "耐久回数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 356,
+      "name": "カウンターA",
+      "effectValue1": "発動可能回数",
+      "effectValue2": "発生効果番号",
+      "effectValue3": "0重複可/1重複不可",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 357,
+      "name": "クリティカルダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 358,
+      "name": "戻り先指定（味方キャラ同位置）",
+      "effectValue1": "前方から番目数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 359,
+      "name": "カウンターB",
+      "effectValue1": "発動可能回数",
+      "effectValue2": "発生効果番号",
+      "effectValue3": "0重複可/1重複不可",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 360,
+      "name": "ATKアップ（RUSH数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 361,
+      "name": "ATKアップ（EX吸収依存）",
+      "effectValue1": "EX減少率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 362,
+      "name": "ATKアップ（指定属性or種族数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 363,
+      "name": "ATKアップ（指定属性or所属数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 364,
+      "name": "CRT率アップ（属性\u002B種族）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 365,
+      "name": "CRT率アップ（属性\u002B攻撃タイプ）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "攻撃タイプID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 366,
+      "name": "クリティカルダメージ倍率アップ（スキル効果依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 367,
+      "name": "サブ属性",
+      "effectValue1": "属性ID",
+      "effectValue2": "0:効果値1の属性IDを参照\n1:自身の左の味方のメイン属性参照\n2:自身の右の味方のメイン属性参照\n3:チーム内で一番多いメイン属性参照\n※同数だった場合は、炎水雷光闇の優先順とする",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 368,
+      "name": "ATKアップ（EX吸収依存固定値）",
+      "effectValue1": "EX減少値",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 369,
+      "name": "ATKアップ（OHHP消費）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "OH消費率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 370,
+      "name": "EX上昇アップ（味方の数依存）",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "1属性/2種族/3攻撃タイプ",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 371,
+      "name": "ATKアップ（指定所属依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "所属ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 372,
+      "name": "CRT率アップ（指定所属依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "所属ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 373,
+      "name": "クリティカルダメージ倍率アップ（ユニゾン数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 374,
+      "name": "クリティカルダメージ倍率アップ（味方の数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 375,
+      "name": "RUSH増加数",
+      "effectValue1": "ラッシュ倍数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 376,
+      "name": "戻り先指定（固定位置）",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 377,
+      "name": "サブ種族",
+      "effectValue1": "種族ID",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 378,
+      "name": "ATKアップ(固有状態変化専用)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 379,
+      "name": "CRT率アップ(固有状態変化専用)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 380,
+      "name": "ATKアップ（ATK段階依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "基礎ATK参照段階値",
+      "effectValue3": "バフ上限",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "増加率(％)"
+    },
+    {
+      "id": 381,
+      "name": "ATKアップ（使用回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 382,
+      "name": "クリティカルダメージ倍率アップ（使用回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 383,
+      "name": "スタンゲージ減少量増加",
+      "effectValue1": "1スキルA/2スキルB/3スキルA\u002B/4スキルB\u002B",
+      "effectValue2": "増加数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 384,
+      "name": "クリティカルダメージ倍率アップ(固有状態変化専用)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 385,
+      "name": "CRT率アップ（ユニゾン数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 386,
+      "name": "ATKアップ（指定属性\u002B種族数依存）(固有状態変化専用)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 387,
+      "name": "CRT率アップ（指定属性\u002B種族数依存）(固有状態変化専用)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 388,
+      "name": "速度アップ(固有状態変化専用)",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 389,
+      "name": "ATKアップ（指定効果数依存)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 390,
+      "name": "速度アップ（異なるロールタイプ数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "1属性/2種族/3ロール/4所属/上記以外:全対象",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 391,
+      "name": "ATKアップ（HP段階依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "基礎HP参照段階値",
+      "effectValue3": "バフ上限",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "増加率(％)"
+    },
+    {
+      "id": 392,
+      "name": "デバフ効果対象拡張",
+      "effectValue1": "隣接レーン数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 393,
+      "name": "CRT率アップ（属性\u002B所属）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 394,
+      "name": "速度アップ（指定所属数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "所属ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 395,
+      "name": "回数バリア（カウンター）",
+      "effectValue1": "攻撃回数",
+      "effectValue2": "発生効果番号",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 396,
+      "name": "通常攻撃KB増加(割合)",
+      "effectValue1": "KB増加率",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 397,
+      "name": "ATKアップ（敵ノーツ位置参照）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "ノーツ位置",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 398,
+      "name": "クリティカルダメージ倍率アップ（スタン依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 399,
+      "name": "CRT率アップ（RUSH数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30000,
+      "name": "クリティカルダメージ倍率アップ（種族\u002B属性）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30001,
+      "name": "クリティカルダメージ倍率アップ（ラッシュ数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30002,
+      "name": "速度アップ（固定値）",
+      "effectValue1": "固定値",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30003,
+      "name": "ATKアップ（種族数合算）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30004,
+      "name": "CRT率アップ（種族数合算）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30005,
+      "name": "ユニゾンアタックのダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30006,
+      "name": "神属性",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30007,
+      "name": "クリティカルダメージ倍率アップ（味方の数依存ビット指定）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細をビットで指定",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30008,
+      "name": "RUSH数増加（通常攻撃）",
+      "effectValue1": "ラッシュ加算数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30009,
+      "name": "ATKアップ（指定種族数ビット指定）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30010,
+      "name": "クリティカルダメージ倍率アップ（異なる属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "0サブ属性含む/1メイン属性のみ",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30011,
+      "name": "属性カウント追加2",
+      "effectValue1": "カウント増加数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30012,
+      "name": "CRT率アップ（指定効果数依存)",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30013,
+      "name": "スタンダメージ倍率アップ（スタン敵数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30014,
+      "name": "激励",
+      "effectValue1": "ユニゾン人数",
+      "effectValue2": "前方から番目数",
+      "effectValue3": "効果発動回数",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30015,
+      "name": "スタンダメージ倍率軽減",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30016,
+      "name": "螺旋の恩寵",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "ノーツ移動増加量",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30017,
+      "name": "クリティカルダメージ倍率アップ（状態変化回数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30018,
+      "name": "戻り先指定（敵キャラ同位置）",
+      "effectValue1": "前方から番目数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30019,
+      "name": "EX上昇アップ（異なる属性数依存）",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30020,
+      "name": "威光",
+      "effectValue1": "初期有利属性ダメージ倍率(％)",
+      "effectValue2": "ラッシュ数",
+      "effectValue3": "有利属性ダメージ倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "最大Lv"
+    },
+    {
+      "id": 30021,
+      "name": "ノーツ移動量増加",
+      "effectValue1": "ノーツ移動増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30022,
+      "name": "カウンター誘発",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30023,
+      "name": "ATKアップ（指定種族\u002B所属数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30024,
+      "name": "新春万福",
+      "effectValue1": "移動マス数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30025,
+      "name": "慶賀光春",
+      "effectValue1": "回復割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30026,
+      "name": "ATKアップ（回復超過分依存）",
+      "effectValue1": "係数(％)",
+      "effectValue2": "スキル効果種別ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30027,
+      "name": "ATKアップ（指定ロール依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "ロールID",
+      "effectValue3": "係数(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30028,
+      "name": "消費EX減少（固定値・ロール依存）",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "ロールID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30029,
+      "name": "ATKアップ（異なるロール数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30030,
+      "name": "クリティカルダメージ倍率アップ（異なるロール依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30031,
+      "name": "マギトリック",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30032,
+      "name": "正義の焔",
+      "effectValue1": "移動マス数（最小）",
+      "effectValue2": "移動マス数（最大）",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30033,
+      "name": "ユニゾンアタック時EX獲得量増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30034,
+      "name": "スタンダメージ倍率アップ（異なるロール数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30035,
+      "name": "ATKアップ（スタンゲージ数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30036,
+      "name": "ATKアップ（スタン中の敵数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30037,
+      "name": "ATKアップ（指定攻撃タイプ依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃タイプID",
+      "effectValue3": "係数(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30038,
+      "name": "ATKアップ（指定攻撃タイプ\u002B所属数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "攻撃タイプID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30039,
+      "name": "消費EX減少（割合）※シスター専用",
+      "effectValue1": "EXゲージ消費減少率(％)",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30040,
+      "name": "家族の絆（ステラ用）",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30041,
+      "name": "ATKアップ（指定属性\u002B指定攻撃タイプ依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "攻撃タイプID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30042,
+      "name": "クリティカルダメージ倍率アップ（指定属性\u002B指定攻撃タイプ依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "攻撃タイプID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30043,
+      "name": "オーバーラッシュ",
+      "effectValue1": "係数(％)",
+      "effectValue2": "最大倍率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30044,
+      "name": "EX上昇アップ（スキル使用回数依存）",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "スキル種別をビットで指定\n1:EX1/2:EX2/4:EX1\u002B/8:EX2\u002B",
+      "effectValue3": "最大増加数",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30045,
+      "name": "クリティカルダメージ倍率アップ（指定種族\u002B指定所属依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30046,
+      "name": "EX上昇アップ(固有状態変化専用)",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30047,
+      "name": "ATKアップ（Sアクティブスキル発動回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30048,
+      "name": "ATKアップ（異なるメイン属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30049,
+      "name": "CRT率アップ（異なるメイン属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30050,
+      "name": "消費EX減少(焔界内の敵数依存)",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "スキル使用回数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30051,
+      "name": "再臨",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30052,
+      "name": "CRT率アップ（味方の数依存ビット指定）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細をビットで指定",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30053,
+      "name": "EX上昇アップ（味方の数依存ビット指定）",
+      "effectValue1": "増加数（固定値）",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細をビットで指定",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30054,
+      "name": "被ダメージ軽減（指定属性数依存ビット指定）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "属性をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 30055,
+      "name": "ATKアップ（参照条件指定）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "1:減少している味方のスタンゲージ数"
+    },
+    {
+      "id": 30056,
+      "name": "チャージコネクト",
+      "effectValue1": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue2": "詳細をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 31000,
+      "name": "与ダメージ増加（リアルタイムOH参照）",
+      "effectValue1": "係数(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 400,
+      "name": "ATKダウン",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 401,
+      "name": "CRT率ダウン",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 402,
+      "name": "速度ダウン",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 403,
+      "name": "重さダウン",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 404,
+      "name": "被ダメージ増加",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 405,
+      "name": "強制スタン（デバフ）",
+      "effectValue1": "-",
+      "effectValue2": "スタンCT",
+      "effectValue3": "0:バリアによって無効化/1:強制付与",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 406,
+      "name": "ATKダウン（味方数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 407,
+      "name": "CRT率ダウン（味方数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 408,
+      "name": "速度ダウン（味方数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 409,
+      "name": "重さダウン（味方数依存）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 410,
+      "name": "被ダメージ増加（味方数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ",
+      "effectValue3": "詳細ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 411,
+      "name": "被ダメージ増加（スタン消費）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "消費スタンゲージ数\n※99の場合全消費",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 412,
+      "name": "被ダメージ増加（スタン依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "基礎増加率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 413,
+      "name": "魅了",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 414,
+      "name": "標的（特殊被ダメ増加）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "スタン減少倍率",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 415,
+      "name": "被ダメージ増加（ラッシュ依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 416,
+      "name": "融解（特殊被ダメ増加【炎】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 417,
+      "name": "弱点属性",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 418,
+      "name": "被ダメージ増加（チャージ依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 419,
+      "name": "被ダメージ増加（異なる属性数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 420,
+      "name": "被ダメージ増加（属性\u002B種族）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 421,
+      "name": "被ダメージ増加（属性\u002B所属）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 422,
+      "name": "被ダメージ増加（ユニゾン依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 423,
+      "name": "崩壊（特殊被ダメ増加【闇】）",
+      "effectValue1": "初期ダメージ増加率(％)",
+      "effectValue2": "ラッシュ数",
+      "effectValue3": "ダメージ増加率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "最大Lv"
+    },
+    {
+      "id": 424,
+      "name": "被ダメージ増加（ATK段階依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "基礎ATK参照段階値",
+      "effectValue3": "デバフ上限",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "増加率(％)"
+    },
+    {
+      "id": 425,
+      "name": "聖痕（特殊被ダメ増加【光】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 426,
+      "name": "被ダメージ増加（味方の数依存ビット指定）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細をビットで指定",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 427,
+      "name": "ノーツ反転",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 428,
+      "name": "被ダメージ増加（使用回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "スキル種別をビットで指定\n0:同じスキルを参照\n1:EX1/2:EX2/4:EX1\u002B/8:EX2\u002B"
+    },
+    {
+      "id": 429,
+      "name": "極冷（特殊被ダメ増加【水】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 430,
+      "name": "魔障（特殊被ダメ増加【魔法】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 431,
+      "name": "消費EX増加（割合）",
+      "effectValue1": "EXゲージ消費増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 432,
+      "name": "被ダメージ増加（状態変化回数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 433,
+      "name": "EX上昇ダウン",
+      "effectValue1": "減少数（固定値）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 434,
+      "name": "帯電（特殊被ダメ増加【雷】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 435,
+      "name": "破砕（特殊被ダメ増加【打撃】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 436,
+      "name": "裂傷（特殊被ダメ増加【斬撃】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 437,
+      "name": "特殊被ダメ増加(闇)(仮)",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 438,
+      "name": "制圧（特殊被ダメ増加【人間】）",
+      "effectValue1": "初期ダメージ増加率(％)",
+      "effectValue2": "ダメージ増加率(％)",
+      "effectValue3": "最大Lv",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 439,
+      "name": "審判（特殊被ダメ増加【神族】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 440,
+      "name": "混沌（特殊被ダメ増加【魔族】）",
+      "effectValue1": "ダメージ増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 441,
+      "name": "被ダメージ増加（種族\u002B所属）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "所属ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 442,
+      "name": "被ダメージ増加（ロール数依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "ロールID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 443,
+      "name": "睡眠",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 444,
+      "name": "マジックミスト",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 445,
+      "name": "百合の蕾（ラファエロ用）",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 446,
+      "name": "百合の花（ラファエロ用）",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 447,
+      "name": "被ダメージ増加（爆裂LV依存）",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "最大値(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 500,
+      "name": "毒",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "回復間隔(CT)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 501,
+      "name": "麻痺",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 502,
+      "name": "混乱",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 503,
+      "name": "萎縮",
+      "effectValue1": "EXゲージ低下率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 504,
+      "name": "封印",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 505,
+      "name": "チャージコマンド封印",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 506,
+      "name": "ユニゾンコマンド封印",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 507,
+      "name": "火傷",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "回復間隔(CT)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 508,
+      "name": "凍傷",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 509,
+      "name": "呪い",
+      "effectValue1": null,
+      "effectValue2": null,
+      "effectValue3": null,
+      "effectValue4": null,
+      "effectValue5": "-"
+    },
+    {
+      "id": 510,
+      "name": "EX1封印",
+      "effectValue1": null,
+      "effectValue2": null,
+      "effectValue3": null,
+      "effectValue4": null,
+      "effectValue5": "-"
+    },
+    {
+      "id": 511,
+      "name": "EX2封印",
+      "effectValue1": null,
+      "effectValue2": null,
+      "effectValue3": null,
+      "effectValue4": null,
+      "effectValue5": "-"
+    },
+    {
+      "id": 600,
+      "name": "ユニットHP回復",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 601,
+      "name": "HP回復",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 602,
+      "name": "HP継続回復",
+      "effectValue1": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue2": "詳細ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "回復間隔(CT)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 603,
+      "name": "スタン回復",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 604,
+      "name": "スタンゲージ回復",
+      "effectValue1": "スタン回復数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 605,
+      "name": "HP回復（種族依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 606,
+      "name": "黎明の恩寵",
+      "effectValue1": "スタン回復数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 607,
+      "name": "HP回復（所属依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "所属ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 608,
+      "name": "HP回復（属性\u002B種族依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "種族ID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 609,
+      "name": "HP継続回復（属性\u002B種族依存）",
+      "effectValue1": "属性ID",
+      "effectValue2": "種族ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "回復間隔(CT)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 610,
+      "name": "HP回復（属性\u002B属性依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "属性ID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 611,
+      "name": "HP継続回復（属性\u002B属性依存）",
+      "effectValue1": "属性ID",
+      "effectValue2": "属性ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "回復間隔(CT)",
+      "effectValue5": "-"
+    },
+    {
+      "id": 612,
+      "name": "HP回復（異なる属性数依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 613,
+      "name": "HP回復（種族\u002B所属依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "所属ID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 614,
+      "name": "HP回復（属性\u002B攻撃タイプ依存）",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "HP割合(％)",
+      "effectValue4": "攻撃タイプID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 700,
+      "name": "デバフ・状態異常解除",
+      "effectValue1": "解除個数\n※「0」の場合、すべて解除",
+      "effectValue2": "0:全体対象、1:敵だけ",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 701,
+      "name": "バフ解除",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 702,
+      "name": "EXゲージ吸収",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 703,
+      "name": "指定効果の効果値上書き（共通）",
+      "effectValue1": "指定効果に設定しているスキル効果の効果値",
+      "effectValue2": "指定効果に設定しているスキル効果の効果値",
+      "effectValue3": "指定効果に設定しているスキル効果の効果値",
+      "effectValue4": "上書きする効果番号\n※元の効果の効果値4は維持",
+      "effectValue5": "-"
+    },
+    {
+      "id": 704,
+      "name": "バリアブレイク",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 705,
+      "name": "ノーツ操作（移動数指定）",
+      "effectValue1": "移動マス数（最小）",
+      "effectValue2": "移動マス数（最大）",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 706,
+      "name": "ノーツ操作（指定キャラ同位置）",
+      "effectValue1": "前方から番目数",
+      "effectValue2": "0:0位置は対象外とする、1:0位置も対象とする",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 707,
+      "name": "指定効果の効果値上書き（個別）",
+      "effectValue1": "指定効果に設定しているスキル効果の効果値",
+      "effectValue2": "指定効果に設定しているスキル効果の効果値",
+      "effectValue3": "指定効果に設定しているスキル効果の効果値",
+      "effectValue4": "上書きする効果番号\n※元の効果の効果値4は維持",
+      "effectValue5": "-"
+    },
+    {
+      "id": 708,
+      "name": "指定効果の効果値上書き_適応条件込(共通)",
+      "effectValue1": "指定効果に設定しているスキル効果の効果値",
+      "effectValue2": "指定効果に設定しているスキル効果の効果値",
+      "effectValue3": "指定効果に設定しているスキル効果の効果値",
+      "effectValue4": "上書きする効果番号\n※元の効果の効果値4は維持",
+      "effectValue5": "-"
+    },
+    {
+      "id": 709,
+      "name": "指定効果の効果値上書き_適応条件込(個別)",
+      "effectValue1": "指定効果に設定しているスキル効果の効果値",
+      "effectValue2": "指定効果に設定しているスキル効果の効果値",
+      "effectValue3": "指定効果に設定しているスキル効果の効果値",
+      "effectValue4": "上書きする効果番号\n※元の効果の効果値4は維持",
+      "effectValue5": "-"
+    },
+    {
+      "id": 710,
+      "name": "ノーツ入替\n※使用不可",
+      "effectValue1": "前方から番目数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 711,
+      "name": "バフ解除（効果指定）",
+      "effectValue1": "1ATKバフ系/2CRT率アップ系/3速度アップ系/4重さアップ系/5被ダメージ軽減系/6状態異常耐性系",
+      "effectValue2": "1ATKバフ系/2CRT率アップ系/3速度アップ系/4重さアップ系/5被ダメージ軽減系/6状態異常耐性系",
+      "effectValue3": "1ATKバフ系/2CRT率アップ系/3速度アップ系/4重さアップ系/5被ダメージ軽減系/6状態異常耐性系",
+      "effectValue4": "1ATKバフ系/2CRT率アップ系/3速度アップ系/4重さアップ系/5被ダメージ軽減系/6状態異常耐性系",
+      "effectValue5": "-"
+    },
+    {
+      "id": 712,
+      "name": "EXゲージ吸収（指定属性数依存）",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "属性ID",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 713,
+      "name": "EXゲージ増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 714,
+      "name": "ノーツ強制0位置移動",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 715,
+      "name": "EXゲージ吸収（スタンゲージ依存）",
+      "effectValue1": "スタン減少数",
+      "effectValue2": "補正値（百分率）",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 716,
+      "name": "スキル効果解除（ID指定）",
+      "effectValue1": "スキルID",
+      "effectValue2": "スキルID",
+      "effectValue3": "スキルID",
+      "effectValue4": "スキルID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 717,
+      "name": "モードチェンジ",
+      "effectValue1": "ATK増減割合(％)\n※-指定可",
+      "effectValue2": "EX上昇増減割合(％)\n※-指定可",
+      "effectValue3": "行動CT増減数\n※-指定可",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 718,
+      "name": "サブEX追加（星力結晶）",
+      "effectValue1": "サブEX増加数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 719,
+      "name": "固有ゲージ増加",
+      "effectValue1": "固有ゲージ増加数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 720,
+      "name": "モードチェンジB",
+      "effectValue1": "ATK増減割合(％)\n※-指定可",
+      "effectValue2": "EX上昇増減割合(％)\n※-指定可",
+      "effectValue3": "行動CT増減数\n※-指定可",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 721,
+      "name": "シスターゲージ増加",
+      "effectValue1": "増加率(％)",
+      "effectValue2": null,
+      "effectValue3": null,
+      "effectValue4": null,
+      "effectValue5": "-"
+    },
+    {
+      "id": 722,
+      "name": "ATK系バフ効果量・時間増加",
+      "effectValue1": "効果増加量(％)",
+      "effectValue2": "時間増加量(％)",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 723,
+      "name": "ATK系バフ効果量加算・時間増加",
+      "effectValue1": "効果増加量(％)",
+      "effectValue2": "時間増加量(％)",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 724,
+      "name": "消費EX減少(指定の味方)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue4": "詳細ID",
+      "effectValue5": "-"
+    },
+    {
+      "id": 725,
+      "name": "スタン時間延長",
+      "effectValue1": "CT数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 726,
+      "name": "EXゲージ吸収（ATK段階依存）",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "基礎ATK参照段階値",
+      "effectValue3": "係数",
+      "effectValue4": "回復割合(％)",
+      "effectValue5": "吸収最大値"
+    },
+    {
+      "id": 727,
+      "name": "バフ奪取",
+      "effectValue1": "個数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 728,
+      "name": "究明の恩寵",
+      "effectValue1": "EX増加量",
+      "effectValue2": "EX増加最大数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 729,
+      "name": "デバフ効果時間延長",
+      "effectValue1": "延長割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 730,
+      "name": "EXゲージ吸収（指定所属数依存）",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "所属ID",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 731,
+      "name": "消費EX減少(スタン減少量依存)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 732,
+      "name": "スタンゲージ減少",
+      "effectValue1": "スタン減少量",
+      "effectValue2": "0:強制的に減少/1:バリア系やスタンバリアを参照",
+      "effectValue3": "0:条件なし\n1:このEXスキルで敵をスタンさせた場合",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 733,
+      "name": "爆弾設置(水着ネーゼ専用)",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "効果番号",
+      "effectValue3": "効果番号",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 734,
+      "name": "EXゲージ増加（スキル効果依存）",
+      "effectValue1": "EX増加量",
+      "effectValue2": "スキルID",
+      "effectValue3": "0:味方、1:敵、2:両方",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 735,
+      "name": "ノーツ操作（敵移動数参照）※シスターAスキル用",
+      "effectValue1": "最大移動数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 736,
+      "name": "EXゲージ増加（消費OHHP依存）",
+      "effectValue1": "係数(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 737,
+      "name": "新春晴餅【常時発動効果】",
+      "effectValue1": "初期カウント数",
+      "effectValue2": "最大カウント数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 738,
+      "name": "新春晴餅カウント増減",
+      "effectValue1": "1カウント増加、2カウント減少",
+      "effectValue2": "増減数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 739,
+      "name": "ヒールドライブ",
+      "effectValue1": "EXゲージ増加量",
+      "effectValue2": "係数(％)",
+      "effectValue3": "ATKバフ効果CT",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 740,
+      "name": "ノーツ操作（位置指定）",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 741,
+      "name": "消費EX減少(指定攻撃タイプ依存)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "攻撃タイプID",
+      "effectValue4": "-",
+      "effectValue5": "1:FOH条件あり/2:なし"
+    },
+    {
+      "id": 742,
+      "name": "星力共鳴（属性）",
+      "effectValue1": "EXゲージ消費減少率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 743,
+      "name": "消費EX減少(ラッシュ数参照)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 744,
+      "name": "輪廻LV【常時発動効果】",
+      "effectValue1": "初期LV数",
+      "effectValue2": "最大LV数",
+      "effectValue3": "増加LV数",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 745,
+      "name": "EXゲージ吸収（異なる属性依存）",
+      "effectValue1": "吸収ゲージ値",
+      "effectValue2": "回復割合(％)",
+      "effectValue3": "1サブ属性含む/2メイン属性のみ",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 746,
+      "name": "爆裂LV【常時発動効果】",
+      "effectValue1": "初期LV数",
+      "effectValue2": "最大LV数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 747,
+      "name": "爆裂LV増減",
+      "effectValue1": "1カウント増加、2カウント減少",
+      "effectValue2": "増減数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 748,
+      "name": "消費EX減少(敵スタン数参照)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 749,
+      "name": "シェアハートボンバー",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 750,
+      "name": "シェアハートボンバー移動",
+      "effectValue1": "1前方、2後方",
+      "effectValue2": "移動マス数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 751,
+      "name": "天啓LV【常時発動効果】",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "LV増加数",
+      "effectValue3": "最大LV数",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 752,
+      "name": "天啓LV増減",
+      "effectValue1": "1カウント増加、2カウント減少",
+      "effectValue2": "増減数",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 753,
+      "name": "EXゲージ増加（味方の数依存）",
+      "effectValue1": "EX増加量",
+      "effectValue2": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue3": "詳細をビットで指定",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 754,
+      "name": "消費EX減少(条件指定)【常時発動効果】",
+      "effectValue1": "EX基礎減少量",
+      "effectValue2": "最低値",
+      "effectValue3": "最大減少量",
+      "effectValue4": "-",
+      "effectValue5": "1.自身の固有状態変化した回数"
+    },
+    {
+      "id": 755,
+      "name": "スーパーチャージ",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 900,
+      "name": "EXスキル効果アップ",
+      "effectValue1": "1スキルA/2スキルB/3スキルA\u002B/4スキルB\u002B",
+      "effectValue2": "効果番号",
+      "effectValue3": "1～4：効果値番号\n5：適用確率\n6：効果時間",
+      "effectValue4": "可変値\n※-あり",
+      "effectValue5": "-"
+    },
+    {
+      "id": 901,
+      "name": "スタン時にバフ解除",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 902,
+      "name": "相手のチームHP減少に応じてATKアップ",
+      "effectValue1": "係数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 903,
+      "name": "ダメージ軽減（特定ユニットスタン解除）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "レーンをビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 904,
+      "name": "ダメージ軽減（通常攻撃）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "解除時間(CT)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 905,
+      "name": "ダメージ軽減（チャージ攻撃）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "解除時間(CT)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 906,
+      "name": "ダメージ軽減（ユニゾン・ランブル）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "解除時間(CT)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 907,
+      "name": "ダメージ軽減（EXスキル）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "増加率(％)",
+      "effectValue3": "解除時間(CT)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 908,
+      "name": "被ダメージ軽減（特定種族）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 909,
+      "name": "ダメージカット（特定種族）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "種族ID\n※0のとき全種族対象",
+      "effectValue3": "1指定タイプ/2指定タイプ以外",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "0サブ種族は考慮しない/1サブ種族も考慮"
+    },
+    {
+      "id": 910,
+      "name": "被ダメージ軽減（異なる属性数依存）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 911,
+      "name": "被ダメージ軽減（異なる属性数依存2）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 912,
+      "name": "被ダメージ軽減（指定種族数依存）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "種族ID",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 913,
+      "name": "ダメージカット（攻撃タイプ）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "攻撃タイプID",
+      "effectValue3": "1指定タイプ/2指定タイプ以外",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 914,
+      "name": "ダメージ上限",
+      "effectValue1": "ダメージ数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 915,
+      "name": "ダメージカット（属性）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "1指定属性/2指定属性以外",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 916,
+      "name": "ダメージ反射（重複可）",
+      "effectValue1": "ダメージ割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 917,
+      "name": "イラスト変更",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 918,
+      "name": "属性カウント追加",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 919,
+      "name": "ダメージカット（ユニゾン）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 920,
+      "name": "初回行動CT短縮（固定値）",
+      "effectValue1": "減少値",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 921,
+      "name": "スキル対象追加",
+      "effectValue1": "1属性/2種族/3攻撃タイプ/4所属/上記以外:全対象",
+      "effectValue2": "詳細ID",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 922,
+      "name": "ダメージカット（同時攻撃体数依存）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "カット減少率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 923,
+      "name": "ダメージカット（種族or属性）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "種族をビットで指定",
+      "effectValue3": "属性をビットで指定",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "0サブ種族は考慮しない/1サブ種族も考慮"
+    },
+    {
+      "id": 924,
+      "name": "ラッシュ増加無効（種族or属性）",
+      "effectValue1": "種族をビットで指定",
+      "effectValue2": "属性をビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "0サブ種族は考慮しない/1サブ種族も考慮"
+    },
+    {
+      "id": 925,
+      "name": "被ダメージ軽減（ラッシュ数依存）",
+      "effectValue1": "軽減率(％)",
+      "effectValue2": "軽減率減少(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 926,
+      "name": "ダメージカット（ラッシュ数依存）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "カット率減少(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 927,
+      "name": "ダメージカット（クリティカル以外）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 928,
+      "name": "ダメージカット（多段依存）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "カット率減少(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 929,
+      "name": "ダメージカット（ラッシュ数以下）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "ラッシュ数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 930,
+      "name": "ラッシュ増加無効（攻撃タイプ）",
+      "effectValue1": "攻撃タイプをビットで指定",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 931,
+      "name": "ラッシュ増加無効（クリティカル時以外）",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 932,
+      "name": "強制移動無効化（シスター）",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 933,
+      "name": "ダメージカット（特定ユニットスタン解除）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "レーンをビットで指定",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 934,
+      "name": "初回行動CT最速抽選確率",
+      "effectValue1": "抽選確率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 935,
+      "name": "ダメージカット（ユニゾン人数参照）",
+      "effectValue1": "カット率(％)",
+      "effectValue2": "カット減少率(％)",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 936,
+      "name": "ノックバック・強制移動無効化（EXスキル以外）",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 937,
+      "name": "確定ランブル勝利",
+      "effectValue1": "ATK値",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 938,
+      "name": "デバフ無効",
+      "effectValue1": "-",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1000,
+      "name": "初期EX上昇",
+      "effectValue1": "初期EX上昇量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1001,
+      "name": "回復量上昇",
+      "effectValue1": "回復上昇量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1002,
+      "name": "HP上昇",
+      "effectValue1": "HP上昇割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1003,
+      "name": "スタンCT減少",
+      "effectValue1": "減少スタンCT数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1004,
+      "name": "EXスキル効果アップ(Uアビリティ)",
+      "effectValue1": "1スキルA/2スキルB/3スキルA\u002B/4スキルB\u002B",
+      "effectValue2": "効果番号",
+      "effectValue3": "1～4：効果値番号\n5：適用確率\n6：効果時間",
+      "effectValue4": "可変値\n※-あり",
+      "effectValue5": "-"
+    },
+    {
+      "id": 1005,
+      "name": "覚醒時特殊効果アップ",
+      "effectValue1": "固有ゲージ指定効果種別ID",
+      "effectValue2": "効果番号",
+      "effectValue3": "1～4：効果値番号\n5：適用確率\n6：効果時間",
+      "effectValue4": "可変値\n※-あり",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2000,
+      "name": "有利属性ダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2001,
+      "name": "クリティカルダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2002,
+      "name": "ラッシュ補正倍率アップ",
+      "effectValue1": "増加割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2003,
+      "name": "ランブル勝利時の敵スタン時間延長(デバフ)",
+      "effectValue1": "CT数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2004,
+      "name": "スタン時間短縮",
+      "effectValue1": "減少割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2005,
+      "name": "通常攻撃KB増加",
+      "effectValue1": "KB増加数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2008,
+      "name": "状態異常付与確率アップ",
+      "effectValue1": "加算確率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2012,
+      "name": "ユニゾンアタックEX上昇量アップ",
+      "effectValue1": "EX増加率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2013,
+      "name": "HP回復(シスター用)",
+      "effectValue1": "HP割合(％)",
+      "effectValue2": "1OH可/2OH不可",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2014,
+      "name": "スタンゲージ減少",
+      "effectValue1": "減少スタンゲージ数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2015,
+      "name": "テルス獲得量アップ",
+      "effectValue1": "テルス獲得上昇率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2016,
+      "name": "回数バリア（カウンター）",
+      "effectValue1": "攻撃回数",
+      "effectValue2": "発生効果番号",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2017,
+      "name": "追加アイテム獲得",
+      "effectValue1": "ステージID\n※「m_stage_rewards」で報酬設定したID",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2018,
+      "name": "ラッシュ継続",
+      "effectValue1": "ラッシュ数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2019,
+      "name": "有利属性ダメージ倍率アップ（常時ラッシュ数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2020,
+      "name": "HPアップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2021,
+      "name": "クリティカルダメージ倍率アップ（常時ラッシュ数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "係数(％)",
+      "effectValue3": "最大倍率(％)",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2022,
+      "name": "有利属性ダメージ倍率アップ（異なるメイン属性数依存）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 2023,
+      "name": "有利属性ダメージ倍率アップ（種族\u002B属性）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3000,
+      "name": "ラッシュダメージ倍率アップ（加算\u002B％）",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3001,
+      "name": "ユニゾンアタックのダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3002,
+      "name": "ランブルアタックのダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3003,
+      "name": "有利属性ダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3004,
+      "name": "相手スタン時のダメージ倍率アップ",
+      "effectValue1": "加算割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3005,
+      "name": "行動CT最速抽選確率",
+      "effectValue1": "抽選確率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3006,
+      "name": "通常攻撃時ラッシュ数増加\u002B1",
+      "effectValue1": "発動確率(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3007,
+      "name": "ノックバック量減少",
+      "effectValue1": "KB減少割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3008,
+      "name": "初期OH（HP回復割合％）",
+      "effectValue1": "OH割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3009,
+      "name": "初期ラッシュ数アップ",
+      "effectValue1": "ラッシュ増加数",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3010,
+      "name": "ユニゾンアタック時HP回復（HP依存）",
+      "effectValue1": "係数（万分率）",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3011,
+      "name": "速度アップ（ユニゾンアタック後）",
+      "effectValue1": "減少率(％)",
+      "effectValue2": "ユニゾン人数",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3012,
+      "name": "ランブル勝利時EX増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3013,
+      "name": "チャージ攻撃時EX増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3014,
+      "name": "被弾時のEX獲得量増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3015,
+      "name": "被弾時ATKアップ",
+      "effectValue1": "増加率(％)",
+      "effectValue2": "効果時間(CT)",
+      "effectValue3": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 3016,
+      "name": "ユニゾンアタック時EX獲得量増加",
+      "effectValue1": "EX増加量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "-",
+      "effectValue5": "-"
+    },
+    {
+      "id": 4000,
+      "name": "ATKアップ",
+      "effectValue1": "上昇割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 4001,
+      "name": "HPアップ",
+      "effectValue1": "HP上昇割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 4002,
+      "name": "初期EXアップ",
+      "effectValue1": "初期EX上昇量",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 4003,
+      "name": "消費EX減少（固定値）",
+      "effectValue1": "EXゲージ消費減少値",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 4004,
+      "name": "CRT率アップ",
+      "effectValue1": "上昇割合(％)",
+      "effectValue2": "-",
+      "effectValue3": "-",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "-"
+    },
+    {
+      "id": 5000,
+      "name": "元素の星紋",
+      "effectValue1": "初期有利属性ダメージ倍率(％)",
+      "effectValue2": "有利属性ダメージ増加倍率(％)",
+      "effectValue3": "印の初期蓄積数",
+      "effectValue4": "1解除可能/2解除不可/3解除不可（アイコン表示）",
+      "effectValue5": "最大Lv"
+    },
+    {
+      "id": 6000,
+      "name": "焔界",
+      "effectValue1": "タイムライン位置",
+      "effectValue2": "属性ID",
+      "effectValue3": "種族ID",
+      "effectValue4": "-",
+      "effectValue5": "ダメージ増加率(％)"
+    }
+  ]
+}

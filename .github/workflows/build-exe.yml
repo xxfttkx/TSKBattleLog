@@ -141,6 +141,7 @@ jobs:
           Copy-Item -Recurse -Force dist/TSKBattleLog/* release/
           Copy-Item -Force dist/mod_manifest.json release/
           Copy-Item -Force version.txt release/
+          Copy-Item -Force SkillEffectTypes.json release/
           foreach ($f in @("mods.json","trace_config.json","char_skill.json")) {
             if (Test-Path $f) { Copy-Item -Force $f release/ }
           }
