@@ -19,6 +19,7 @@ import threading
 import time
 import ctypes
 import urllib.request
+from io import BytesIO
 from pathlib import Path
 
 import tkinter as tk
@@ -159,6 +160,8 @@ def wiki_icon_url(unit_name: str, character_name: str) -> str:
     """构造 wiki 头像直链。
     规律（已验证）：attach2/696D67_<hex_utf8('［UnitName］角色名_icon_NF.png')>.png
     其中 696D67 是 "img" 的 hex 前缀。"""
+    # wiki 文件名用全角括号，游戏数据用半角，需统一
+    character_name = character_name.replace("(", "（").replace(")", "）")
     page = f"［{unit_name}］{character_name}_icon_NF.png"
     hx = page.encode("utf-8").hex().upper()
     return f"{WIKI_BASE}/attach2/696D67_{hx}.png"
@@ -1260,8 +1263,18 @@ class App(tk.Tk):
                     data = r.read()
                 if len(data) < 100:
                     raise ValueError(f"响应过小 ({len(data)} bytes)，URL 可能失效")
+                # 校验内容确实是图片，避免把 HTML 错误页当 png 缓存
+                try:
+                    Image.open(BytesIO(data)).verify()
+                except Exception:
+                    raise ValueError("响应非图片，URL 可能失效")
                 path.write_bytes(data)
-            img = Image.open(path).convert("RGBA").resize((48, 48))
+            try:
+                img = Image.open(path).convert("RGBA").resize((48, 48))
+            except Exception:
+                # 缓存损坏（坏文件曾被落盘），删除后下次自动重下
+                path.unlink(missing_ok=True)
+                raise
             self.ui_queue.put(("unitIconReady", (address, img)))
         except Exception as e:
             self.ui_queue.put(("unitIconFailed",
