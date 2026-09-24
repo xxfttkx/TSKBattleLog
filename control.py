@@ -17,6 +17,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 import ctypes
 import urllib.request
 from io import BytesIO
@@ -1158,7 +1159,13 @@ class App(tk.Tk):
                     self._apply_unit_icon_failed(*data)
         except queue.Empty:
             pass
-        self.after(80, self._poll_queue)
+        except Exception:
+            # 单条消息处理异常不允许炸掉轮询循环（炸了 GUI 从此收不到 agent 消息）；
+            # 落盘留痕以便排查（Tkinter 回调异常默认只打 stderr）
+            self._log_internal("[debug] ui 消息处理异常:\n" +
+                               traceback.format_exc())
+        finally:
+            self.after(80, self._poll_queue)
 
     def _apply_mod_list(self, mods: list[dict]):
         # agent 上报的 modList 只用于同步分类/描述元数据（其 enabled 恒为 false：
@@ -1308,7 +1315,14 @@ class App(tk.Tk):
         if self.bridge.script is None:
             messagebox.showinfo("提示", "尚未注入，无法查询 buff")
             return
-        self._open_buff_dialog(address, name)
+        # 弹窗构建异常绝不能静默（Tkinter 回调异常只打 stderr）：
+        # 中断会导致后续 post 不执行，表现为永远"读取中"
+        try:
+            self._open_buff_dialog(address, name)
+        except Exception:
+            self._log_internal("[debug] buff 弹窗构建异常:\n" +
+                               traceback.format_exc())
+            return
         self.bridge.post({"type": "buffRequest", "payload": {"address": address}})
 
     def _open_buff_dialog(self, address: str, name: str | None = None):
@@ -1346,14 +1360,19 @@ class App(tk.Tk):
         for c, w in zip(cols, widths):
             tree.heading(c, text=c)
             tree.column(c, width=w, anchor="center")
-        # 选中行显示该效果类型的字段含义（SkillEffectTypes.json 查询）
-        desc_label = ttk.Label(top, text="", foreground="#555",
-                               justify="left", anchor="w")
-        desc_label.pack(fill="x", padx=8, pady=(0, 6), side="bottom")
+        # 选中行显示该效果类型的字段含义（SkillEffectTypes.json 查询）。
+        # 初始不挂载（不留底部空白）；首次选中行时才 pack 并加高窗口，
+        # 这样详情区占多少表格就缩多少，但窗口同步变高，表格行数不受挤压
+        desc_holder = tk.Frame(top)
+        desc_label = ttk.Label(desc_holder, text="", foreground="#555",
+                               justify="left", anchor="w",
+                               wraplength=980)
+        desc_label.pack(fill="both", expand=True)
         tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         tree.bind("<<TreeviewSelect>>", self._on_buff_select)
         self._buff_dialog = {"top": top, "tree": tree, "info": info,
                              "stats_label": stats_label,
+                             "desc_holder": desc_holder,
                              "desc_label": desc_label, "row_ids": [],
                              "address": address, "mode_var": mode_var,
                              "toggle_btn": toggle_btn, "effects": None}
@@ -1371,9 +1390,14 @@ class App(tk.Tk):
         dlg = self._buff_dialog
         if dlg is None:
             return
+        holder = dlg["desc_holder"]
+        top = dlg["top"]
         sel = dlg["tree"].selection()
         if not sel:
             dlg["desc_label"].configure(text="")
+            if holder.winfo_ismapped():
+                holder.pack_forget()
+                top.geometry(f"{top.winfo_width()}x{dlg['base_h']}")
             return
         idx = dlg["tree"].index(sel[0])
         row_ids = dlg.get("row_ids") or []
@@ -1391,6 +1415,15 @@ class App(tk.Tk):
             desc = info.get(f"effectValue{i}", "-")
             lines.append(f"effectValue{i}: {desc}")
         dlg["desc_label"].configure(text="\n".join(lines))
+        # 首次展开：挂载详情区并同步加高窗口（表格行数不受挤压）；
+        # 之后切换行只更新文本（详情区行数固定 6 行，高度稳定）
+        if not holder.winfo_ismapped():
+            dlg["base_h"] = top.winfo_height()
+            holder.pack(fill="x", padx=8, pady=(0, 6), side="bottom",
+                        before=dlg["tree"])
+            top.update_idletasks()
+            need = holder.winfo_reqheight() + 6  # pack pady
+            top.geometry(f"{top.winfo_width()}x{dlg['base_h'] + need}")
 
     def _toggle_buff_mode(self):
         dlg = self._buff_dialog
