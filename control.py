@@ -46,6 +46,11 @@ ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
 
+# auto-skill 技能优先级（char_skill.json 值 ↔ 单位栏下拉标签；"默认"= 不写 key，走游戏抽选）
+SKILL_LABELS = {0: "普攻", 1: "EX1", 2: "EX2", 3: "随机"}
+SKILL_VALUES = {v: k for k, v in SKILL_LABELS.items()}
+SKILL_LABEL_LIST = ["默认", "普攻", "EX1", "EX2", "随机"]
+
 
 def _f2(v) -> str:
     """战斗日志系数：数字保留两位，缺失（None）显示 -"""
@@ -1190,6 +1195,42 @@ class App(tk.Tk):
 
     # ---- 出战角色头像栏 / buff 查询 ----
 
+    def _read_char_skill(self) -> dict:
+        try:
+            return json.loads(CHAR_SKILL_JSON.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _get_unit_skill_label(self, cfg: dict, unit_name: str,
+                              char_name: str) -> str:
+        """显示当前配置：与 agent getAutoUseSkillIndex 同优先级（全名 → 裸称号）"""
+        v = cfg.get(f"[{unit_name}] {char_name}", cfg.get(unit_name))
+        return SKILL_LABELS.get(v, "默认")
+
+    def _on_skill_select(self, unit_name: str, char_name: str,
+                         var: tk.StringVar):
+        """单位栏下拉选择技能：立即写 char_skill.json 并全量下发（下一次 LotterySkill 生效）。
+        写回一律用全名 key；裸 unitName key 是历史遗留，遇到即迁移删除。"""
+        label = var.get()
+        cfg = self._read_char_skill()
+        cfg.pop(unit_name, None)
+        full = f"[{unit_name}] {char_name}"
+        if label == "默认":
+            cfg.pop(full, None)
+        else:
+            cfg[full] = SKILL_VALUES[label]
+        try:
+            CHAR_SKILL_JSON.write_text(
+                json.dumps(cfg, ensure_ascii=False, indent=4) + "\n",
+                encoding="utf-8")
+        except Exception as e:
+            self._append_log(
+                time.strftime("%H:%M:%S.") +
+                f"{int(time.time()*1000)%1000:03d}",
+                f"[units] char_skill.json 写入失败: {e}")
+            return
+        self.bridge.post_char_skill()
+
     def _apply_unit_list(self, payload):
         """agent 战斗初始化后上报单位：team=Player 走头像栏，Enemy 走紧凑文字条。
         兼容旧格式（直接传 units 数组，视为玩家）。"""
@@ -1216,14 +1257,27 @@ class App(tk.Tk):
         if not self.hide_units_var.get():
             self.units_bar.pack(side="top", fill="x", padx=8, pady=(0, 2),
                                 before=self.notebook)
+        skill_cfg = self._read_char_skill()
         for u in units:
             address = u.get("address", "")
+            unit_name = u.get("unitName", "")
             name = u.get("characterName", "?")
+            cell = ttk.Frame(self.units_bar)
+            cell.pack(side="left", padx=6, pady=2)
             btn = ttk.Button(
-                self.units_bar, text=name, compound="top",
+                cell, text=name, compound="top",
                 command=lambda a=address, n=name: self._on_unit_click(a, n),
             )
-            btn.pack(side="left", padx=6, pady=2)
+            btn.pack(side="top")
+            # 技能优先级下拉（auto-skill）：选择即写 char_skill.json 并下发
+            var = tk.StringVar(
+                value=self._get_unit_skill_label(skill_cfg, unit_name, name))
+            cb = ttk.Combobox(cell, textvariable=var, width=4,
+                              state="readonly", values=SKILL_LABEL_LIST)
+            cb.pack(side="top", pady=(2, 0))
+            cb.bind("<<ComboboxSelected>>",
+                    lambda _e, un=unit_name, cn=name, v=var:
+                        self._on_skill_select(un, cn, v))
             self.unit_buttons[address] = btn
             threading.Thread(target=self._download_icon, args=(u,),
                              daemon=True).start()
