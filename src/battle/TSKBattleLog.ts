@@ -76,8 +76,21 @@ export interface UnisonEvent {
   damage: string;
 }
 
+/** 队伍元信息（随战斗结束快照落盘，供历史回看辨认场次） */
+export interface BattleUnitMeta {
+  unitName: string;
+  characterName: string;
+  attr: number;
+  damage: string;
+}
+
 /** 发给宿主的可序列化战斗日志快照（bigint 一律转字符串） */
 export interface BattleLogSnapshot {
+  meta?: {
+    mode: string;
+    players: BattleUnitMeta[];
+    enemies: { unitName: string; characterName: string }[];
+  };
   turns: TurnRecord[];
   groups: {
     seq: number;
@@ -124,6 +137,10 @@ export class TSKBattleLog {
   damageTotal: bigint = BigInt(0);
   unisonDamageTotal: bigint = BigInt(0);
   turnCount = 0;
+  /** 战斗模式（BattleMode 枚举名），Player Initialize 时记录 */
+  private mode = "";
+  /** 敌方名单（Enemy Initialize 时记录，不含 attr/damage：部分模式敌方 UnitData 缺失） */
+  private enemyUnits: { unitName: string; characterName: string }[] = [];
 
   /** 攻击者地址 -> 已计算但尚未落地的伤害段队列（calc 返回 → Set*DamageValue 落地） */
   private calcQueue = new Map<string, CalcSegment[]>();
@@ -152,6 +169,16 @@ export class TSKBattleLog {
     this.turnRecords = [];
     this.unisonEvents = [];
     this.eventSeq = 0;
+    this.mode = "";
+    this.enemyUnits = [];
+  }
+
+  /** Enemy Initialize 时记录敌方名单（与 init 无关，战斗结束快照用） */
+  setEnemies(units: { unitName: string; characterName: string }[]): void {
+    this.enemyUnits = units.map((u) => ({
+      unitName: u.unitName,
+      characterName: u.characterName,
+    }));
   }
 
   onTurnChange(oldVal: number, newVal: number): void {
@@ -178,8 +205,9 @@ export class TSKBattleLog {
     });
   }
 
-  init(notes: Il2Cpp.Array<Il2Cpp.Object>): void {
+  init(notes: Il2Cpp.Array<Il2Cpp.Object>, modeName: string): void {
     this.clear();
+    this.mode = modeName;
     for (const note of notes) {
       const battleNote = new TSKBattleNote();
       const unitData = note.field("<UnitData>k__BackingField")
@@ -384,9 +412,19 @@ export class TSKBattleLog {
     return `${(value * 100).toFixed(0)}%`;
   }
 
-  /** 当前战斗的可序列化快照（宿主「战斗日志」窗口按需拉取） */
+  /** 当前战斗的可序列化快照（宿主「战斗日志」窗口按需拉取/战斗结束落盘） */
   snapshot(): BattleLogSnapshot {
     return {
+      meta: {
+        mode: this.mode,
+        players: this.notes.map((n) => ({
+          unitName: n.unitName,
+          characterName: n.characterName,
+          attr: n.attr,
+          damage: n.damage.toString(),
+        })),
+        enemies: this.enemyUnits.map((u) => ({ ...u })),
+      },
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {
         const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));

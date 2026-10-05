@@ -40,8 +40,12 @@ export class BattleLogMod implements Mod {
       this,
       this.handleInitialize,
     );
-    traceMethodByName(image, "TSKBattleManager", "InitializeResult", this, () =>
-      this.tskBattleLog.onEndBattle(),
+    traceMethodByName(
+      image,
+      "TSKBattleManager",
+      "InitializeResult",
+      this,
+      this.handleEndBattle,
     );
     // Set*DamageValue：quiet hook，只做累计+暴击回填，日志由 flushGroups 统一输出
     traceMethodByName(
@@ -246,6 +250,12 @@ export class BattleLogMod implements Mod {
     return this.tskBattleLog.snapshot();
   }
 
+  /** 战斗结束：控制台汇总 + 全量快照推宿主落盘（历史回看） */
+  private handleEndBattle: MethodEnterHandler = () => {
+    this.tskBattleLog.onEndBattle();
+    sendHost("battleLogEnded", this.tskBattleLog.snapshot());
+  };
+
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {
     // x64 寄存器槽位高位不可信：int 参数直接 toInt32()，
     // 勿用 parseInt(ptr.toString(),16)——那是把寄存器值当地址解析
@@ -310,7 +320,10 @@ export class BattleLogMod implements Mod {
     }
 
     if (teamType === "Player" || teamType === "Unknown") {
-      this.tskBattleLog.init(notes);
+      this.tskBattleLog.init(notes, modeName);
+    } else if (teamType === "Enemy") {
+      // 敌方不进 notes（伤害统计只认玩家），仅留名单供结束快照
+      this.tskBattleLog.setEnemies(units);
     }
     // 敌我双方都上报，GUI 按 team 区分展示（玩家带头像，敌人纯文字紧凑条）
     sendHost("unitList", { team: teamType, units });

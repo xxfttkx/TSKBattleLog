@@ -41,6 +41,7 @@ MODS_JSON = ROOT_DIR / "mods.json"
 TRACE_CONFIG_JSON = ROOT_DIR / "trace_config.json"
 CHAR_SKILL_JSON = ROOT_DIR / "char_skill.json"
 LOG_DIR = ROOT_DIR / "logs"
+BATTLE_LOG_DIR = LOG_DIR / "battles"  # 战斗结束快照（历史回看）
 GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
@@ -433,6 +434,8 @@ class FridaBridge:
                 self.ui_queue.put(("buffData", payload))
             elif msg_type == "battleLogData":
                 self.ui_queue.put(("battleLogData", payload))
+            elif msg_type == "battleLogEnded":
+                self.ui_queue.put(("battleLogEnded", payload))
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
@@ -470,6 +473,7 @@ class App(tk.Tk):
         self._effect_types = _load_effect_types()  # id → 字段含义（buff 弹窗查询用）
         self._blog_dialog: dict | None = None  # 战斗日志窗口
         self._blog_last_geom: str | None = None  # 关闭前的几何，供持久化
+        self._blog_history = None  # 历史战斗列表窗口
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
@@ -1158,6 +1162,8 @@ class App(tk.Tk):
                     self._apply_buff_data(data)
                 elif kind == "battleLogData":
                     self._apply_battle_log_data(data)
+                elif kind == "battleLogEnded":
+                    self._save_ended_battle_log(data)
                 elif kind == "unitIconReady":
                     self._apply_unit_icon(*data)
                 elif kind == "unitIconFailed":
@@ -1663,6 +1669,9 @@ class App(tk.Tk):
         info = ttk.Label(header, text="读取中...", foreground="#1a5fb4",
                          font=("", 10, "bold"))
         info.pack(side="left")
+        ttk.Button(header, text="历史",
+                   command=self._open_battle_log_history).pack(
+            side="right", padx=(4, 0))
         ttk.Button(header, text="刷新",
                    command=self._refresh_battle_log).pack(side="right")
 
@@ -1770,6 +1779,170 @@ class App(tk.Tk):
             return
         dlg["info"].configure(foreground="#1a5fb4")
         self._render_battle_log(dlg, payload)
+
+    def _save_ended_battle_log(self, snap: dict):
+        """战斗结束：agent 推全量快照，落盘 logs/battles/时间戳.json 供历史回看"""
+        try:
+            BATTLE_LOG_DIR.mkdir(parents=True, exist_ok=True)
+            stamp = time.strftime("%Y%m%d_%H%M%S")
+            path = BATTLE_LOG_DIR / f"{stamp}.json"
+            i = 1
+            while path.exists():  # 同秒多场（理论罕见），追加序号
+                path = BATTLE_LOG_DIR / f"{stamp}_{i}.json"
+                i += 1
+            path.write_text(json.dumps(snap, ensure_ascii=False, indent=2),
+                            encoding="utf-8")
+            meta = snap.get("meta") or {}
+            players = "、".join(
+                p.get("characterName", "?")
+                for p in meta.get("players", []))
+            self._append_log(
+                time.strftime("%H:%M:%S.") +
+                f"{int(time.time()*1000)%1000:03d}",
+                f"[battle-log] 战斗快照已保存 {path.name}"
+                f"（{meta.get('mode', '?')} / {players}）")
+        except Exception as e:
+            self._append_log(
+                time.strftime("%H:%M:%S.") +
+                f"{int(time.time()*1000)%1000:03d}",
+                f"[battle-log] 快照保存失败: {e}")
+
+    # ---- 战斗日志历史回看 ----
+
+    @staticmethod
+    def _history_time_label(name: str) -> str:
+        """文件名 20261005_153012[_1].json → 2026-10-05 15:30:12"""
+        try:
+            return time.strftime("%Y-%m-%d %H:%M:%S",
+                                 time.strptime(name[:15], "%Y%m%d_%H%M%S"))
+        except Exception:
+            return name
+
+    def _open_battle_log_history(self):
+        if self._blog_history is not None:
+            try:
+                if self._blog_history["top"].winfo_exists():
+                    self._blog_history["top"].deiconify()
+                    self._blog_history["top"].lift()
+                    return
+            except Exception:
+                pass
+            self._blog_history = None
+        top = tk.Toplevel(self)
+        top.title("历史战斗")
+        top.geometry("920x440")
+        top.minsize(560, 300)
+        top.protocol("WM_DELETE_WINDOW", self._on_history_close)
+
+        bar = ttk.Frame(top)
+        bar.pack(fill="x", padx=8, pady=(6, 2))
+        ttk.Label(bar, text="logs/battles/ 下的战斗结束快照",
+                  foreground="#666").pack(side="left")
+        ttk.Button(bar, text="打开文件夹",
+                   command=lambda: os.startfile(BATTLE_LOG_DIR)).pack(
+            side="right", padx=(4, 0))
+        ttk.Button(bar, text="删除",
+                   command=self._delete_selected_history).pack(
+            side="right", padx=(4, 0))
+        ttk.Button(bar, text="打开",
+                   command=self._replay_selected_history).pack(side="right")
+
+        cols = ("time", "mode", "turns", "damage", "players")
+        frame = ttk.Frame(top)
+        frame.pack(fill="both", expand=True, padx=8, pady=(2, 8))
+        tree = ttk.Treeview(frame, columns=cols, show="headings")
+        for c, t_, w, anchor in (
+            ("time", "时间", 140, "center"),
+            ("mode", "模式", 130, "center"),
+            ("turns", "回合", 50, "center"),
+            ("damage", "总伤害", 110, "e"),
+            ("players", "出战角色", 400, "w"),
+        ):
+            tree.heading(c, text=t_)
+            tree.column(c, width=w, anchor=anchor)
+        tree.pack(side="left", fill="both", expand=True)
+        sb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        sb.pack(side="right", fill="y")
+        tree.configure(yscrollcommand=sb.set)
+        tree.bind("<Double-1>", lambda _e: self._replay_selected_history())
+        self._blog_history = {"top": top, "tree": tree}
+        self._populate_history(tree)
+
+    def _on_history_close(self):
+        if self._blog_history is not None:
+            try:
+                self._blog_history["top"].destroy()
+            except Exception:
+                pass
+        self._blog_history = None
+
+    def _populate_history(self, tree: ttk.Treeview):
+        for row in tree.get_children():
+            tree.delete(row)
+        if not BATTLE_LOG_DIR.exists():
+            return
+        files = sorted(BATTLE_LOG_DIR.glob("*.json"), reverse=True)
+        for path in files:
+            try:
+                snap = json.loads(path.read_text(encoding="utf-8"))
+                meta = snap.get("meta") or {}
+                players = "、".join(
+                    p.get("characterName", "?")
+                    for p in meta.get("players", []))
+                tree.insert("", "end", iid=str(path), values=(
+                    self._history_time_label(path.name),
+                    meta.get("mode", "?"),
+                    snap.get("turnCount", 0),
+                    snap.get("damageTotal", "0"),
+                    players,
+                ))
+            except Exception:
+                tree.insert("", "end", iid=str(path),
+                            values=(self._history_time_label(path.name),
+                                    "（文件损坏）", "", "", ""))
+
+    def _replay_selected_history(self):
+        if self._blog_history is None:
+            return
+        sel = self._blog_history["tree"].selection()
+        if not sel:
+            return
+        self._replay_battle_log(Path(sel[0]))
+        self._on_history_close()
+
+    def _delete_selected_history(self):
+        if self._blog_history is None:
+            return
+        tree = self._blog_history["tree"]
+        if not tree.selection():
+            return
+        if not messagebox.askyesno("确认", "删除选中的战斗快照？",
+                                   parent=self._blog_history["top"]):
+            return
+        for iid in tree.selection():
+            try:
+                Path(iid).unlink()
+            except Exception:
+                pass
+        self._populate_history(tree)
+
+    def _replay_battle_log(self, path: Path):
+        """读历史快照灌进战斗日志窗口（复用实时渲染管线）"""
+        try:
+            snap = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            messagebox.showerror("错误", f"读取失败: {e}")
+            return
+        if self._blog_dialog is None:
+            self._open_battle_log_dialog()
+        dlg = self._blog_dialog
+        if dlg is None:
+            return
+        dlg["info"].configure(foreground="#1a5fb4")
+        self._render_battle_log(dlg, snap)
+        dlg["info"].configure(
+            text=f"【历史 {self._history_time_label(path.name)}】"
+                 + str(dlg["info"].cget("text")))
 
     def _render_battle_log(self, dlg: dict, snap: dict):
         tree: ttk.Treeview = dlg["tree"]

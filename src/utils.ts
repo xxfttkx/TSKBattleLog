@@ -6,7 +6,8 @@ type HostMessageType =
   | "modList"
   | "unitList"
   | "buffData"
-  | "battleLogData";
+  | "battleLogData"
+  | "battleLogEnded";
 
 function sendHost(type: HostMessageType, payload: any) {
   try {
