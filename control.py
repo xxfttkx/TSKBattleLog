@@ -16,6 +16,7 @@ import queue
 import re
 import sys
 import threading
+import webbrowser
 import time
 import traceback
 import ctypes
@@ -50,6 +51,9 @@ GUI_CONFIG = ROOT_DIR / "gui_config.json"
 ICON_CACHE_DIR = ROOT_DIR / "cache" / "icons"
 PROCESS_NAME = "twinkle_starknightsX.exe"
 LOG_MAX_LINES = 5000  # 日志缓存上限，超出自动裁剪头部
+# 启动时探测最新 Release（public 仓库，免认证；/latest 不含预发布）
+LATEST_RELEASE_API = \
+    "https://api.github.com/repos/xxfttkx/TSKBattleLog/releases/latest"
 
 # auto-skill 技能优先级（char_skill.json 值 ↔ 单位栏下拉标签；"默认"= 不写 key，走游戏抽选）
 SKILL_LABELS = {0: "普攻", 1: "EX1", 2: "EX2", 3: "随机"}
@@ -104,6 +108,31 @@ def _read_app_version() -> str:
         except Exception:
             continue
     return "unknown"
+
+
+def _version_tuple(v: str) -> tuple:
+    """'v1.5.0' -> (1,5,0)；脏数据兜底 (0,)，保证比较不抛异常"""
+    try:
+        return tuple(int(x) for x in v.lstrip("vV").split(".") if x != "")
+    except Exception:
+        return (0,)
+
+
+def _fetch_latest_release(timeout: float = 4.0) -> tuple[str, str] | None:
+    """请求最新 Release，返回 (tag_name, html_url)；任何失败（无网/超时/
+    403 限流）一律返回 None，由调用方静默处理"""
+    try:
+        req = urllib.request.Request(LATEST_RELEASE_API, headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "TSKBattleLog-update-check",
+        })
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        tag = data.get("tag_name", "")
+        url = data.get("html_url", "")
+        return (tag, url) if tag and url else None
+    except Exception:
+        return None
 
 
 def _get_process_exe_path(pid: int):
@@ -454,6 +483,7 @@ class App(tk.Tk, BattleLogWindowMixin):
         self._blog_dialog: dict | None = None  # 战斗日志窗口
         self._blog_last_geom: str | None = None  # 关闭前的几何，供持久化
         self._blog_history = None  # 历史战斗列表窗口
+        self._latest_url = ""  # 探测到的新版 Release 页 URL（无新版为空）
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 
         self._build_ui()
@@ -466,6 +496,35 @@ class App(tk.Tk, BattleLogWindowMixin):
 
         # UI 事件轮询（Frida 消息→主线程）
         self.after(80, self._poll_queue)
+
+        # 后台探测新版（daemon；无网络/失败静默，不打扰主流程）
+        threading.Thread(target=self._check_for_updates, daemon=True).start()
+
+    # ---- 版本更新探测 ----
+
+    def _check_for_updates(self):
+        """后台线程：查 GitHub 最新 Release，仅确有新版时通知 UI"""
+        try:
+            current = _read_app_version()
+            if current == "unknown":
+                return
+            latest = _fetch_latest_release()
+            if latest is None:
+                return
+            tag, url = latest
+            if _version_tuple(tag) > _version_tuple(current):
+                self.ui_queue.put(
+                    ("updateAvailable", {"tag": tag, "url": url}))
+        except Exception:
+            pass  # 静默：更新探测永远不能影响工具使用
+
+    def _apply_update_available(self, info: dict):
+        self._latest_url = info.get("url", "")
+        self.update_label.configure(text=f"✦ {info.get('tag', '')} 可用，点击下载")
+
+    def _open_latest_release(self, _event=None):
+        if self._latest_url:
+            webbrowser.open(self._latest_url)
 
     # ---- UI 构建 ----
 
@@ -746,10 +805,15 @@ class App(tk.Tk, BattleLogWindowMixin):
                    command=self._open_game_dir).pack(anchor="w")
 
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
-        ttk.Label(
-            settings_inner, text=f"版本 v{_read_app_version()}",
-            foreground="#999",
-        ).pack(anchor="e", pady=(10, 0))
+        # 右侧：当前版本；有新版时旁边出现蓝色可点击链接（启动后台探测，失败静默）
+        ver_frame = ttk.Frame(settings_inner)
+        ver_frame.pack(anchor="e", pady=(10, 0))
+        ttk.Label(ver_frame, text=f"版本 v{_read_app_version()}",
+                  foreground="#999").pack(side="left")
+        self.update_label = ttk.Label(ver_frame, text="",
+                                      foreground="#1a5fb4", cursor="hand2")
+        self.update_label.pack(side="left", padx=(8, 0))
+        self.update_label.bind("<Button-1>", self._open_latest_release)
 
         # Windows 滚轮滚动设置页（递归绑到 canvas 内所有控件，含 Label/按钮）
         def _on_settings_wheel(event):
@@ -1148,6 +1212,8 @@ class App(tk.Tk, BattleLogWindowMixin):
                     self._apply_unit_icon(*data)
                 elif kind == "unitIconFailed":
                     self._apply_unit_icon_failed(*data)
+                elif kind == "updateAvailable":
+                    self._apply_update_available(data)
         except queue.Empty:
             pass
         except Exception:
