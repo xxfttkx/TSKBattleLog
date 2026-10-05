@@ -51,16 +51,23 @@ class BattleLogWindowMixin:
     # ---- 战斗日志窗口 ----
 
     def _on_click_battle_log(self):
-        if self.bridge.script is None:
-            messagebox.showinfo("提示", "尚未注入，无法查看战斗日志")
-            return
         self._open_battle_log_dialog()
-        self._refresh_battle_log()
+        if self.bridge.script is None:
+            # 未注入也能开窗口看历史；实时刷新不可用
+            self._blog_dialog["info"].configure(
+                text="未注入 — 仅可查看历史", foreground="#888888")
+        else:
+            self._refresh_battle_log()
 
     def _refresh_battle_log(self):
         if self._blog_dialog is None:
             return
-        self._blog_dialog["info"].configure(text="读取中...")
+        if self.bridge.script is None:
+            self._blog_dialog["info"].configure(
+                text="未注入 — 仅可查看历史", foreground="#888888")
+            return
+        self._blog_dialog["info"].configure(foreground="#1a5fb4",
+                                            text="读取中...")
         self.bridge.post({"type": "battleLogRequest"})
 
     def _read_battle_log_geometry(self) -> str | None:
