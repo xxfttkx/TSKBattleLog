@@ -482,7 +482,6 @@ class App(tk.Tk, BattleLogWindowMixin):
         self._effect_types = _load_effect_types()  # id → 字段含义（buff 弹窗查询用）
         self._blog_dialog: dict | None = None  # 战斗日志窗口
         self._blog_last_geom: str | None = None  # 关闭前的几何，供持久化
-        self._blog_history = None  # 历史战斗列表窗口
         self._latest_url = ""  # 探测到的新版 Release 页 URL（无新版为空）
         self._log_file = None  # 自动落盘文件句柄，注入启动时创建
 

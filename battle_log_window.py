@@ -118,7 +118,7 @@ class BattleLogWindowMixin:
         top.title("战斗日志")
         geom = self._read_battle_log_geometry()
         top.geometry(geom or "1080x620")
-        top.minsize(640, 360)
+        top.minsize(920, 480)
         top.attributes("-topmost", self._always_top)
         top.protocol("WM_DELETE_WINDOW", self._on_battle_log_close)
 
@@ -127,17 +127,20 @@ class BattleLogWindowMixin:
         info = ttk.Label(header, text="读取中...", foreground="#1a5fb4",
                          font=("", 10, "bold"))
         info.pack(side="left")
-        ttk.Button(header, text="历史",
-                   command=self._open_battle_log_history).pack(
-            side="right", padx=(4, 0))
         ttk.Button(header, text="刷新",
                    command=self._refresh_battle_log).pack(side="right")
 
-        ttk.Label(top, text="时间线（回合分隔 / 技能分组 / Unison），点击行查看段详情",
+        # 历史列表并入本窗口的第二个标签页，避免多窗口互相遮挡
+        notebook = ttk.Notebook(top)
+        notebook.pack(fill="both", expand=True, padx=4, pady=(2, 4))
+        log_tab = ttk.Frame(notebook)
+        notebook.add(log_tab, text="战斗日志")
+
+        ttk.Label(log_tab, text="时间线（回合分隔 / 技能分组 / Unison），点击行查看段详情",
                   foreground="#666").pack(anchor="w", padx=8)
 
         cols = ("turn", "attacker", "action", "hits", "damage", "crits", "sv")
-        tree_frame = ttk.Frame(top)
+        tree_frame = ttk.Frame(log_tab)
         tree_frame.pack(fill="both", expand=False, padx=8, pady=(2, 6))
         tree = ttk.Treeview(tree_frame, columns=cols, show="headings", height=12)
         for c, t_, w, anchor in (
@@ -162,7 +165,7 @@ class BattleLogWindowMixin:
         tree.configure(yscrollcommand=tree_sb.set)
 
         # 单行富文本（ttk.Label 不支持行内多色），attacker/defender 分色
-        detail_info = tk.Text(top, height=1, wrap="none", borderwidth=0,
+        detail_info = tk.Text(log_tab, height=1, wrap="none", borderwidth=0,
                               highlightthickness=0, takefocus=0, cursor="arrow",
                               background=top.cget("background"),
                               font=("", 9, "bold"))
@@ -174,7 +177,7 @@ class BattleLogWindowMixin:
 
         dcols = ("seg", "damage", "crit", "dtype", "sv", "fluc", "rush",
                  "attr", "critco", "down", "rate", "passive")
-        detail_frame = ttk.Frame(top)
+        detail_frame = ttk.Frame(log_tab)
         detail_frame.pack(fill="both", expand=True, padx=8, pady=(2, 8))
         detail = ttk.Treeview(detail_frame, columns=dcols, show="headings", height=8)
         self._configure_detail_columns(detail, "coeffs")
@@ -186,10 +189,24 @@ class BattleLogWindowMixin:
 
         dlg = {"top": top, "info": info, "tree": tree,
                "detail": detail, "detail_info": detail_info,
-               "rows": {}}
+               "rows": {}, "notebook": notebook}
         self._blog_dialog = dlg
+        dlg["history_tree"] = self._build_history_tab(notebook)
+        notebook.bind("<<NotebookTabChanged>>", self._on_blog_tab_changed)
+        self._populate_history(dlg["history_tree"])
         tree.bind("<<TreeviewSelect>>",
                   lambda _e: self._on_battle_log_select())
+
+    def _on_blog_tab_changed(self, _event=None):
+        """切到「历史」页时重新扫描目录，外部文件变动（新增/手动删除）能即时反映"""
+        dlg = self._blog_dialog
+        if dlg is None:
+            return
+        try:
+            if dlg["notebook"].index("current") == 1:
+                self._populate_history(dlg["history_tree"])
+        except Exception:
+            pass
 
     def _configure_detail_columns(self, detail: ttk.Treeview, mode: str):
         """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 发起者/伤害两列"""
@@ -276,23 +293,12 @@ class BattleLogWindowMixin:
         except Exception:
             return name
 
-    def _open_battle_log_history(self):
-        if self._blog_history is not None:
-            try:
-                if self._blog_history["top"].winfo_exists():
-                    self._blog_history["top"].deiconify()
-                    self._blog_history["top"].lift()
-                    return
-            except Exception:
-                pass
-            self._blog_history = None
-        top = tk.Toplevel(self)
-        top.title("历史战斗")
-        top.geometry("920x440")
-        top.minsize(560, 300)
-        top.protocol("WM_DELETE_WINDOW", self._on_history_close)
+    def _build_history_tab(self, notebook: ttk.Notebook) -> ttk.Treeview:
+        """在 Notebook 中构建「历史」标签页，返回 Treeview 供外部刷新"""
+        hist_tab = ttk.Frame(notebook)
+        notebook.add(hist_tab, text="历史")
 
-        bar = ttk.Frame(top)
+        bar = ttk.Frame(hist_tab)
         bar.pack(fill="x", padx=8, pady=(6, 2))
         ttk.Label(bar, text="logs/battles/ 下的战斗结束快照",
                   foreground="#666").pack(side="left")
@@ -312,7 +318,7 @@ class BattleLogWindowMixin:
                    command=self._replay_selected_history).pack(side="right")
 
         cols = ("lock", "time", "mode", "turns", "damage", "players")
-        frame = ttk.Frame(top)
+        frame = ttk.Frame(hist_tab)
         frame.pack(fill="both", expand=True, padx=8, pady=(2, 8))
         tree = ttk.Treeview(frame, columns=cols, show="headings")
         for c, t_, w, anchor in (
@@ -330,16 +336,7 @@ class BattleLogWindowMixin:
         sb.pack(side="right", fill="y")
         tree.configure(yscrollcommand=sb.set)
         tree.bind("<Double-1>", lambda _e: self._replay_selected_history())
-        self._blog_history = {"top": top, "tree": tree}
-        self._populate_history(tree)
-
-    def _on_history_close(self):
-        if self._blog_history is not None:
-            try:
-                self._blog_history["top"].destroy()
-            except Exception:
-                pass
-        self._blog_history = None
+        return tree
 
     def _populate_history(self, tree: ttk.Treeview):
         for row in tree.get_children():
@@ -368,13 +365,15 @@ class BattleLogWindowMixin:
                                     "（文件损坏）", "", "", ""))
 
     def _replay_selected_history(self):
-        if self._blog_history is None:
+        dlg = self._blog_dialog
+        if dlg is None:
             return
-        sel = self._blog_history["tree"].selection()
+        tree: ttk.Treeview = dlg["history_tree"]
+        sel = tree.selection()
         if not sel:
             return
         self._replay_battle_log(Path(sel[0]))
-        self._on_history_close()
+        dlg["notebook"].select(0)  # 切回「战斗日志」页展示回放
 
     def _is_history_locked(self, path: Path) -> bool:
         """快照是否被锁定（缺失 locked 字段视为未锁定；读取失败视为锁定，防误删）"""
@@ -385,9 +384,10 @@ class BattleLogWindowMixin:
             return True
 
     def _delete_selected_history(self):
-        if self._blog_history is None:
+        dlg = self._blog_dialog
+        if dlg is None:
             return
-        tree = self._blog_history["tree"]
+        tree: ttk.Treeview = dlg["history_tree"]
         sel = tree.selection()
         if not sel:
             return
@@ -395,13 +395,13 @@ class BattleLogWindowMixin:
         unlocked = [iid for iid in sel if iid not in locked]
         if not unlocked:
             messagebox.showinfo("提示", "选中的快照均已锁定，未删除任何文件。",
-                                parent=self._blog_history["top"])
+                                parent=dlg["top"])
             return
         hint = f"删除选中的 {len(unlocked)} 条战斗快照？"
         if locked:
             hint += f"\n（其中 {len(locked)} 条已锁定，将跳过）"
         if not messagebox.askyesno("确认", hint,
-                                   parent=self._blog_history["top"]):
+                                   parent=dlg["top"]):
             return
         for iid in unlocked:
             try:
@@ -412,9 +412,10 @@ class BattleLogWindowMixin:
 
     def _toggle_lock_selected_history(self):
         """切换选中快照的 locked 标记（重写 JSON 文件，随文件走）"""
-        if self._blog_history is None:
+        dlg = self._blog_dialog
+        if dlg is None:
             return
-        tree = self._blog_history["tree"]
+        tree: ttk.Treeview = dlg["history_tree"]
         if not tree.selection():
             return
         for iid in tree.selection():
@@ -430,9 +431,10 @@ class BattleLogWindowMixin:
 
     def _clean_unlocked_history(self):
         """一键清理：删除全部未锁定快照，锁定的保留"""
-        if self._blog_history is None or not self._BATTLE_LOG_DIR.exists():
+        dlg = self._blog_dialog
+        if dlg is None or not self._BATTLE_LOG_DIR.exists():
             return
-        top = self._blog_history["top"]
+        top = dlg["top"]
         files = list(self._BATTLE_LOG_DIR.glob("*.json"))
         unlocked = [p for p in files if not self._is_history_locked(p)]
         if not unlocked:
@@ -456,7 +458,7 @@ class BattleLogWindowMixin:
             messagebox.showwarning(
                 "提示", f"已删除 {deleted} 条，"
                         f"{len(unlocked) - deleted} 条删除失败。", parent=top)
-        self._populate_history(self._blog_history["tree"])
+        self._populate_history(dlg["history_tree"])
 
     def _replay_battle_log(self, path: Path):
         """读历史快照灌进战斗日志窗口（复用实时渲染管线）"""
