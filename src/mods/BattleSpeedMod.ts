@@ -30,7 +30,7 @@ import { buildMethodIndex, resolveMethod } from "../debug/MethodResolver";
  *
  * 倍率由宿主通过 battleSpeed 消息运行时下发（面板「设置」页下拉框，属个人偏好，
  * 存 gui_config.json），载荷 {speed, force}；applyConfig 只更新目标值，
- * 兜底下一帧即按新值维持。无宿主 run.ps1 使用内置默认 2.0。
+ * 兜底下一帧即按新值维持。无宿主 run.ps1 使用内置默认 3.0。
  *
  * 诊断输出（[speed]/[ex] 探针日志）受全局诊断开关控制（宿主 setDebug 消息，
  * 所有 mod 共用，见 utils.logDebug/isDebugLog）；本 mod 额外实现 applyDebugConfig
@@ -43,8 +43,8 @@ export class BattleSpeedMod implements Mod {
     "战斗倍速（空闲推进加速；QTE/技能演出/选技能保持正常速度，结算自动恢复）";
   enabled = true;
 
-  /** 目标倍速：默认 2.0，宿主可通过 applyConfig 运行时下发（1.0~10.0） */
-  speed = 2.0;
+  /** 目标倍速：默认 3.0，宿主可通过 applyConfig 运行时下发（1.0~10.0） */
+  speed = 3.0;
 
   /**
    * 全局模式（宿主 battleSpeed 消息 {force} 下发，个人偏好，默认关）。

@@ -262,7 +262,7 @@ class FridaBridge:
         self.thread = None
         self.pid = None  # 注入目标进程 pid（找到后回填，供解析游戏目录）
         # 战斗倍速目标值：GUI 下拉框同步写入，握手时随初始配置一起下发
-        self.battle_speed = 2.0
+        self.battle_speed = 3.0
         # 全局加速开关：True=每帧锁定 timeScale（选技能/QTE/EX 选择与演出都加速）
         self.battle_speed_force = False
         # 全局诊断日志开关：True=agent 所有 mod 的 logDebug 输出 + 重型探针
@@ -993,15 +993,15 @@ class App(tk.Tk, BattleLogWindowMixin):
             self.bridge.post_battle_speed()
 
     def _read_battle_speed(self) -> float:
-        """读 gui_config.json 的 battleSpeed（个人偏好），缺失/非法回退 2.0"""
+        """读 gui_config.json 的 battleSpeed（个人偏好），缺失/非法回退 3.0"""
         try:
             cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
-            speed = float(cfg.get("battleSpeed", 2.0))
+            speed = float(cfg.get("battleSpeed", 3.0))
             if 1.0 <= speed <= 10.0:
                 return speed
         except Exception:
             pass
-        return 2.0
+        return 3.0
 
     def _on_battle_speed_force_toggle(self):
         """全局加速开关：同步 bridge + 持久化 + 已注入则随 battleSpeed 即时下发"""
