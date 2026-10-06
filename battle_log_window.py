@@ -299,17 +299,24 @@ class BattleLogWindowMixin:
         ttk.Button(bar, text="打开文件夹",
                    command=lambda: os.startfile(self._BATTLE_LOG_DIR)).pack(
             side="right", padx=(4, 0))
+        ttk.Button(bar, text="清理未锁定",
+                   command=self._clean_unlocked_history).pack(
+            side="right", padx=(4, 0))
         ttk.Button(bar, text="删除",
                    command=self._delete_selected_history).pack(
+            side="right", padx=(4, 0))
+        ttk.Button(bar, text="锁定/解锁",
+                   command=self._toggle_lock_selected_history).pack(
             side="right", padx=(4, 0))
         ttk.Button(bar, text="打开",
                    command=self._replay_selected_history).pack(side="right")
 
-        cols = ("time", "mode", "turns", "damage", "players")
+        cols = ("lock", "time", "mode", "turns", "damage", "players")
         frame = ttk.Frame(top)
         frame.pack(fill="both", expand=True, padx=8, pady=(2, 8))
         tree = ttk.Treeview(frame, columns=cols, show="headings")
         for c, t_, w, anchor in (
+            ("lock", "锁", 36, "center"),
             ("time", "时间", 140, "center"),
             ("mode", "模式", 130, "center"),
             ("turns", "回合", 50, "center"),
@@ -348,6 +355,7 @@ class BattleLogWindowMixin:
                     p.get("characterName", "?")
                     for p in meta.get("players", []))
                 tree.insert("", "end", iid=str(path), values=(
+                    "🔒" if snap.get("locked") else "",
                     self._history_time_label(path.name),
                     meta.get("mode", "?"),
                     snap.get("turnCount", 0),
@@ -356,7 +364,7 @@ class BattleLogWindowMixin:
                 ))
             except Exception:
                 tree.insert("", "end", iid=str(path),
-                            values=(self._history_time_label(path.name),
+                            values=("", self._history_time_label(path.name),
                                     "（文件损坏）", "", "", ""))
 
     def _replay_selected_history(self):
@@ -368,21 +376,87 @@ class BattleLogWindowMixin:
         self._replay_battle_log(Path(sel[0]))
         self._on_history_close()
 
+    def _is_history_locked(self, path: Path) -> bool:
+        """快照是否被锁定（缺失 locked 字段视为未锁定；读取失败视为锁定，防误删）"""
+        try:
+            snap = json.loads(path.read_text(encoding="utf-8"))
+            return bool(snap.get("locked"))
+        except Exception:
+            return True
+
     def _delete_selected_history(self):
         if self._blog_history is None:
             return
         tree = self._blog_history["tree"]
-        if not tree.selection():
+        sel = tree.selection()
+        if not sel:
             return
-        if not messagebox.askyesno("确认", "删除选中的战斗快照？",
+        locked = [iid for iid in sel if self._is_history_locked(Path(iid))]
+        unlocked = [iid for iid in sel if iid not in locked]
+        if not unlocked:
+            messagebox.showinfo("提示", "选中的快照均已锁定，未删除任何文件。",
+                                parent=self._blog_history["top"])
+            return
+        hint = f"删除选中的 {len(unlocked)} 条战斗快照？"
+        if locked:
+            hint += f"\n（其中 {len(locked)} 条已锁定，将跳过）"
+        if not messagebox.askyesno("确认", hint,
                                    parent=self._blog_history["top"]):
             return
-        for iid in tree.selection():
+        for iid in unlocked:
             try:
                 Path(iid).unlink()
             except Exception:
                 pass
         self._populate_history(tree)
+
+    def _toggle_lock_selected_history(self):
+        """切换选中快照的 locked 标记（重写 JSON 文件，随文件走）"""
+        if self._blog_history is None:
+            return
+        tree = self._blog_history["tree"]
+        if not tree.selection():
+            return
+        for iid in tree.selection():
+            path = Path(iid)
+            try:
+                snap = json.loads(path.read_text(encoding="utf-8"))
+                snap["locked"] = not snap.get("locked")
+                path.write_text(json.dumps(snap, ensure_ascii=False),
+                                encoding="utf-8")
+            except Exception:
+                pass
+        self._populate_history(tree)
+
+    def _clean_unlocked_history(self):
+        """一键清理：删除全部未锁定快照，锁定的保留"""
+        if self._blog_history is None or not self._BATTLE_LOG_DIR.exists():
+            return
+        top = self._blog_history["top"]
+        files = list(self._BATTLE_LOG_DIR.glob("*.json"))
+        unlocked = [p for p in files if not self._is_history_locked(p)]
+        if not unlocked:
+            messagebox.showinfo("提示", "没有未锁定的快照可清理。",
+                                parent=top)
+            return
+        n_locked = len(files) - len(unlocked)
+        hint = f"删除全部 {len(unlocked)} 条未锁定快照？"
+        if n_locked:
+            hint += f"\n（{n_locked} 条已锁定，保留）"
+        if not messagebox.askyesno("确认", hint, parent=top):
+            return
+        deleted = 0
+        for p in unlocked:
+            try:
+                p.unlink()
+                deleted += 1
+            except Exception:
+                pass
+        if deleted < len(unlocked):
+            messagebox.showwarning(
+                "提示", f"已删除 {deleted} 条，"
+                        f"{len(unlocked) - deleted} 条删除失败。", parent=top)
+        self._populate_history(self._blog_history["tree"])
 
     def _replay_battle_log(self, path: Path):
         """读历史快照灌进战斗日志窗口（复用实时渲染管线）"""
