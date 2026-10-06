@@ -6,6 +6,6 @@
   "trace-config": false,
   "backtrace": false,
   "field-watch": false,
-  "avatar-clarity": false,
+  "avatar-clarity": true,
   "battle-speed": true
 }
