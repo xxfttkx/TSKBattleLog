@@ -167,12 +167,15 @@ def _get_process_exe_path(pid: int):
 WIKI_BASE = "https://twinklestarknights.wikiru.jp"
 
 
-def wiki_icon_url(unit_name: str, character_name: str) -> str:
+def wiki_icon_url(unit_name: str, character_name: str,
+                  fullwidth: bool = True) -> str:
     """构造 wiki 头像直链。
     规律（已验证）：attach2/696D67_<hex_utf8('［UnitName］角色名_icon_NF.png')>.png
-    其中 696D67 是 "img" 的 hex 前缀。"""
-    # wiki 文件名用全角括号，游戏数据用半角，需统一
-    character_name = character_name.replace("(", "（").replace(")", "）")
+    其中 696D67 是 "img" 的 hex 前缀。
+    fullwidth=True 时括号转全角（多数角色）；False 时保留半角
+    （少数角色如「アポロ(大人)」wiki 页面名用半角括号）。"""
+    if fullwidth:
+        character_name = character_name.replace("(", "（").replace(")", "）")
     page = f"［{unit_name}］{character_name}_icon_NF.png"
     hx = page.encode("utf-8").hex().upper()
     return f"{WIKI_BASE}/attach2/696D67_{hx}.png"
@@ -1372,26 +1375,41 @@ class App(tk.Tk, BattleLogWindowMixin):
                          f"[units] 敌人 {len(units)} 名，点击名字可查看 buff")
 
     def _download_icon(self, unit: dict):
-        """后台线程：读缓存或从 wiki 下载头像，结果经 ui_queue 回主线程"""
+        """后台线程：读缓存或从 wiki 下载头像，结果经 ui_queue 回主线程。
+        wiki 页面名的括号全/半角不统一，先试全角（多数），失败 fallback 半角；
+        缓存文件名统一用全角版，保证同一角色无论走哪个分支都命中同一份缓存。"""
         address = unit.get("address", "")
         try:
-            url = wiki_icon_url(unit.get("unitName", ""),
-                                unit.get("characterName", ""))
-            fname = url.rsplit("/", 1)[-1]
+            unit_name = unit.get("unitName", "")
+            char_name = unit.get("characterName", "")
+            url_fw = wiki_icon_url(unit_name, char_name, fullwidth=True)
+            url_hw = wiki_icon_url(unit_name, char_name, fullwidth=False)
+            # 缓存文件名固定用全角版，避免半角角色每次都多打一次全角请求
+            fname = url_fw.rsplit("/", 1)[-1]
             ICON_CACHE_DIR.mkdir(parents=True, exist_ok=True)
             path = ICON_CACHE_DIR / fname
+            data: bytes | None = None
             if not path.exists():
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "Mozilla/5.0 TSKBattleLog"})
-                with urllib.request.urlopen(req, timeout=20) as r:
-                    data = r.read()
-                if len(data) < 100:
-                    raise ValueError(f"响应过小 ({len(data)} bytes)，URL 可能失效")
-                # 校验内容确实是图片，避免把 HTML 错误页当 png 缓存
-                try:
-                    Image.open(BytesIO(data)).verify()
-                except Exception:
-                    raise ValueError("响应非图片，URL 可能失效")
+                last_err = None
+                for url in (url_fw, url_hw):
+                    if url == url_hw and url_hw == url_fw:
+                        continue  # 无括号角色两个 URL 相同，跳过重复
+                    try:
+                        req = urllib.request.Request(
+                            url, headers={"User-Agent": "Mozilla/5.0 TSKBattleLog"})
+                        with urllib.request.urlopen(req, timeout=20) as r:
+                            data = r.read()
+                        if len(data) < 100:
+                            raise ValueError(
+                                f"响应过小 ({len(data)} bytes)，URL 可能失效")
+                        # 校验内容确实是图片，避免把 HTML 错误页当 png 缓存
+                        Image.open(BytesIO(data)).verify()
+                        break  # 成功即停
+                    except Exception as e:
+                        last_err = e
+                        data = None
+                if data is None:
+                    raise last_err or RuntimeError("头像下载失败")
                 path.write_bytes(data)
             try:
                 img = Image.open(path).convert("RGBA").resize((48, 48))
