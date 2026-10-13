@@ -1419,8 +1419,9 @@ class App(tk.Tk, BattleLogWindowMixin):
                 raise
             self.ui_queue.put(("unitIconReady", (address, img)))
         except Exception as e:
-            self.ui_queue.put(("unitIconFailed",
-                               (address, str(e), unit.get("characterName", "?"))))
+            full_name = (f"[{unit.get('unitName', '')}] "
+                         f"{unit.get('characterName', '?')}")
+            self.ui_queue.put(("unitIconFailed", (address, str(e), full_name)))
 
     def _apply_unit_icon(self, address: str, img: "Image.Image"):
         photo = ImageTk.PhotoImage(img)
