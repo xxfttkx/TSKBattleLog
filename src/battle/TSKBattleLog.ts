@@ -90,6 +90,10 @@ export interface BattleLogSnapshot {
     mode: string;
     players: BattleUnitMeta[];
     enemies: { unitName: string; characterName: string }[];
+    /** 战斗初始 EX（全员 InitExGauge 之和），init 时计算；旧快照无此字段 */
+    initialEx?: number;
+    /** 一巡可使用 EX（全员普攻回充 + 40*5 固定），init 时计算；旧快照无此字段 */
+    firstRoundUsableEx?: number;
   };
   turns: TurnRecord[];
   groups: {
@@ -145,6 +149,10 @@ export class TSKBattleLog {
   private enemyModeSet = false;
   /** 敌方名单（Enemy Initialize 时记录，不含 attr/damage：部分模式敌方 UnitData 缺失） */
   private enemyUnits: { unitName: string; characterName: string }[] = [];
+  /** 战斗初始 EX（全员 InitExGauge 之和），init 时计算 */
+  private initialEx = 0;
+  /** 一巡可使用 EX（全员普攻回充 + 40*5 固定），init 时计算 */
+  private firstRoundUsableEx = 0;
 
   /** 攻击者地址 -> 已计算但尚未落地的伤害段队列（calc 返回 → Set*DamageValue 落地） */
   private calcQueue = new Map<string, CalcSegment[]>();
@@ -176,6 +184,8 @@ export class TSKBattleLog {
     this.mode = "";
     this.enemyModeSet = false;
     this.enemyUnits = [];
+    this.initialEx = 0;
+    this.firstRoundUsableEx = 0;
   }
 
   /** Enemy Initialize 时记录敌方名单 + 定格战斗模式（与 init 无关，战斗结束快照用）。
@@ -248,8 +258,10 @@ export class TSKBattleLog {
     for (const note of this.notes) {
       totalEx += note.ex;
     }
+    this.initialEx = totalEx;
+    this.firstRoundUsableEx = this.getTotalNormalAttackExRate() + 40 * 5;
     log(`战斗初始EX: ${totalEx}`);
-    log(`一巡可使用EX: ${this.getTotalNormalAttackExRate() + 40 * 5}`);
+    log(`一巡可使用EX: ${this.firstRoundUsableEx}`);
   }
 
   getTotalNormalAttackExRate(): number {
@@ -438,6 +450,8 @@ export class TSKBattleLog {
           damage: n.damage.toString(),
         })),
         enemies: this.enemyUnits.map((u) => ({ ...u })),
+        initialEx: this.initialEx,
+        firstRoundUsableEx: this.firstRoundUsableEx,
       },
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {

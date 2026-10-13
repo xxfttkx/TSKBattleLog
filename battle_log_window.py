@@ -578,9 +578,15 @@ class BattleLogWindowMixin:
 
         total = snap.get("damageTotal", "0")
         unison_total = snap.get("unisonDamageTotal", "0")
+        meta = snap.get("meta") or {}
+        initial_ex = meta.get("initialEx")
+        first_ex = meta.get("firstRoundUsableEx")
+        ex_txt = ""
+        if initial_ex is not None and first_ex is not None:
+            ex_txt = f"    初始EX {initial_ex}    一巡可使用EX {first_ex}"
         dlg["info"].configure(
             text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
-                 f"    Unison伤害 {unison_total}    "
+                 f"    Unison伤害 {unison_total}{ex_txt}    "
                  f"（技能分组 {len(snap.get('groups', []))} / "
                  f"Unison次数 {unison_count} / "
                  f"当前回合数 {len(turns)}）",
