@@ -137,8 +137,12 @@ export class TSKBattleLog {
   damageTotal: bigint = BigInt(0);
   unisonDamageTotal: bigint = BigInt(0);
   turnCount = 0;
-  /** 战斗模式（BattleMode 枚举名），Player Initialize 时记录 */
+  /** 战斗模式（BattleMode 枚举名）。
+   *  Player Initialize 恒报 Normal（游戏数据限制），真正的模式只在 Enemy Initialize；
+   *  boss 多波次会多次 Enemy Initialize，取首次有效值，后续波次不覆盖。 */
   private mode = "";
+  /** 是否已由 Enemy Initialize 定格模式（首波定基准，防止后续波次/多波覆盖） */
+  private enemyModeSet = false;
   /** 敌方名单（Enemy Initialize 时记录，不含 attr/damage：部分模式敌方 UnitData 缺失） */
   private enemyUnits: { unitName: string; characterName: string }[] = [];
 
@@ -170,15 +174,25 @@ export class TSKBattleLog {
     this.unisonEvents = [];
     this.eventSeq = 0;
     this.mode = "";
+    this.enemyModeSet = false;
     this.enemyUnits = [];
   }
 
-  /** Enemy Initialize 时记录敌方名单（与 init 无关，战斗结束快照用） */
-  setEnemies(units: { unitName: string; characterName: string }[]): void {
+  /** Enemy Initialize 时记录敌方名单 + 定格战斗模式（与 init 无关，战斗结束快照用）。
+   *  模式规则：仅首次有效枚举名生效（Player 恒 Normal 不可信）；
+   *  dirty 读值（raw:xx）跳过，留给后续波次重试，避免定格成垃圾值。 */
+  setEnemies(
+    units: { unitName: string; characterName: string }[],
+    modeName?: string,
+  ): void {
     this.enemyUnits = units.map((u) => ({
       unitName: u.unitName,
       characterName: u.characterName,
     }));
+    if (!this.enemyModeSet && modeName && !modeName.startsWith("raw:")) {
+      this.mode = modeName;
+      this.enemyModeSet = true;
+    }
   }
 
   onTurnChange(oldVal: number, newVal: number): void {

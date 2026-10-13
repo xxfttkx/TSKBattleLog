@@ -322,8 +322,10 @@ export class BattleLogMod implements Mod {
     if (teamType === "Player" || teamType === "Unknown") {
       this.tskBattleLog.init(notes, modeName);
     } else if (teamType === "Enemy") {
-      // 敌方不进 notes（伤害统计只认玩家），仅留名单供结束快照
-      this.tskBattleLog.setEnemies(units);
+      // 敌方不进 notes（伤害统计只认玩家），仅留名单 + 定格模式供结束快照。
+      // Player Initialize 恒报 Normal 不可信，真正的模式只在 Enemy Initialize；
+      // boss 多波次会多次进这里，setEnemies 内部按「首次有效值」定格，重复调用幂等
+      this.tskBattleLog.setEnemies(units, modeName);
     }
     // 敌我双方都上报，GUI 按 team 区分展示（玩家带头像，敌人纯文字紧凑条）
     sendHost("unitList", { team: teamType, units });
