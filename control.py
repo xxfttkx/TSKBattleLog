@@ -1479,7 +1479,11 @@ class App(tk.Tk, BattleLogWindowMixin):
         cols = ("type", "time", "effectValue", "effectValue1",
                 "effectValue2", "effectValue3", "effectValue4", "effectValue5")
         widths = (300, 70, 95, 95, 80, 80, 80, 80)
-        tree = ttk.Treeview(top, columns=cols, show="headings")
+        # tree + 右侧垂直滚动条容器（效果多时可直接拖到底）
+        tree_frame = ttk.Frame(top)
+        tree = ttk.Treeview(tree_frame, columns=cols, show="headings")
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
         for c, w in zip(cols, widths):
             tree.heading(c, text=c)
             tree.column(c, width=w, anchor="center")
@@ -1491,9 +1495,12 @@ class App(tk.Tk, BattleLogWindowMixin):
                                justify="left", anchor="w",
                                wraplength=980)
         desc_label.pack(fill="both", expand=True)
-        tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        vsb.pack(side="right", fill="y")
+        tree.pack(side="left", fill="both", expand=True)
+        tree_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         tree.bind("<<TreeviewSelect>>", self._on_buff_select)
-        self._buff_dialog = {"top": top, "tree": tree, "info": info,
+        self._buff_dialog = {"top": top, "tree": tree, "tree_frame": tree_frame,
+                             "info": info,
                              "stats_label": stats_label,
                              "desc_holder": desc_holder,
                              "desc_label": desc_label, "row_ids": [],
@@ -1543,7 +1550,7 @@ class App(tk.Tk, BattleLogWindowMixin):
         if not holder.winfo_ismapped():
             dlg["base_h"] = top.winfo_height()
             holder.pack(fill="x", padx=8, pady=(0, 6), side="bottom",
-                        before=dlg["tree"])
+                        before=dlg["tree_frame"])
             top.update_idletasks()
             need = holder.winfo_reqheight() + 6  # pack pady
             top.geometry(f"{top.winfo_width()}x{dlg['base_h'] + need}")
