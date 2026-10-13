@@ -30,12 +30,14 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 - Per-unit damage tracking with post-battle ranking
 - Multi-hit skill grouping (per attacker / turn / kind / segment) with crit count and skill multiplier
 - Unison damage tracking
-- Battle Log window: battle timeline (turn separators with cumulative damage, per-attacker skill groups colored by attribute, Unison events) with a per-segment detail panel showing damage coefficients — fluctuation / rush / attribute / critical / down / vulnerability rate / passive
-- Configurable auto-battle skill selection via `char_skill.json`
+- Battle Log window: battle timeline (turn separators with cumulative damage, per-attacker skill groups colored by attribute, Unison events) with a per-segment detail panel showing damage coefficients — fluctuation / rush / attribute / critical / down / vulnerability rate / passive; the info line also shows battle mode, initial EX and first-round usable EX
+- Battle history: snapshots are auto-saved to `logs/battles/` when a battle ends; the History tab lists past battles newest-first (time / mode / turns / total damage / party) for one-click replay, with locking to protect important battles and one-click cleanup of unlocked records; the window also works without injection for browsing local snapshots
+- Configurable auto-battle skill selection via `char_skill.json`; a per-unit priority dropdown under each player avatar (Default / Normal / EX1 / EX2 / Random) applies changes instantly
 - Config-driven debug observation points and IL2CPP backtraces via `trace_config.json`
 - Mod loader with runtime enable/disable and a floating control panel
-- Unit avatar bar (player icons from the wiki) + compact enemy list; click any unit to view its live buffs, ATK/CRT/NoteCount and EX stats, with detail/summary toggle
+- Unit avatar bar (player icons from the wiki, tolerant of full-/half-width parentheses in file names) + compact enemy list; click any unit to view its live buffs, ATK/CRT/NoteCount and EX stats, with detail/summary toggle
 - Auto-saved log files + in-panel log viewer (clear / copy / open logs folder)
+- On startup, checks GitHub for the latest release and shows a clickable download link on the Settings tab when a newer version exists (silent on failure)
 
 ## Mod categories
 
@@ -72,14 +74,15 @@ The script runs `npm run build` first, then opens the panel. Tick the mods you w
 Panel features:
 
 - **窗口置顶** toggle (top-left)
-- **MODs / Logs** tabs (never shown at the same time); switch to Logs automatically after injection starts
+- **MODs / Logs / 设置 (Settings)** tabs; switch to Logs automatically after injection starts
 - Mod list grouped by Observer / Modifier / Debug. Selection is persisted to `mods.json`. Checkboxes are locked after injection starts (changing mods mid-battle is unsafe).
 - **重载配置**: re-read `trace_config.json` and update trace/backtrace points at runtime
 - **隐藏单位栏**: hide the player avatar bar and enemy list to focus on logs
+- **设置 (Settings)** tab: battle speed (default 3x), log font size / colored log / diagnostic log toggles, an "open game install directory" entry for unit-list-dump, plus the current version and a new-version download link (all persisted to `gui_config.json`)
 - Log viewer with **清空 / 复制日志 / 打开日志目录**; logs are also auto-saved to `logs/` (8 KB buffer, flushed on close)
 - 5000-line ring buffer; older lines are dropped automatically
-- Player avatar bar (48 px wiki icons) and a compact enemy name strip above it. Clicking any unit opens a **Skill Effects** window showing live buffs (detail / summary toggle) plus ATK (base), CRT, NoteCount, EX rate and normal-attack EX gain.
-- **战斗日志** button: opens the Battle Log window (on-demand snapshot, refresh to pull the latest; window size/position remembered)
+- Player avatar bar (48 px wiki icons) and a compact enemy name strip above it. Each avatar has a skill-priority dropdown (Default / Normal / EX1 / EX2 / Random) that writes to `char_skill.json` and takes effect instantly. Clicking any unit opens a **Skill Effects** window showing live buffs (detail / summary toggle) plus ATK (base), CRT, NoteCount, EX rate and normal-attack EX gain.
+- **战斗日志** button: opens the Battle Log window (on-demand snapshot, refresh to pull the latest; window size/position remembered). Inside is a **历史 (History)** tab: snapshots are auto-saved to `logs/battles/` when a battle ends, listed newest-first for one-click replay, with locking and one-click cleanup of unlocked records; the window also opens without injection to browse/replay local snapshots.
 
 ### Method B: Headless injection (console only)
 
@@ -98,7 +101,7 @@ Download `TSKBattleLog-windows-x64.zip` from [Releases](../../releases) (or from
 - No Python or frida installation required — dependencies are bundled
 - The panel works exactly like [Method A](#method-a-floating-control-panel-recommended): tick the mods you want, then press **▶ 启动注入**
 - Config files sit next to the exe and can be edited directly: `mods.json` (mod toggles), `trace_config.json` (debug observation points), `char_skill.json` (auto-skill priority)
-- Logs are written to `logs/` next to the exe; window position is remembered in `gui_config.json`
+- Logs are written to `logs/` next to the exe (battle snapshots in `logs/battles/`); window position and other personal preferences are kept in `gui_config.json`
 
 To build it yourself, see [`.github/workflows/build-exe.yml`](.github/workflows/build-exe.yml).
 
@@ -119,7 +122,7 @@ Every feature is its own mod under `src/mods/`. `mods.json` holds the default en
 
 ## Skill configuration (`char_skill.json`)
 
-Controls the priority used by `auto-skill`.
+Controls the priority used by `auto-skill`. The easiest way is the dropdown under each player avatar in the panel (Default / Normal / EX1 / EX2 / Random), which writes and applies changes instantly; you can also edit this file by hand.
 
 ```json
 {
