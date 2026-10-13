@@ -233,9 +233,13 @@ export class TSKBattleLog {
     this.clear();
     this.mode = modeName;
     for (const note of notes) {
-      const battleNote = new TSKBattleNote();
+      // notes 数组长度=队伍上限，未满员时空槽的 UnitData 为 null，跳过防 access violation
       const unitData = note.field("<UnitData>k__BackingField")
-        .value as Il2Cpp.Object;
+        .value as Il2Cpp.Object | null;
+      if (!unitData || unitData.handle.isNull()) {
+        continue;
+      }
+      const battleNote = new TSKBattleNote();
       battleNote.initByUnitData(unitData);
       battleNote.address = note.handle.toString();
       this.notes.push(battleNote);
