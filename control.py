@@ -1391,9 +1391,10 @@ class App(tk.Tk, BattleLogWindowMixin):
             data: bytes | None = None
             if not path.exists():
                 last_err = None
-                for url in (url_fw, url_hw):
-                    if url == url_hw and url_hw == url_fw:
-                        continue  # 无括号角色两个 URL 相同，跳过重复
+                for i, url in enumerate((url_fw, url_hw)):
+                    # 无括号角色两个 URL 相同，第二次迭代跳过避免重复请求
+                    if i == 1 and url_hw == url_fw:
+                        continue
                     try:
                         req = urllib.request.Request(
                             url, headers={"User-Agent": "Mozilla/5.0 TSKBattleLog"})
