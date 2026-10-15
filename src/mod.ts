@@ -89,30 +89,57 @@ export function traceMethodByName(
   const logEnter = `enter ${cls.name}.${method.name}`;
   const logReturn = (retval: any) => `${method.name} return: ${retval}\n`;
 
+  // 按需挂载回调：onLeave 会迫使 Gum 额外拦截函数返回路径（改写返回地址 +
+  // 保存/恢复调用上下文），纯 onEnter 探针不应承担这份开销；
+  // enter/return 日志分别在 onEnter/onLeave 里输出，故 !quiet 时两个都得挂。
+  const needEnter = onEnter !== undefined || !quiet;
+  const needLeave = onLeave !== undefined || !quiet;
+  if (!needEnter && !needLeave) {
+    return undefined; // 无回调且 quiet，没有安装钩子的意义
+  }
+
+  // guarded 包装闭包提升到 attach 外，避免每次调用重新分配
+  const enterHandler = onEnter
+    ? mod
+      ? guarded(mod, onEnter)
+      : onEnter
+    : undefined;
+  const leaveHandler = onLeave
+    ? mod
+      ? guarded(mod, onLeave)
+      : onLeave
+    : undefined;
+
   return Interceptor.attach(method.virtualAddress, {
-    onEnter(args) {
-      if (!quiet && (mod === undefined || mod.enabled)) {
-        log(logEnter);
-      }
-      if (onEnter) {
-        // InvocationContext 可能直接是 CpuContext 或持有 .context 字段，两者兜底
-        const self = this as any;
-        const ctx: CpuContext = self.context ?? self;
-        const guardedEnter = mod ? guarded(mod, onEnter) : onEnter;
-        guardedEnter(cls, method, args, ctx, self as InvocationContext);
-      }
-    },
-    onLeave(retval) {
-      if (onLeave) {
-        const self = this as any;
-        const ctx: CpuContext = self.context ?? self;
-        const guardedLeave = mod ? guarded(mod, onLeave) : onLeave;
-        guardedLeave(cls, method, retval, self as InvocationContext, ctx);
-      }
-      if (!quiet && (mod === undefined || mod.enabled)) {
-        log(logReturn(retval));
-      }
-    },
+    ...(needEnter
+      ? {
+          onEnter(args) {
+            if (!quiet && (mod === undefined || mod.enabled)) {
+              log(logEnter);
+            }
+            if (enterHandler) {
+              // InvocationContext 可能直接是 CpuContext 或持有 .context 字段，两者兜底
+              const self = this as any;
+              const ctx: CpuContext = self.context ?? self;
+              enterHandler(cls, method, args, ctx, self as InvocationContext);
+            }
+          },
+        }
+      : {}),
+    ...(needLeave
+      ? {
+          onLeave(retval) {
+            if (leaveHandler) {
+              const self = this as any;
+              const ctx: CpuContext = self.context ?? self;
+              leaveHandler(cls, method, retval, self as InvocationContext, ctx);
+            }
+            if (!quiet && (mod === undefined || mod.enabled)) {
+              log(logReturn(retval));
+            }
+          },
+        }
+      : {}),
   });
 }
 
