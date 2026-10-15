@@ -158,6 +158,10 @@ export class TSKBattleLog {
   private calcQueue = new Map<string, CalcSegment[]>();
   /** 已闭合的技能分组（战斗结束时汇总） */
   private skillGroups: SkillGroup[] = [];
+  /** 当前是否有一场战斗已由 Player Initialize 启动。
+   *  用于守卫 battleLogEnded 保存：只有真正有 Player Init 的战斗才保存，
+   *  且一场战斗只保存一次（防止重复 End 事件落盘重复快照）。 */
+  private battleStarted = false;
   /** 当前正在输出的攻击者，用于检测攻击者切换并 flush 分组 */
   private currentAttacker?: string;
   /** 回合切换记录（宿主时间线用） */
@@ -186,6 +190,7 @@ export class TSKBattleLog {
     this.enemyUnits = [];
     this.initialEx = 0;
     this.firstRoundUsableEx = 0;
+    this.battleStarted = false;
   }
 
   /** Enemy Initialize 时记录敌方名单 + 定格战斗模式（与 init 无关，战斗结束快照用）。
@@ -266,6 +271,8 @@ export class TSKBattleLog {
     this.firstRoundUsableEx = this.getTotalNormalAttackExRate() + 40 * 5;
     log(`战斗初始EX: ${totalEx}`);
     log(`一巡可使用EX: ${this.firstRoundUsableEx}`);
+    // Player Init 完成，标记一场战斗已启动；onEndBattle 后复位为 false
+    this.battleStarted = true;
   }
 
   getTotalNormalAttackExRate(): number {
@@ -413,7 +420,16 @@ export class TSKBattleLog {
     return this.logs.join("\n");
   }
 
+  /** 战斗结束是否应当保存快照。
+   *  两个条件：本场有 Player Initialize 启动（battleStarted），且确实有出击角色（notes 非空）。
+   *  无玩家信息的 End 事件（误触发/重复 End/只有敌方初始化）一律不保存。 */
+  shouldSave(): boolean {
+    return this.battleStarted && this.notes.length > 0;
+  }
+
   onEndBattle(): void {
+    // 复位标志：本场已结算，后续若再有 End 事件应跳过（防止重复落盘）
+    this.battleStarted = false;
     // 兜底：战斗结束时最后攻击者的分组可能还没 flush
     this.flushGroups();
     log(

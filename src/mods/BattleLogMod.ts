@@ -250,8 +250,11 @@ export class BattleLogMod implements Mod {
     return this.tskBattleLog.snapshot();
   }
 
-  /** 战斗结束：控制台汇总 + 全量快照推宿主落盘（历史回看） */
+  /** 战斗结束：控制台汇总 + 全量快照推宿主落盘（历史回看）。
+   *  守卫：只有本场真正有 Player Initialize 且有出击角色时才保存，
+   *  避免无玩家信息的 End 事件（误触发/重复 End/只有敌方初始化）落盘脏快照。 */
   private handleEndBattle: MethodEnterHandler = () => {
+    if (!this.tskBattleLog.shouldSave()) return;
     this.tskBattleLog.onEndBattle();
     sendHost("battleLogEnded", this.tskBattleLog.snapshot());
   };
