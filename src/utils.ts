@@ -151,14 +151,19 @@ function intBitsToFloat(hex: string): number {
 }
 
 /**
- * 从 onLeave 的 CpuContext 读 float 返回值。
+ * 从 onLeave 的 CpuContext 读 float/double 返回值。
  * Win/Linux x86 与 x64 ABI 下，float/double 返回值走 XMM0（低 32 位是 float，
- * 低 64 位是 double），Interceptor 的 retval 只反映 RAX，读浮点必须用本函数。
+ * 低 64 位是 double），Interceptor 的 retval 只反映 RAX，读浮点必须用本组函数。
  * 依赖 frida 17.16+（CpuContext 暴露 xmm 寄存器）。
  */
 function readFloatReturn(ctx: CpuContext): number {
   if (!("xmm0" in ctx)) return NaN;
   return new Float32Array(ctx.xmm0, 0, 1)[0];
+}
+
+function readDoubleReturn(ctx: CpuContext): number {
+  if (!("xmm0" in ctx)) return NaN;
+  return new Float64Array(ctx.xmm0, 0, 1)[0];
 }
 
 function getNameByTSKBattleNote(note: Il2Cpp.Object): string {
@@ -326,5 +331,6 @@ export {
   dumpIl2CppObject,
   getAutoUseSkillIndex,
   readFloatReturn,
+  readDoubleReturn,
   sendHost,
 };

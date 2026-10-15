@@ -1,4 +1,10 @@
-import { log, dumpArgs, sendHost } from "./utils";
+import {
+  log,
+  dumpArgs,
+  sendHost,
+  readFloatReturn,
+  readDoubleReturn,
+} from "./utils";
 
 export type MethodEnterHandler = (
   cls: Il2Cpp.Class,
@@ -16,7 +22,7 @@ export type MethodLeaveHandler = (
   retval: InvocationReturnValue,
   /** Interceptor 的 InvocationContext，可读取 onEnter 阶段暂存的字段 */
   invocation: InvocationContext,
-  /** Interceptor 的 CpuContext；x86/x64 下浮点返回值在 context.xmm0（readFloatReturn） */
+  /** Interceptor 的 CpuContext；x86/x64 下浮点返回值在 context.xmm0（readFloatReturn/readDoubleReturn） */
   context: CpuContext,
 ) => void;
 
@@ -87,7 +93,37 @@ export function traceMethodByName(
 
   // 进入日志也可被 mod 开关抑制
   const logEnter = `enter ${cls.name}.${method.name}`;
-  const logReturn = (retval: any) => `${method.name} return: ${retval}\n`;
+  // 返回日志按 IL2CPP 返回类型取真实值并标注类型：float/double 经 XMM0 返回，
+  // retval（RAX）对它们是垃圾；类型由 il2cpp-bridge 元数据给出，无需手动 dump 签名
+  const returnTypeName = method.returnType.name;
+  const isFloatRet = returnTypeName === "System.Single";
+  const isDoubleRet = returnTypeName === "System.Double";
+  const isVoidRet = returnTypeName === "System.Void";
+  const isInt32Ret = returnTypeName === "System.Int32";
+  const isBoolRet = returnTypeName === "System.Boolean";
+  const logReturn = (retval: any, ctx: CpuContext | undefined) => {
+    // void 的 retval 只是 RAX 残留值，无意义，不打印
+    if (isVoidRet) {
+      return `${method.name} return(System.Void)\n`;
+    }
+    if (isFloatRet && ctx) {
+      return `${method.name} return(${returnTypeName}): ${readFloatReturn(ctx)}\n`;
+    }
+    if (isDoubleRet && ctx) {
+      return `${method.name} return(${returnTypeName}): ${readDoubleReturn(ctx)}\n`;
+    }
+    // Int32 按有符号十进制显示（retval.toString() 是无符号 hex，0xffffffff 实为 -1）；
+    // bool 按低 8 位解码（Windows x64 高位可能是残留垃圾）
+    if (isInt32Ret) {
+      return `${method.name} return(${returnTypeName}): ${retval.toInt32()}\n`;
+    }
+    if (isBoolRet) {
+      return `${method.name} return(${returnTypeName}): ${
+        (retval.toInt32() & 0xff) !== 0
+      }\n`;
+    }
+    return `${method.name} return(${returnTypeName}): ${retval}\n`;
+  };
 
   // 按需挂载回调：onLeave 会迫使 Gum 额外拦截函数返回路径（改写返回地址 +
   // 保存/恢复调用上下文），纯 onEnter 探针不应承担这份开销；
@@ -109,6 +145,8 @@ export function traceMethodByName(
       ? guarded(mod, onLeave)
       : onLeave
     : undefined;
+  // onLeave 里需要 ctx 的两种情况：有 leaveHandler，或返回值是 float/double（读 XMM0）
+  const needCtx = leaveHandler !== undefined || isFloatRet || isDoubleRet;
 
   return Interceptor.attach(method.virtualAddress, {
     ...(needEnter
@@ -129,13 +167,19 @@ export function traceMethodByName(
     ...(needLeave
       ? {
           onLeave(retval) {
+            const self = this as any;
+            const ctx = needCtx ? (self.context ?? self) : undefined;
             if (leaveHandler) {
-              const self = this as any;
-              const ctx: CpuContext = self.context ?? self;
-              leaveHandler(cls, method, retval, self as InvocationContext, ctx);
+              leaveHandler(
+                cls,
+                method,
+                retval,
+                self as InvocationContext,
+                ctx as CpuContext,
+              );
             }
             if (!quiet && (mod === undefined || mod.enabled)) {
-              log(logReturn(retval));
+              log(logReturn(retval, ctx));
             }
           },
         }
