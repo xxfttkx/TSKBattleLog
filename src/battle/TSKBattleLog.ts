@@ -72,6 +72,9 @@ export interface TurnRecord {
   to: number;
   total: string;
   percents: { name: string; percent: string }[];
+  /** 该回合开始时全队「一巡可使用 EX」（普攻回充总和 + 40*5，含当时已挂 buff）；
+   *  Initialize 时点 buff 未挂、init 口径值存 meta.firstRoundUsableEx；旧快照无此字段 */
+  usableEx?: number;
 }
 
 /** Unison 伤害事件（不走技能分组，单独成时间线条目；玩家圈通用 Unison 叫法，不翻译） */
@@ -221,7 +224,10 @@ export class TSKBattleLog {
     // 回合切换视为上一回合所有动作结束，先输出未 flush 的分组
     this.flushGroups();
     this.turnCount = newVal;
-    const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}    damageTotal=${this.damageTotal}`;
+    // Initialize 时点被动效果通常还没挂上 skillEffectList（init bonus 恒 0），
+    // 回合开始后效果已就位：用已存地址重建对象重算全队 EX 加成
+    const usableEx = this.refreshExUpBonuses();
+    const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}    damageTotal=${this.damageTotal}    一巡可使用EX=${usableEx}`;
     log(msg);
     this.logs.push(msg);
     const percents: { name: string; percent: string }[] = [];
@@ -238,7 +244,30 @@ export class TSKBattleLog {
       to: newVal,
       total: this.damageTotal.toString(),
       percents,
+      usableEx,
     });
+  }
+
+  /**
+   * 回合切换时重算全队 EX 上升加成，返回当前全队「一巡可使用 EX」。
+   * notes 在战斗中被游戏列表持有，地址不会失效；单个单位读取失败保留旧值。
+   */
+  private refreshExUpBonuses(): number {
+    for (const note of this.notes) {
+      try {
+        const unit = new Il2Cpp.Object(ptr(note.address));
+        const bonus = calcExUpBonus(getSkillEffects(unit));
+        if (bonus !== note.exUpBonus) {
+          logDebug(
+            `[exUp] ${note.getName()}: bonus ${note.exUpBonus} -> ${bonus}`,
+          );
+          note.exUpBonus = bonus;
+        }
+      } catch (e) {
+        logDebug(`[exUp] ${note.getName()} refresh error: ${e}`);
+      }
+    }
+    return this.getTotalNormalAttackExRate() + 40 * 5;
   }
 
   init(notes: Il2Cpp.Array<Il2Cpp.Object>, modeName: string): void {
@@ -255,8 +284,8 @@ export class TSKBattleLog {
       battleNote.init(unitData);
       battleNote.address = note.handle.toString();
       // EX 上升加成：按游戏公式从单位 skillEffectList 累计（上限 300）。
-      // 若 Initialize 时效果尚未挂上（此处为 0 而点击头像非 0），
-      // 需改到首次回合切换时重算——诊断日志可核对。
+      // Initialize 时被动效果通常尚未挂上（此处多为 0），onTurnChange 会重算；
+      // init 口径的一巡可使用EX 仍按基础值存入 meta，每回合值存 TurnRecord。
       try {
         battleNote.exUpBonus = calcExUpBonus(getSkillEffects(note));
       } catch (e) {

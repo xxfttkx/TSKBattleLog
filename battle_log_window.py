@@ -26,6 +26,17 @@ def _pct(v) -> str:
     return f"{v / 100:.1f}%" if isinstance(v, (int, float)) else "-"
 
 
+def _turn_header_text(rec: dict) -> str:
+    """回合分隔行文本：回合区间 + 累计伤害 + 该回合一巡可使用EX
+    （usableEx 为每回合 buff 实算值；旧快照无此字段则省略）"""
+    text = (f"── turn {rec.get('from')} -> {rec.get('to')}"
+            f"    累计伤害 {rec.get('total')}")
+    usable = rec.get("usableEx")
+    if isinstance(usable, int):
+        text += f"    一巡可使用EX {usable}"
+    return text
+
+
 DEFAULT_ATTR_COLOR = "#555555"  # 未知/0 属性兜底灰
 
 
@@ -519,8 +530,7 @@ class BattleLogWindowMixin:
                     "", "end",
                     values=(
                         "",
-                        f"── turn {rec.get('from')} -> {rec.get('to')}"
-                        f"    累计伤害 {rec.get('total')}",
+                        _turn_header_text(rec),
                         "", "", "", "", "",
                     ),
                     tags=("turn",),
@@ -567,8 +577,7 @@ class BattleLogWindowMixin:
                 "", "end",
                 values=(
                     "",
-                    f"── turn {rec.get('from')} -> {rec.get('to')}"
-                    f"    累计伤害 {rec.get('total')}",
+                    _turn_header_text(rec),
                     "", "", "", "", "",
                 ),
                 tags=("turn",),
@@ -583,6 +592,7 @@ class BattleLogWindowMixin:
         first_ex = meta.get("firstRoundUsableEx")
         ex_txt = ""
         if initial_ex is not None and first_ex is not None:
+            # init 时点 buff 尚未挂上，是基础值口径；每回合实算值见回合分隔行
             ex_txt = f"    初始EX {initial_ex}    一巡可使用EX {first_ex}"
         dlg["info"].configure(
             text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
@@ -616,9 +626,12 @@ class BattleLogWindowMixin:
                 f"{p.get('name', '')}({p.get('percent', '')})"
                 for p in obj.get("percents", [])
             )
+            usable = obj.get("usableEx")
+            usable_txt = (f"    一巡可使用EX {usable}"
+                          if isinstance(usable, int) else "")
             self._set_blog_detail_info(
                 (f"回合 {obj.get('from')} -> {obj.get('to')}    "
-                 f"累计伤害 {obj.get('total')}    {percents}", None))
+                 f"累计伤害 {obj.get('total')}{usable_txt}    {percents}", None))
             return
 
         if kind == "unison_comb":
