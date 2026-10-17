@@ -6,7 +6,7 @@ import { TraceConfigMod, TraceEntry } from "./mods/TraceConfigMod";
 import { BacktraceMod, BacktraceEntry } from "./mods/BacktraceMod";
 import { BattleSpeedMod } from "./mods/BattleSpeedMod";
 import { createMods } from "./mods/createMods";
-import { getSkillEffects } from "./battle/skillEffects";
+import { calcExUpBonus, getSkillEffects } from "./battle/skillEffects";
 import { applyCharSkill } from "./common";
 import modsConfig from "../mods.json";
 
@@ -141,20 +141,29 @@ Il2Cpp.perform(() => {
           .value as Il2Cpp.Object;
         const exUp = unitData.field("<ExGaugeRate>k__BackingField")
           .value as number;
+        // EX 上升加成（6 类技能效果、上限 300）与生效总值，按游戏公式
+        const exUpBonus = calcExUpBonus(effects);
+        const exUpTotal = Math.max(0, exUp + exUpBonus);
         let noteCount: number | string;
         try {
           noteCount = unit.field("noteCount").value as number;
         } catch (e) {
           noteCount = `err: ${e}`;
         }
+        // 通常攻击回复 EX（按生效值计算，与游戏公式口径一致），
+        // exGainBonus 为 buff 带来的实际提升量（生效值版 − 基础值版）
+        const exGain = Math.ceil((100 + exUpTotal) / 3.75);
+        const exGainBonus = exGain - Math.ceil((100 + exUp) / 3.75);
         stats = {
           baseAttack,
           atk,
           crt,
-          exUp,
+          exUp, // 基础值（旧版兼容字段）
+          exUpBonus,
+          exUpTotal,
           noteCount,
-          // 通常攻击回复 EX（与 BattleLog 初始化日志口径一致）
-          exGain: Math.ceil((100 + exUp) / 3.75),
+          exGain,
+          exGainBonus,
         };
       } catch (e) {
         stats = { error: String(e) };

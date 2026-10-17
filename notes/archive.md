@@ -481,3 +481,14 @@ if (!locked && Math.abs(cur - target) > 1e-6) {
 [13:00:34.930] [TSKBattleLog] [バニーサンタ] 蘭美 Ex -> ["バグリンα"] "バグリンα": 9 hits, damage=869207, crit=4, sv=1.05
 ```
 
+## il2cpp-bridge invoke 失败，NativeFunction 可行
+
+现象：`TSKBattleNote.GetBaseExGaugeRate` 方法存在、`virtualAddress` 非 NULL，但 `method.invoke()` 调用失败（无返回/抛异常）。改用 `new NativeFunction(m.virtualAddress, "int", ["pointer"])` 后成功。
+
+原因推测：
+- il2cpp-bridge 的 `invoke` 有额外封装（参数装箱、返回类型转换、方法激活状态检查），对从未被游戏代码调用过的方法可能触发未初始化状态
+- 自动签名推断在复杂情况下（值类型参数、泛型隐式参数）可能出错
+- IL2CPP thunk 机制：`virtualAddress` 指向的可能是跳板，invoke 的封装破坏了跳转所需的寄存器状态
+
+结论：简单 getter（无参、int 返回、实例方法）用 `NativeFunction` 更可控；`invoke` 的便利在复杂签名时才显现，但对这类场景反而容易踩坑。
+

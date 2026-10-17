@@ -1,6 +1,13 @@
 import { TSKBattleNote } from "./TSKBattleNote";
-import { dumpArgs, log, dumpObject, getAutoUseSkillIndex } from "../utils";
+import {
+  dumpArgs,
+  log,
+  dumpObject,
+  getAutoUseSkillIndex,
+  logDebug,
+} from "../utils";
 import { skillMap } from "../common";
+import { calcExUpBonus, getSkillEffects } from "./skillEffects";
 import type { CalcCoeffs } from "./damageCoeffs";
 
 enum DamageType {
@@ -245,8 +252,19 @@ export class TSKBattleLog {
         continue;
       }
       const battleNote = new TSKBattleNote();
-      battleNote.initByUnitData(unitData);
+      battleNote.init(unitData);
       battleNote.address = note.handle.toString();
+      // EX 上升加成：按游戏公式从单位 skillEffectList 累计（上限 300）。
+      // 若 Initialize 时效果尚未挂上（此处为 0 而点击头像非 0），
+      // 需改到首次回合切换时重算——诊断日志可核对。
+      try {
+        battleNote.exUpBonus = calcExUpBonus(getSkillEffects(note));
+      } catch (e) {
+        logDebug(`[exUp] ${battleNote.getName()} bonus calc error: ${e}`);
+      }
+      logDebug(
+        `[exUp] ${battleNote.getName()}: base=${battleNote.exUp} bonus=${battleNote.exUpBonus} total=${battleNote.getExUpTotal()}`,
+      );
       this.notes.push(battleNote);
       const autoSkillIndex = getAutoUseSkillIndex(
         battleNote.unitName,

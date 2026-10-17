@@ -1634,12 +1634,24 @@ class App(tk.Tk, BattleLogWindowMixin):
             crt = stats.get("crt")
             crt_str = f"{crt/100:.2f}%" if isinstance(crt, (int, float)) else str(crt)
             note_count = stats.get("noteCount")
+            # EX上升显示生效总值，加成非 0 时附括号；旧 agent 数据无 exUpTotal 时回退基础值
+            ex_up_total = stats.get("exUpTotal", stats.get("exUp"))
+            ex_up_bonus = stats.get("exUpBonus") or 0
+            ex_up_str = (f"{ex_up_total}（{ex_up_bonus:+d}）"
+                         if isinstance(ex_up_bonus, int) and ex_up_bonus
+                         else f"{ex_up_total}")
+            # 普攻回复EX 同格式：括号 = buff 带来的实际提升量
+            ex_gain = stats.get("exGain")
+            ex_gain_bonus = stats.get("exGainBonus") or 0
+            ex_gain_str = (f"{ex_gain}（{ex_gain_bonus:+d}）"
+                           if isinstance(ex_gain_bonus, int) and ex_gain_bonus
+                           else f"{ex_gain}")
             dlg["stats_label"].configure(
                 text=(f"ATK: {stats.get('atk')}  (base {stats.get('baseAttack')})    "
                       f"CRT: {crt_str}    "
                       f"NoteCount: {note_count}    "
-                      f"EX上升: {stats.get('exUp')}    "
-                      f"普攻回复EX: {stats.get('exGain')}"),
+                      f"EX上升: {ex_up_str}    "
+                      f"普攻回复EX: {ex_gain_str}"),
                 foreground="#1a5fb4")
         else:
             dlg["stats_label"].configure(text="")

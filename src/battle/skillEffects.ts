@@ -53,3 +53,35 @@ export function getSkillEffects(unit: Il2Cpp.Object): SkillEffectInfo[] {
   }
   return out;
 }
+
+/**
+ * 按游戏内公式计算 EX 上升加成（Ghidra 还原自实际 EX 回复计算）：
+ * ExRateUp(+SkillValue1) / ExRateDown(−SkillValue1) /
+ * ExRateUpAllyCount / ExRateUpAttrOut / ExRateUpSkillCount(+SkillEffectValue) /
+ * ExRateUpSpecific(+SkillValue1)，加成上限 300（不设下限，负值由 total 兜底）。
+ */
+export function calcExUpBonus(effects: SkillEffectInfo[]): number {
+  let bonus = 0;
+  for (const e of effects) {
+    switch (e.t) {
+      case SkillType.ExRateUp:
+      case SkillType.ExRateUpSpecific:
+        bonus += e.value;
+        break;
+      case SkillType.ExRateDown:
+        bonus -= e.value;
+        break;
+      case SkillType.ExRateUpAllyCount:
+      case SkillType.ExRateUpAttrOut:
+      case SkillType.ExRateUpSkillCount:
+        bonus += e.effectValue;
+        break;
+    }
+  }
+  return Math.min(bonus, 300);
+}
+
+/** 实际生效的 exUp 总值：max(0, 基础 + 加成) */
+export function calcExUpTotal(base: number, bonus: number): number {
+  return Math.max(0, base + bonus);
+}

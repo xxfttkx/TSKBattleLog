@@ -17,12 +17,15 @@ export class TSKBattleNote {
   attr: number;
 
   ex: number;
+  /** ExGaugeRate 基础值（不含技能效果加成） */
   exUp: number;
+  /** EX 上升加成（6 类技能效果累计、上限 300；init 时由 skillEffectList 计算） */
+  exUpBonus: number;
   hp: number;
   atk: number;
   critical: number;
 
-  initByUnitData(unitData: Il2Cpp.Object): void {
+  init(unitData: Il2Cpp.Object): void {
     this.unitName =
       (unitData.field("<UnitName>k__BackingField").value as Il2Cpp.String)
         .content ?? "Unknown UnitName";
@@ -59,14 +62,21 @@ export class TSKBattleNote {
     this.attr = 0;
     this.ex = 0;
     this.exUp = 0;
+    this.exUpBonus = 0;
     this.hp = 0;
     this.atk = 0;
     this.critical = 0;
   }
 
   logUnitData(): void {
+    // 加成非 0 时以 exUp=117(+30) 形式附带，便于核对 init 时 skillEffectList 是否已挂上
+    const exUpStr = `${this.exUp}${
+      this.exUpBonus
+        ? `(${this.exUpBonus > 0 ? "+" : ""}${this.exUpBonus})`
+        : ""
+    }`;
     log(
-      `${this.getName()}: ex=${this.ex} exUp=${this.exUp} hp=${this.hp} atk=${
+      `${this.getName()}: ex=${this.ex} exUp=${exUpStr} hp=${this.hp} atk=${
         this.atk
       } critical=${
         this.critical
@@ -78,8 +88,14 @@ export class TSKBattleNote {
     return `${this.getName()} damage=${this.damage}`;
   }
 
+  /** 实际生效的 exUp：max(0, 基础 + 加成) */
+  getExUpTotal(): number {
+    return Math.max(0, this.exUp + this.exUpBonus);
+  }
+
+  /** 普攻回复 EX：等价于 40 × (1 + (total−50)/150)，total 为生效值（含加成） */
   getNormalAttackExRate(): number {
-    return Math.ceil((100 + this.exUp) / 3.75);
+    return Math.ceil((100 + this.getExUpTotal()) / 3.75);
   }
 
   getName(): string {
