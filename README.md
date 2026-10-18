@@ -78,11 +78,12 @@ Panel features:
 - Mod list grouped by Observer / Modifier / Debug. Selection is persisted to `mods.json`. Checkboxes are locked after injection starts (changing mods mid-battle is unsafe).
 - **重载配置**: re-read `trace_config.json` and update trace/backtrace points at runtime
 - **隐藏单位栏**: hide the player avatar bar and enemy list to focus on logs
-- **设置 (Settings)** tab: battle speed (default 3x), log font size / colored log / diagnostic log toggles, an "open game install directory" entry for unit-list-dump, plus the current version and a new-version download link (all persisted to `gui_config.json`)
+- **设置 (Settings)** tab: battle speed (default 3x), log font size / colored log / diagnostic log toggles, a "open gamedata directory" entry for unit-list-dump, plus the current version and a new-version download link (all persisted to `gui_config.json`)
 - Log viewer with **清空 / 复制日志 / 打开日志目录**; logs are also auto-saved to `logs/` (8 KB buffer, flushed on close)
 - 5000-line ring buffer; older lines are dropped automatically
 - Player avatar bar (48 px wiki icons) and a compact enemy name strip above it. Each avatar has a skill-priority dropdown (Default / Normal / EX1 / EX2 / Random) that writes to `char_skill.json` and takes effect instantly. Clicking any unit opens a **Skill Effects** window showing live buffs (detail / summary toggle) plus ATK (base), CRT, NoteCount, EX rate and normal-attack EX gain.
 - **战斗日志** button: opens the Battle Log window (on-demand snapshot, refresh to pull the latest; window size/position remembered). Inside is a **历史 (History)** tab: snapshots are auto-saved to `logs/battles/` when a battle ends, listed newest-first for one-click replay, with locking and one-click cleanup of unlocked records; the window also opens without injection to browse/replay local snapshots.
+- **Capture** tab: browse capture files in `logs/capture/` (requires the network-capture mod). Requests are merged into one row each (req/URL/resp) showing API name, round-trip time and request summary; clicking a row shows the full plaintext on the right (JSON syntax highlighting, large responses truncated — see the jsonl file for the complete body), and failed responses (`code != 1000`) are highlighted in red.
 
 ### Method B: Headless injection (console only)
 
@@ -112,7 +113,8 @@ Every feature is its own mod under `src/mods/`. `mods.json` holds the default en
 | Key                 | Category | Description                                                                                                  |
 |---------------------|----------|--------------------------------------------------------------------------------------------------------------|
 | `battle-log`        | Observer | Prints battle-related info (damage stats, multi-hit grouping, turns, post-battle summary); powers the Battle Log window with per-segment damage coefficient details |
-| `unit-list-dump`    | Observer | On filtering/sorting in the character screen, exports all unit attributes to `unit_list.json`                |
+| `unit-list-dump`    | Observer | When the game pulls the unit list (e.g. entering home), exports the full server-side unit data to `gamedata/unit_list.json` + `sister_unit_list.json` (requires `network-capture`) |
+| `network-capture`   | Observer | Captures network request/response plaintext (URL, method, RTT) to `logs/capture/*.jsonl`, shown in the **Capture** tab; also publishes API responses to an internal bus consumed by other mods |
 | `qte-perfect`       | Modifier | Forces the battle-start QTE result to PERFECT                                                                |
 | `auto-skill`        | Modifier | In auto mode, picks EX1/EX2 automatically per `char_skill.json`                                              |
 | `avatar-clarity`    | Modifier | Keeps character avatar UI (buff icons, awakening indicators) fully opaque during normal gameplay via a native CModule hook on `CanvasGroup.set_alpha` |

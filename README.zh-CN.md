@@ -78,11 +78,12 @@ pip install frida frida-tools
 - Mod 列表按 观察 / 修改 / 调试 分组，勾选结果持久化到 `mods.json`。注入开始后复选框锁定（战斗中切换 mod 不安全）
 - **重载配置**：重新读取 `trace_config.json`，运行时更新 trace/backtrace 观测点
 - **隐藏单位栏**：隐藏玩家头像栏与敌人列表，专注看日志
-- **设置**页：战斗倍速（默认 3x）、日志字号 / 彩色 / 诊断日志开关、unit-list-dump 的「打开游戏所在目录」入口，以及当前版本号与新版下载链接（均持久化到 `gui_config.json`）
+- **设置**页：战斗倍速（默认 3x）、日志字号 / 彩色 / 诊断日志开关、unit-list-dump 的「打开 gamedata 目录」入口，以及当前版本号与新版下载链接（均持久化到 `gui_config.json`）
 - 日志查看器带 **清空 / 复制日志 / 打开日志目录**；日志同时自动写入 `logs/`（8 KB 缓冲，关闭时 flush）
 - 5000 行环形缓冲；更早的日志自动丢弃
 - 玩家头像栏（48 px wiki 图标）及其上方的紧凑敌人名条。每个头像下方有技能优先级下拉（默认 / 普攻 / EX1 / EX2 / 随机，写入 `char_skill.json` 即时生效）。点击任意单位弹出 **Skill Effects** 窗口，显示实时 buff（明细/汇总切换）以及 ATK（含基础值）、CRT、NoteCount、EX 上升率和普攻回复 EX
 - **战斗日志**按钮：打开战斗日志窗口（按需快照，点刷新拉取最新；窗口大小/位置记忆）。窗口内含「历史」标签页：战斗结束自动落盘快照到 `logs/battles/`，按时间倒序列出历史场次，双击或点「打开」回放，支持锁定与一键清理未锁定记录；未注入时也能打开窗口浏览/回放本地快照
+- **Capture** 页：浏览 `logs/capture/` 抓包记录（需勾选 network-capture）。同一请求的 req/URL/resp 自动合并为一行，显示接口名、往返耗时与参数摘要；点击行在右侧查看完整明文（JSON 语法高亮，大响应自动截断，完整内容见 jsonl 文件），失败响应（`code != 1000`）整行标红
 
 ### 方式二：无界面注入（仅控制台）
 
@@ -112,7 +113,8 @@ pip install frida frida-tools
 | 键                  | 分类 | 说明                                                                                               |
 |---------------------|------|----------------------------------------------------------------------------------------------------|
 | `battle-log`        | 观察 | 打印战斗相关各种信息（伤害统计、多段分组、回合、战斗结算）；驱动战斗日志窗口，提供每段伤害系数明细 |
-| `unit-list-dump`    | 观察 | 角色界面进行筛选或排序操作时将所有单位属性导出到 `unit_list.json`                                   |
+| `unit-list-dump`    | 观察 | 游戏拉取角色列表时（如进入主城）自动导出服务器全量单位数据到 `gamedata/unit_list.json` + `sister_unit_list.json`（依赖 `network-capture`） |
+| `network-capture`   | 观察 | 抓取网络请求/响应明文（URL、方法、往返耗时）落盘 `logs/capture/*.jsonl`，在 **Capture** 页查看；同时向内部 API 总线发布响应体供其他 mod 消费 |
 | `qte-perfect`       | 修改 | 战斗开始时的 QTE 结果强制 PERFECT                                                                   |
 | `auto-skill`        | 修改 | auto 模式下按 `char_skill.json` 配置自动选择 EX1/EX2                                                 |
 | `avatar-clarity`    | 修改 | 通过 CModule native hook 拦截 `CanvasGroup.set_alpha`，使角色头像 UI（buff 图标、觉醒标记）常态不半透明 |

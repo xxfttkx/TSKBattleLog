@@ -450,6 +450,9 @@ class FridaBridge:
             elif msg_type == "captureData":
                 # 抓包数据不进 UI 队列（量大防刷屏），直接 append 落盘
                 self._append_capture(payload)
+            elif msg_type == "unitListDump":
+                # unit-list-dump 全量数据：直接落盘 gamedata/，不进 UI 队列
+                self._save_unit_list_dump(payload)
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
@@ -470,6 +473,24 @@ class FridaBridge:
                 f.write(json.dumps(payload, ensure_ascii=False) + "\n")
         except Exception as e:
             self._log_internal(f"[capture] 写入失败: {e}")
+
+    def _save_unit_list_dump(self, payload: dict):
+        """unit-list-dump 全量数据落盘 gamedata/（服务器原始快照，每次覆盖）。"""
+        try:
+            gamedata_dir = ROOT_DIR / "gamedata"
+            gamedata_dir.mkdir(parents=True, exist_ok=True)
+            for key, name in (("unit_list", "unit_list.json"),
+                              ("sister_unit_list", "sister_unit_list.json")):
+                data = payload.get(key)
+                if data is None:
+                    continue
+                path = gamedata_dir / name
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                self._log_internal(f"[unit-list-dump] {path} 已保存"
+                                   f"（{len(data)} 条）")
+        except Exception as e:
+            self._log_internal(f"[unit-list-dump] 写入失败: {e}")
 
     def _log_internal(self, text: str):
         # 宿主内部日志，没有时间戳，用 "bridge:" 前缀区分
@@ -829,15 +850,17 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         lf_dump.pack(fill="x", pady=4)
         ttk.Label(
             lf_dump,
-            text="开启后在角色界面筛选/排序会导出 unit_list.json / sister_unit_list.json。\n"
-                 "文件经 Frida 以相对路径写入游戏进程工作目录（即游戏安装目录）：",
+            text="开启后游戏拉取角色列表时自动导出全量单位数据\n"
+                 "（服务器原始数据，依赖 network-capture 同时开启）。"
+                 "保存到项目 gamedata/ 目录（unit_list.json / sister_unit_list.json）：",
             justify="left", foreground="#666",
         ).pack(anchor="w", pady=(0, 4))
         self.game_dir_var = tk.StringVar(value="注入后自动显示游戏目录")
         ttk.Label(lf_dump, textvariable=self.game_dir_var,
                   foreground="#0a7").pack(anchor="w", pady=(0, 6))
-        ttk.Button(lf_dump, text="打开游戏所在目录",
-                   command=self._open_game_dir).pack(anchor="w")
+        ttk.Button(lf_dump, text="打开 gamedata 目录",
+                   command=lambda: os.startfile(ROOT_DIR / "gamedata")
+                   ).pack(anchor="w")
 
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
         # 右侧：当前版本；有新版时旁边出现蓝色可点击链接（启动后台探测，失败静默）
@@ -873,20 +896,6 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         if not exe:
             return None
         return os.path.dirname(exe)
-
-    def _open_game_dir(self):
-        path = self._resolve_game_dir()
-        if not path:
-            messagebox.showinfo(
-                "提示", "尚未获取到游戏进程，请先启动注入并进入游戏。")
-            return
-        if not os.path.isdir(path):
-            messagebox.showerror("打开失败", f"目录不存在：\n{path}")
-            return
-        try:
-            os.startfile(path)  # type: ignore[attr-defined]
-        except Exception as e:
-            messagebox.showerror("打开失败", str(e))
 
     # ---- 初始化 / 保存 mods.json ----
 

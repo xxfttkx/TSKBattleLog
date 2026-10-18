@@ -1,6 +1,7 @@
 import { guarded, Mod } from "../mod";
 import { log, sendHost } from "../utils";
 import { ApiName } from "../common";
+import { hasApiSubscribers, publishApi } from "../apiBus";
 
 /** ApiName 枚举数值 -> 接口名（common.ts 离线枚举快照；缺失时显示原始值）。
  * 枚举值与游戏实际定义存在错位（StoryTop↔warehouse/list 等已实证），
@@ -104,11 +105,20 @@ export class NetworkCaptureMod implements Mod {
         const isReq = input.startsWith("{") || input.startsWith("[");
         // req 行 api 留空（此时自身 URL 尚未出现，host 按同段 url 行回填）；
         // resp 行优先用最近一次 URL 后缀（枚举表错位，URL 才是事实）
+        const plain = isReq ? input : readIl2CppString(retval);
         this.emit({
           kind: isReq ? "req" : "resp",
           api: isReq ? "" : this.lastUrlPath || this.lastApi,
-          plain: isReq ? input : readIl2CppString(retval),
+          plain,
         });
+        // API 总线：有 mod 订阅该接口时发布响应体（按需 parse，双 resp 去重在 bus 内）
+        if (
+          !isReq &&
+          plain &&
+          hasApiSubscribers(this.lastUrlPath || this.lastApi)
+        ) {
+          publishApi(this.lastUrlPath || this.lastApi, plain);
+        }
       },
     );
 
