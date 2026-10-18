@@ -31,6 +31,7 @@ from PIL import Image, ImageTk
 # 战斗日志窗口/历史回看以 mixin 形式拆分（battle_log_window 内 import control
 # 仅取运行时常量，顶层不解引用，循环导入安全）
 from battle_log_window import BattleLogWindowMixin
+from capture_window import CaptureTabMixin
 
 # PyInstaller 打包后 __file__ 指向 _internal 临时目录，
 # 用户可见的文件（配置/日志/缓存/mod_manifest.json）应放在 exe 同级目录
@@ -270,6 +271,9 @@ class FridaBridge:
         self.battle_speed_force = False
         # 全局诊断日志开关：True=agent 所有 mod 的 logDebug 输出 + 重型探针
         self.debug_log = False
+        # 网络抓包落盘文件（network-capture mod）：首条数据到达时才创建，
+        # 会话级命名 capture_YYYYMMDD_HHMMSS.jsonl
+        self._capture_path = None
 
     def start(self):
         self.thread = threading.Thread(target=self._run, daemon=True)
@@ -443,9 +447,29 @@ class FridaBridge:
                 self.ui_queue.put(("battleLogData", payload))
             elif msg_type == "battleLogEnded":
                 self.ui_queue.put(("battleLogEnded", payload))
+            elif msg_type == "captureData":
+                # 抓包数据不进 UI 队列（量大防刷屏），直接 append 落盘
+                self._append_capture(payload)
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
+
+    def _append_capture(self, payload: dict):
+        """network-capture mod 数据逐行 append 到 logs/capture/*.jsonl。
+        每条独立 open/close：网络请求频次低，换取崩溃安全。"""
+        try:
+            cap_dir = ROOT_DIR / "logs" / "capture"
+            if self._capture_path is None:
+                cap_dir.mkdir(parents=True, exist_ok=True)
+                self._capture_path = cap_dir / time.strftime(
+                    "capture_%Y%m%d_%H%M%S.jsonl")
+                self._log_internal(f"[capture] 抓包开始，落盘 {self._capture_path}")
+                # 通知 UI 当次会话文件名：Capture 页刷新时优先跳转此文件
+                self.ui_queue.put(("captureFile", self._capture_path.name))
+            with open(self._capture_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        except Exception as e:
+            self._log_internal(f"[capture] 写入失败: {e}")
 
     def _log_internal(self, text: str):
         # 宿主内部日志，没有时间戳，用 "bridge:" 前缀区分
@@ -455,11 +479,13 @@ class FridaBridge:
 
 # ============== UI ==============
 
-class App(tk.Tk, BattleLogWindowMixin):
+class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
     # 供 BattleLogWindowMixin 运行时引用（避免 mixin 反向 import control）
     _GUI_CONFIG = GUI_CONFIG
     _BATTLE_LOG_DIR = BATTLE_LOG_DIR
     _ATTR_COLORS = ATTR_COLORS
+    # 供 CaptureTabMixin 引用：抓包 jsonl 目录
+    _CAPTURE_DIR = ROOT_DIR / "logs" / "capture"
 
     def __init__(self):
         super().__init__()
@@ -468,6 +494,8 @@ class App(tk.Tk, BattleLogWindowMixin):
         self.minsize(460, 320)
         # 恢复上次的窗口位置与大小（geometry: "WxH+X+Y"）
         self._restore_geometry()
+        # 当次抓包会话文件名（captureFile 消息回填），Capture 页刷新时优先跳转
+        self._capture_current_file = None
         # 默认置顶
         self._always_top = True
         self.attributes("-topmost", True)
@@ -677,7 +705,12 @@ class App(tk.Tk, BattleLogWindowMixin):
             "<B1-Motion>",
             lambda e: self.after_idle(self._update_log_follow))
 
-        # ---- Tab 3：设置（Canvas 滚动容器，内容超高时滚轮/滚动条可下拉） ----
+        # ---- Tab 3：网络抓包（capture_window.py mixin）----
+        self._build_capture_tab(self.notebook)
+        # Capture 页「原始事件」开关初值（gui_config.json 个人偏好）
+        self.capture_raw_var.set(self._read_capture_raw())
+
+        # ---- Tab 4：设置（Canvas 滚动容器，内容超高时滚轮/滚动条可下拉） ----
         settings_tab = ttk.Frame(self.notebook)
         self.notebook.add(settings_tab, text="设置")
 
@@ -1037,6 +1070,14 @@ class App(tk.Tk, BattleLogWindowMixin):
         except Exception:
             return False
 
+    def _read_capture_raw(self) -> bool:
+        """读 gui_config.json 的 captureRaw（Capture 页「原始事件」开关），回退 False"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("captureRaw", False))
+        except Exception:
+            return False
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
         # 注入后复选框已冻结，本回调不会再触发。
@@ -1074,6 +1115,8 @@ class App(tk.Tk, BattleLogWindowMixin):
 
     def _apply_log_font_size(self, size: int):
         self.log_text.configure(font=("Consolas", int(size)))
+        # Capture 页控件联动（_build_ui 顺序保证此时已构建）
+        self.apply_capture_font(size)
 
     def _apply_log_colors(self, enabled: bool):
         mono = self.LOG_TAG_COLORS["m"]
@@ -1152,6 +1195,10 @@ class App(tk.Tk, BattleLogWindowMixin):
                 cfg["logColor"] = bool(self.log_color_var.get())
             except Exception:
                 pass
+            try:
+                cfg["captureRaw"] = bool(self.capture_raw_var.get())
+            except Exception:
+                pass
             # 战斗日志窗口几何：开着取实时值，已关取关闭前暂存值
             try:
                 blog_geom = None
@@ -1216,6 +1263,9 @@ class App(tk.Tk, BattleLogWindowMixin):
                     self._apply_unit_icon_failed(*data)
                 elif kind == "updateAvailable":
                     self._apply_update_available(data)
+                elif kind == "captureFile":
+                    # 当次抓包会话文件名（network-capture 首条数据时）
+                    self._capture_current_file = data
         except queue.Empty:
             pass
         except Exception:

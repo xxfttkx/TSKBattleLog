@@ -492,3 +492,20 @@ if (!locked && Math.abs(cur - target) > 1e-6) {
 
 结论：简单 getter（无参、int 返回、实例方法）用 `NativeFunction` 更可控；`invoke` 的便利在复杂签名时才显现，但对这类场景反而容易踩坑。
 
+
+## Interceptor.attach 跨回调状态存 this 本身，this.context 是 CpuContext
+
+现象：NetworkCaptureMod 的 MaskStringWithXOR 探针在 onEnter 把 input 存到
+`this.context ?? this`、onLeave 取回——req 行恒为 0，resp 却正常（resp 的明文
+来自 retval，不吃这个 bug）。排查改了两轮参数位置（args[0]/args[1]）均无效，
+Ghidra 签名证实 static + input 在 args[0] 一直都对。
+
+根因：gum 的 InvocationContext 自带 `.context` 属性 = CpuContext（寄存器），
+恒为真值，fallback 永远不生效；且 onEnter/onLeave 拿到的是**不同的** CpuContext
+对象，存进 enter 的值 leave 时取不回（实际是 undefined）。
+
+正解：跨 enter/leave 的自定义状态直接挂在 `this`（InvocationContext）上——
+gum 保证同一调用的两个回调共享它（本项目 BattleSpeedMod 的 `(this as any)._instance`
+一直是这个用法）。教训：**Interceptor.attach 里看到 `.context` 要警觉，那是寄存器，
+不是状态袋**；与此对应，项目早年 `parseArgument(args[i], "float")` 读 xmm 也是同一
+家族的「this.context 里有什么」问题。

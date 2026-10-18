@@ -8,6 +8,7 @@ import { BacktraceMod } from "./BacktraceMod";
 import { FieldWatchMod } from "./FieldWatchMod";
 import { AvatarClarityMod } from "./AvatarClarityMod";
 import { BattleSpeedMod } from "./BattleSpeedMod";
+import { NetworkCaptureMod } from "./NetworkCaptureMod";
 
 /**
  * 全量 mod 注册表（单一事实源）：index.ts（agent 装载）与 modManifest.ts
@@ -28,5 +29,6 @@ export function createMods(): Mod[] {
     new FieldWatchMod(),
     new AvatarClarityMod(),
     new BattleSpeedMod(),
+    new NetworkCaptureMod(),
   ];
 }

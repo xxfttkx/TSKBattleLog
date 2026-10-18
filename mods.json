@@ -7,5 +7,6 @@
   "backtrace": false,
   "field-watch": false,
   "avatar-clarity": true,
-  "battle-speed": true
+  "battle-speed": true,
+  "network-capture": true
 }
