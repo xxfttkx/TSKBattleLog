@@ -16,6 +16,10 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 
 *Logs tab: real-time battle log viewer with clear / copy / open logs folder*
 
+![Capture tab](screenshots/gui_capture.png)
+
+*Capture tab: captured requests merged into one row each (API name / latency / request summary), with the full plaintext JSON on the right (syntax highlighting) and a raw-event view toggle*
+
 ![Skill Effects window](screenshots/skill_effects.png)
 
 *Skill Effects window (opens on unit click): live stats — ATK / CRT / NoteCount / EX_UP — plus a detail/summary buff table*

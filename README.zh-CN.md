@@ -16,6 +16,10 @@ TSKBattleLog 捕获并分析游戏运行时的战斗事件——伤害、技能�
 
 *Logs 标签页：实时战斗日志查看器，带清空 / 复制 / 打开日志目录*
 
+![Capture 标签页](screenshots/gui_capture.png)
+
+*Capture 标签页：抓包记录按请求合并显示（接口名 / 耗时 / 参数摘要），右侧查看完整明文 JSON（语法高亮），可切原始事件视图*
+
 ![Skill Effects 弹窗](screenshots/skill_effects.png)
 
 *Skill Effects 弹窗（点击单位打开）：实时属性——ATK / CRT / NoteCount / EX上升——以及明细/汇总 buff 表格*
