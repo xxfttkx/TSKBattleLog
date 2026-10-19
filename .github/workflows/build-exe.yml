@@ -171,10 +171,14 @@ jobs:
       # 5) 创建 GitHub Release 并附 zip
       #    能跑到本 job 即代表需要发版（detect 判定版本是新的，或推了 v* tag，
       #    或手动指定了版本）；softprops 会自动创建对应 tag
+      #    body 取手写的 .github/RELEASE_NOTES.md（发版前更新该文件并提交）；
+      #    generate_release_notes 生成的提交列表会自动附加在 body 之后。
+      #    注意：body_path 文件不存在时本步骤会失败——发版流程要求先写好 notes。
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.detect.outputs.tag }}
           name: TSKBattleLog ${{ needs.detect.outputs.tag }}
+          body_path: .github/RELEASE_NOTES.md
           files: TSKBattleLog-windows-x64.zip
           generate_release_notes: true
