@@ -26,6 +26,15 @@ def _pct(v) -> str:
     return f"{v / 100:.1f}%" if isinstance(v, (int, float)) else "-"
 
 
+def _bonus_txt(v) -> str:
+    """加成量文本：非 0 才带括号（与 buff 弹窗规则一致）"""
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return ""
+    return f"(+{n})" if n > 0 else (f"({n})" if n < 0 else "")
+
+
 def _turn_header_text(rec: dict) -> str:
     """回合分隔行文本：回合区间 + 累计伤害 + 该回合一巡可使用EX
     （usableEx 为每回合 buff 实算值；旧快照无此字段则省略）"""
@@ -220,13 +229,25 @@ class BattleLogWindowMixin:
             pass
 
     def _configure_detail_columns(self, detail: ttk.Treeview, mode: str):
-        """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 发起者/伤害两列"""
+        """切换段详情表格的列布局：coeffs=系数明细，unison=Unison 两列，turn=回合各角色数据"""
         if mode == "unison":
             cols = ("name", "damage")
             detail.configure(columns=cols)
             for c, t_, w, anchor in (
                 ("name", "Unison 发起者", 260, "w"),
                 ("damage", "伤害", 120, "e"),
+            ):
+                detail.heading(c, text=t_)
+                detail.column(c, width=w, anchor=anchor)
+        elif mode == "turn":
+            cols = ("name", "damage", "pct", "exup", "exgain")
+            detail.configure(columns=cols)
+            for c, t_, w, anchor in (
+                ("name", "角色", 220, "w"),
+                ("damage", "累计伤害", 120, "e"),
+                ("pct", "占比", 70, "center"),
+                ("exup", "EX上升", 110, "center"),
+                ("exgain", "回复EX", 110, "center"),
             ):
                 detail.heading(c, text=t_)
                 detail.column(c, width=w, anchor=anchor)
@@ -490,6 +511,19 @@ class BattleLogWindowMixin:
             text=f"【历史 {self._history_time_label(path.name)}】"
                  + str(dlg["info"].cget("text")))
 
+    def _insert_turn_row(self, tree: ttk.Treeview, dlg: dict, rec: dict):
+        """插入回合分隔行（点击在右下详情框看各角色数据表格）"""
+        iid = tree.insert(
+            "", "end",
+            values=(
+                "",
+                _turn_header_text(rec),
+                "", "", "", "", "",
+            ),
+            tags=("turn",),
+        )
+        dlg["rows"][iid] = ("turn", rec)
+
     def _render_battle_log(self, dlg: dict, snap: dict):
         tree: ttk.Treeview = dlg["tree"]
         for row in tree.get_children():
@@ -527,16 +561,7 @@ class BattleLogWindowMixin:
             turn = int(obj.get("turn", 0))
             while turn > cur_turn and cur_turn < len(turns):
                 rec = turns[cur_turn]
-                iid = tree.insert(
-                    "", "end",
-                    values=(
-                        "",
-                        _turn_header_text(rec),
-                        "", "", "", "", "",
-                    ),
-                    tags=("turn",),
-                )
-                dlg["rows"][iid] = ("turn", rec)
+                self._insert_turn_row(tree, dlg, rec)
                 cur_turn += 1
             if turn > cur_turn:
                 cur_turn = turn
@@ -574,16 +599,7 @@ class BattleLogWindowMixin:
         # 结束），上面的 while 没机会被驱动，最后几条分隔行会丢失
         while cur_turn < len(turns):
             rec = turns[cur_turn]
-            iid = tree.insert(
-                "", "end",
-                values=(
-                    "",
-                    _turn_header_text(rec),
-                    "", "", "", "", "",
-                ),
-                tags=("turn",),
-            )
-            dlg["rows"][iid] = ("turn", rec)
+            self._insert_turn_row(tree, dlg, rec)
             cur_turn += 1
 
         total = snap.get("damageTotal", "0")
@@ -621,21 +637,43 @@ class BattleLogWindowMixin:
             return
         kind, obj = entry
 
-        # 默认恢复系数明细列（Unison 行会自行切到两列模式）
-        if kind != "unison_comb":
+        # 默认恢复系数明细列（Unison / 回合行会自行切换列集）
+        if kind not in ("unison_comb", "turn"):
             self._configure_detail_columns(detail, "coeffs")
 
         if kind == "turn":
-            percents = "  ".join(
-                f"{p.get('name', '')}({p.get('percent', '')})"
-                for p in obj.get("percents", [])
-            )
             usable = obj.get("usableEx")
             usable_txt = (f"    一巡可使用EX {usable}"
                           if isinstance(usable, int) else "")
-            self._set_blog_detail_info(
-                (f"回合 {obj.get('from')} -> {obj.get('to')}    "
-                 f"累计伤害 {obj.get('total')}{usable_txt}    {percents}", None))
+            damages = obj.get("damages") or []
+            try:
+                total = int(obj.get("total", "0"))
+            except (TypeError, ValueError):
+                total = 0
+            if damages:
+                # 详情框表格：角色 / 累计伤害 / 占比 / EX上升 / 回复EX（百分比现算）
+                self._configure_detail_columns(detail, "turn")
+                for d in damages:
+                    dmg = str(d.get("damage", ""))
+                    pct = f"{int(dmg) / total * 100:.1f}%" if total else "-"
+                    exup = f"{d.get('exUp', '')}{_bonus_txt(d.get('exUpBonus'))}"
+                    exgain = (f"{d.get('exGain', '')}"
+                              f"{_bonus_txt(d.get('exGainBonus'))}")
+                    detail.insert("", "end", values=(
+                        d.get("name", "?"), dmg, pct, exup, exgain))
+                self._set_blog_detail_info(
+                    (f"回合 {obj.get('from')} -> {obj.get('to')}    "
+                     f"累计伤害 {obj.get('total')}{usable_txt}", None))
+            else:
+                # 旧快照：只有整数百分比，info 行原样显示
+                percents = "  ".join(
+                    f"{p.get('name', '')}({p.get('percent', '')})"
+                    for p in obj.get("percents", [])
+                )
+                self._set_blog_detail_info(
+                    (f"回合 {obj.get('from')} -> {obj.get('to')}    "
+                     f"累计伤害 {obj.get('total')}{usable_txt}    {percents}",
+                     None))
             return
 
         if kind == "unison_comb":

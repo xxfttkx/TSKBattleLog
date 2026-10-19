@@ -71,7 +71,17 @@ export interface TurnRecord {
   from: number;
   to: number;
   total: string;
-  percents: { name: string; percent: string }[];
+  /** 该回合切换时点各角色的累计伤害（note.damage 精确值；百分比由宿主计算）。
+   *  exUp/exGain 为生效值（含加成），bonus 为加成量，宿主负责显示组装。
+   *  旧快照此字段为 percents（整数百分比字符串），宿主按有无 damages 区分 */
+  damages: {
+    name: string;
+    damage: string;
+    exUp: number;
+    exUpBonus: number;
+    exGain: number;
+    exGainBonus: number;
+  }[];
   /** 该回合开始时全队「一巡可使用 EX」（普攻回充总和 + 40*5，含当时已挂 buff）；
    *  Initialize 时点 buff 未挂、init 口径值存 meta.firstRoundUsableEx；旧快照无此字段 */
   usableEx?: number;
@@ -238,12 +248,27 @@ export class TSKBattleLog {
     const msg = `[TSKBattleLog] turn ${oldVal} -> ${newVal}    damageTotal=${this.damageTotal}    一巡可使用EX=${usableEx}`;
     log(msg);
     this.logs.push(msg);
-    const percents: { name: string; percent: string }[] = [];
+    const damages: {
+      name: string;
+      damage: string;
+      exUp: number;
+      exUpBonus: number;
+      exGain: number;
+      exGainBonus: number;
+    }[] = [];
     let damageMsg = ``;
     for (const note of this.notes) {
       const percentage = this.getDamagePercentage(note.damage);
       damageMsg += `${note.characterName}(${percentage}) `;
-      percents.push({ name: note.characterName, percent: percentage });
+      damages.push({
+        name: note.characterName,
+        damage: note.damage.toString(),
+        exUp: note.getExUpTotal(),
+        exUpBonus: note.exUpBonus,
+        exGain: note.getNormalAttackExRate(),
+        exGainBonus:
+          note.getNormalAttackExRate() - Math.ceil((100 + note.exUp) / 3.75),
+      });
     }
     log(damageMsg);
     this.logs.push(damageMsg);
@@ -251,7 +276,7 @@ export class TSKBattleLog {
       from: oldVal,
       to: newVal,
       total: this.damageTotal.toString(),
-      percents,
+      damages,
       usableEx,
     });
   }
@@ -531,7 +556,7 @@ export class TSKBattleLog {
           ? { questName: this.questName, stageName: this.stageName }
           : {}),
       },
-      turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
+      turns: this.turnRecords.map((t) => ({ ...t, damages: [...t.damages] })),
       groups: this.skillGroups.map((g) => {
         const total = g.segments.reduce((acc, s) => acc + s.damage, BigInt(0));
         return {
