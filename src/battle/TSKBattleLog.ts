@@ -104,6 +104,9 @@ export interface BattleLogSnapshot {
     initialEx?: number;
     /** 一巡可使用 EX（全员普攻回充 + 40*5 固定），init 时计算；旧快照无此字段 */
     firstRoundUsableEx?: number;
+    /** 关卡名（battle/start 响应）；未勾 network-capture 时缺省，旧快照无此字段 */
+    questName?: string;
+    stageName?: string;
   };
   turns: TurnRecord[];
   groups: {
@@ -163,6 +166,11 @@ export class TSKBattleLog {
   private initialEx = 0;
   /** 一巡可使用 EX（全员普攻回充 + 40*5 固定），init 时计算 */
   private firstRoundUsableEx = 0;
+  /** 战斗关卡名（battle/start 响应，BattleLogMod 经 apiBus 写入）。
+   *  不参与 clear() 重置：battle/start 响应先于战斗场景 Initialize 到达，
+   *  clear 会把它抹掉；每场战斗的开包会自然覆盖上一场的值 */
+  questName = "";
+  stageName = "";
 
   /** 攻击者地址 -> 已计算但尚未落地的伤害段队列（calc 返回 → Set*DamageValue 落地） */
   private calcQueue = new Map<string, CalcSegment[]>();
@@ -519,6 +527,9 @@ export class TSKBattleLog {
         enemies: this.enemyUnits.map((u) => ({ ...u })),
         initialEx: this.initialEx,
         firstRoundUsableEx: this.firstRoundUsableEx,
+        ...(this.stageName
+          ? { questName: this.questName, stageName: this.stageName }
+          : {}),
       },
       turns: this.turnRecords.map((t) => ({ ...t, percents: [...t.percents] })),
       groups: this.skillGroups.map((g) => {

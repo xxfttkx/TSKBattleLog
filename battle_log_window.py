@@ -335,7 +335,7 @@ class BattleLogWindowMixin:
         for c, t_, w, anchor in (
             ("lock", "锁", 36, "center"),
             ("time", "时间", 140, "center"),
-            ("mode", "模式", 130, "center"),
+            ("mode", "关卡", 150, "center"),
             ("turns", "回合", 50, "center"),
             ("damage", "总伤害", 110, "e"),
             ("players", "出战角色", 400, "w"),
@@ -365,7 +365,8 @@ class BattleLogWindowMixin:
                 tree.insert("", "end", iid=str(path), values=(
                     "🔒" if snap.get("locked") else "",
                     self._history_time_label(path.name),
-                    meta.get("mode", "?"),
+                    # 新快照显示关卡名（battle/start），旧快照回退 mode
+                    meta.get("stageName") or meta.get("mode", "?"),
                     snap.get("turnCount", 0),
                     snap.get("damageTotal", "0"),
                     players,
@@ -594,8 +595,11 @@ class BattleLogWindowMixin:
         if initial_ex is not None and first_ex is not None:
             # init 时点 buff 尚未挂上，是基础值口径；每回合实算值见回合分隔行
             ex_txt = f"    初始EX {initial_ex}    一巡可使用EX {first_ex}"
+        # 关卡名（battle/start 响应，需勾 network-capture；旧快照/未勾时无）
+        stage = meta.get("stageName", "")
+        stage_txt = f"{stage}    " if stage else ""
         dlg["info"].configure(
-            text=f"回合 {snap.get('turnCount', 0)}    总伤害 {total}"
+            text=f"{stage_txt}回合 {snap.get('turnCount', 0)}    总伤害 {total}"
                  f"    Unison伤害 {unison_total}{ex_txt}    "
                  f"（技能分组 {len(snap.get('groups', []))} / "
                  f"Unison次数 {unison_count} / "

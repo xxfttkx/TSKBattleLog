@@ -22,6 +22,7 @@ import {
 } from "../mod";
 import { gaugeViewOnTop } from "../debug/gaugeTop";
 import { damageCoeffs, CalcInputSnapshot } from "../battle/damageCoeffs";
+import { subscribeApi } from "../apiBus";
 
 /** 战斗伤害统计（观察型） */
 export class BattleLogMod implements Mod {
@@ -75,6 +76,16 @@ export class BattleLogMod implements Mod {
       undefined,
       true,
     );
+
+    // 关卡名数据源：battle/start 响应（需勾 network-capture；未勾时快照无关卡名，历史列表回退显示 mode）
+    subscribeApi("battle/start", (body) => {
+      const r = (body as any)?.result;
+      if (!r) return;
+      if (typeof r.quest_name === "string")
+        this.tskBattleLog.questName = r.quest_name;
+      if (typeof r.stage_name === "string")
+        this.tskBattleLog.stageName = r.stage_name;
+    });
 
     // 需要 dump 参数时取消注释：
     // traceMethodByName(image, "TSKBattleNote", "SetDamage", dumpArgsHandler);
