@@ -2,7 +2,7 @@ import { Mod } from "../mod";
 import { BattleLogMod } from "./BattleLogMod";
 import { QteMod } from "./QteMod";
 import { AutoSkillMod } from "./AutoSkillMod";
-import { UnitListDumpMod } from "./UnitListDumpMod";
+import { UserDataDumpMod } from "./UserDataDumpMod";
 import { TraceConfigMod } from "./TraceConfigMod";
 import { BacktraceMod } from "./BacktraceMod";
 import { FieldWatchMod } from "./FieldWatchMod";
@@ -23,7 +23,7 @@ export function createMods(): Mod[] {
     new BattleLogMod(),
     new QteMod(),
     new AutoSkillMod(),
-    new UnitListDumpMod(),
+    new UserDataDumpMod(),
     new TraceConfigMod(),
     new BacktraceMod(),
     new FieldWatchMod(),

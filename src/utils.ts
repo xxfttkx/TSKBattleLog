@@ -9,7 +9,8 @@ type HostMessageType =
   | "battleLogData"
   | "battleLogEnded"
   | "captureData"
-  | "unitListDump";
+  | "unitListDump"
+  | "warehouseDump";
 
 function sendHost(type: HostMessageType, payload: any) {
   try {

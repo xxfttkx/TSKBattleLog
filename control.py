@@ -19,7 +19,6 @@ import threading
 import webbrowser
 import time
 import traceback
-import ctypes
 import urllib.request
 from io import BytesIO
 from pathlib import Path
@@ -132,35 +131,6 @@ def _fetch_latest_release(timeout: float = 4.0) -> tuple[str, str] | None:
         tag = data.get("tag_name", "")
         url = data.get("html_url", "")
         return (tag, url) if tag and url else None
-    except Exception:
-        return None
-
-
-def _get_process_exe_path(pid: int):
-    """按 pid 取进程 exe 完整路径（Windows，纯 ctypes 标准库）。失败返回 None。"""
-    try:
-        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        # 64 位下 HANDLE 是 8 字节，必须显式声明 restype，否则默认 c_int 会截断句柄
-        k32.OpenProcess.restype = ctypes.c_void_p
-        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
-        k32.QueryFullProcessImageNameW.restype = ctypes.c_int
-        k32.QueryFullProcessImageNameW.argtypes = [
-            ctypes.c_void_p, ctypes.c_ulong, ctypes.c_wchar_p,
-            ctypes.POINTER(ctypes.c_ulong)]
-        k32.CloseHandle.argtypes = [ctypes.c_void_p]
-        handle = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if not handle:
-            return None
-        try:
-            buf = ctypes.create_unicode_buffer(1024)
-            size = ctypes.c_ulong(1024)
-            # QueryFullProcessImageNameW(handle, flags=0, buf, &size)
-            if k32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(size)):
-                return buf.value
-            return None
-        finally:
-            k32.CloseHandle(handle)
     except Exception:
         return None
 
@@ -451,8 +421,10 @@ class FridaBridge:
                 # 抓包数据不进 UI 队列（量大防刷屏），直接 append 落盘
                 self._append_capture(payload)
             elif msg_type == "unitListDump":
-                # unit-list-dump 全量数据：直接落盘 gamedata/，不进 UI 队列
+                # user-data-dump 全量数据：直接落盘 userdata/，不进 UI 队列
                 self._save_unit_list_dump(payload)
+            elif msg_type == "warehouseDump":
+                self._save_warehouse_dump(payload)
         elif message["type"] == "error":
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
@@ -475,22 +447,37 @@ class FridaBridge:
             self._log_internal(f"[capture] 写入失败: {e}")
 
     def _save_unit_list_dump(self, payload: dict):
-        """unit-list-dump 全量数据落盘 gamedata/（服务器原始快照，每次覆盖）。"""
+        """user-data-dump 全量数据落盘 userdata/（服务器原始快照，每次覆盖）。"""
         try:
-            gamedata_dir = ROOT_DIR / "gamedata"
-            gamedata_dir.mkdir(parents=True, exist_ok=True)
+            userdata_dir = ROOT_DIR / "userdata"
+            userdata_dir.mkdir(parents=True, exist_ok=True)
             for key, name in (("unit_list", "unit_list.json"),
                               ("sister_unit_list", "sister_unit_list.json")):
                 data = payload.get(key)
                 if data is None:
                     continue
-                path = gamedata_dir / name
+                path = userdata_dir / name
                 with open(path, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                self._log_internal(f"[unit-list-dump] {path} 已保存"
+                self._log_internal(f"[user-data-dump] {path} 已保存"
                                    f"（{len(data)} 条）")
         except Exception as e:
-            self._log_internal(f"[unit-list-dump] 写入失败: {e}")
+            self._log_internal(f"[user-data-dump] 写入失败: {e}")
+
+    def _save_warehouse_dump(self, payload: dict):
+        """warehouse/list 落盘 userdata/warehouse.json（5 个分组原样覆盖写）。"""
+        try:
+            userdata_dir = ROOT_DIR / "userdata"
+            userdata_dir.mkdir(parents=True, exist_ok=True)
+            path = userdata_dir / "warehouse.json"
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            counts = " ".join(
+                f"{k.removesuffix('_list')}:{len(v)}"
+                for k, v in payload.items() if isinstance(v, list))
+            self._log_internal(f"[user-data-dump] {path} 已保存（{counts}）")
+        except Exception as e:
+            self._log_internal(f"[user-data-dump] 写入失败: {e}")
 
     def _log_internal(self, text: str):
         # 宿主内部日志，没有时间戳，用 "bridge:" 前缀区分
@@ -843,23 +830,21 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         self._apply_log_font_size(self._read_log_font_size())
         self._apply_log_colors(self._read_log_color())
 
-        # unit-list-dump：导出文件落在游戏目录，提供一键打开入口
+        # user-data-dump：账号持有数据落 userdata/，提供一键打开入口
         lf_dump = ttk.LabelFrame(
-            settings_inner, text="单位列表导出（unit-list-dump）",
+            settings_inner, text="用户数据导出（user-data-dump）",
             padding=(10, 8))
         lf_dump.pack(fill="x", pady=4)
         ttk.Label(
             lf_dump,
-            text="开启后游戏拉取角色列表时自动导出全量单位数据\n"
-                 "（服务器原始数据，依赖 network-capture 同时开启）。"
-                 "保存到项目 gamedata/ 目录（unit_list.json / sister_unit_list.json）：",
+            text="开启后自动导出账号持有数据（服务器原始数据，依赖 network-capture 同时开启）：\n"
+                 "拉取角色列表时 → unit_list.json / sister_unit_list.json；"
+                 "打开仓库时 → warehouse.json。\n"
+                 "保存到项目 userdata/ 目录：",
             justify="left", foreground="#666",
         ).pack(anchor="w", pady=(0, 4))
-        self.game_dir_var = tk.StringVar(value="注入后自动显示游戏目录")
-        ttk.Label(lf_dump, textvariable=self.game_dir_var,
-                  foreground="#0a7").pack(anchor="w", pady=(0, 6))
-        ttk.Button(lf_dump, text="打开 gamedata 目录",
-                   command=lambda: os.startfile(ROOT_DIR / "gamedata")
+        ttk.Button(lf_dump, text="打开 userdata 目录",
+                   command=lambda: os.startfile(ROOT_DIR / "userdata")
                    ).pack(anchor="w")
 
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
@@ -884,18 +869,6 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
 
         _bind_settings_wheel(settings_inner)
         settings_canvas.bind("<MouseWheel>", _on_settings_wheel)
-
-    # ---- 游戏目录（unit-list-dump 等导出文件落点） ----
-
-    def _resolve_game_dir(self):
-        """按注入目标 pid 解析游戏 exe 所在目录；未注入/失败返回 None。"""
-        pid = getattr(self.bridge, "pid", None)
-        if not pid:
-            return None
-        exe = _get_process_exe_path(int(pid))
-        if not exe:
-            return None
-        return os.path.dirname(exe)
 
     # ---- 初始化 / 保存 mods.json ----
 
@@ -1255,9 +1228,6 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
                     messagebox.showerror("错误", data)
                 elif kind == "connected":
                     self.start_btn.configure(state="disabled", text="✓ 已注入")
-                    game_dir = self._resolve_game_dir()
-                    if game_dir:
-                        self.game_dir_var.set(game_dir)
                 elif kind == "unitList":
                     self._apply_unit_list(data)
                 elif kind == "buffData":

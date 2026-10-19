@@ -151,8 +151,8 @@ cache/
 # config
 gui_config.json
 
-# 游戏数据快照（含账号/好友信息，unit-list-dump 导出）
-gamedata/
+# 账号持有数据快照（含账号/好友信息，user-data-dump 导出）
+userdata/
 
 # Trae IDE：个人状态不入库，但 .trae/skills 工作流技能随仓库共享
 .trae/*

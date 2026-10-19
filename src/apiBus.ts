@@ -2,8 +2,8 @@
  * API 响应总线（模块级，非 mod）。
  *
  * NetworkCaptureMod 收到 resp 明文时发布（publishApi），
- * 其他 mod 按接口名订阅（subscribeApi）消费——例如 unit-list-dump
- * 订阅 unit/list 导出全量单位数据。
+ * 其他 mod 按接口名订阅（subscribeApi）消费——例如 user-data-dump
+ * 订阅 unit/list + warehouse/list 导出账号持有数据。
  *
  * 设计要点：
  * - 按需 parse：没有任何订阅者时零 JSON 解析成本（unit/list 明文 2.3MB）

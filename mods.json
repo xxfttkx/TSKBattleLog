@@ -2,7 +2,7 @@
   "battle-log": true,
   "qte-perfect": true,
   "auto-skill": true,
-  "unit-list-dump": true,
+  "user-data-dump": true,
   "trace-config": false,
   "backtrace": false,
   "field-watch": false,
