@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 """
-TSK Wiki 数据/图片下载器（移植自 TSKUnitViewer 的 fetch_images/fetch_sisters/fetch_equips.mjs）
+TSK Wiki 数据/图片下载器
 ==============================================================================================
 
 功能（三阶段，全部只依赖标准库，可打进 PyInstaller exe）：
@@ -246,8 +246,10 @@ def fetch_units(progress_cb=None, icon_only=False):
 
     # ---- 5. 立绘大图 (逐卡访问详情页, 350ms 间隔) ----
     if not icon_only:
-        # NG 词: 私服/表情/差分/戦闘/攻撃/ドット 的 UTF-8 hex 大写
+        # 立绘优先取「卡名+戦闘服」图 (游戏内战斗形象); 无戦闘服时回退旧逻辑:
+        # 含卡名且不含 NG 词(私服/表情/差分/戦闘/攻撃/ドット)的首张图 (会拿到校服主图)
         ng = [s.encode('utf-8').hex().upper() for s in ('私服', '表情', '差分', '戦闘', '攻撃', 'ドット')]
+        sento = '戦闘服'.encode('utf-8').hex().upper()
         total = len(jobs)
         for i, j in enumerate(jobs, 1):
             out = IMG_DIR / f'{j["unit_id"]}.png'
@@ -262,7 +264,11 @@ def fetch_units(progress_cb=None, icon_only=False):
                 hex_title = j['title'].encode('utf-8').hex().upper()
                 cand = next((x.group(1) for x in _ICON_RE.finditer(page)
                              if hex_title in x.group(1).upper()
-                             and not any(n in x.group(1).upper() for n in ng)), None)
+                             and sento in x.group(1).upper()), None)  # 1) 卡名+戦闘服
+                if cand is None:
+                    cand = next((x.group(1) for x in _ICON_RE.finditer(page)
+                                 if hex_title in x.group(1).upper()
+                                 and not any(n in x.group(1).upper() for n in ng)), None)  # 2) 回退
                 if cand:
                     _dl(BASE + cand, out)
             except Exception:
