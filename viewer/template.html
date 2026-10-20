@@ -251,7 +251,7 @@ const DATA = __PAYLOAD__;
 const WIKI_BASE = 'https://twinklestarknights.wikiru.jp/?';
 const { units, stats, wikiRows, sisters, sisterRows, ATTR, ATTR_COLOR, ROLE, CAMP, AFFIL, WIKI_ATTR_ID, WIKI_CAMP_ID, EQ_PART, EQ_PARAM, SP_TYPE, CAT_NAME } = DATA;
 const sisterById = new Map(sisters.map((s) => [s.sid, s]));
-const state = { q: '', attr: 0, role: 0, rar: 0, camp: 0, sp: 0, own: 0, lb: 0, pc: 0, cat: 0, sort: 'power', desc: false, view: 'card' };
+const state = { q: '', attr: 0, role: 0, rar: 0, camp: 0, sp: 0, own: 0, lb: 0, pc: 0, cat: [], sort: 'power', desc: false, view: 'card' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // dump rich text 还原: 先转义, 再把 color 标签 (esc 后为 &lt;color=...&gt;) 还原为彩色 span, 换行转 br
@@ -301,7 +301,20 @@ function renderToolbar() {
   chipRow('campChips', [[0, '种族'], ...Object.entries(CAMP).map(([k, v]) => [+k, v])], 'camp');
   chipRow('spChips', [[0, '攻撃'], ...Object.entries(SP_TYPE).map(([k, v]) => [+k, v])], 'sp');
   chipRow('lbChips', [[0, '升星'], [1, '可升星'], [2, '素材不足']], 'lb');
-  chipRow('catChips', [[0, '分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])], 'cat');
+  // 技能分类: 多选 toggle, 选中项之间为「同时满足」(AND); 「分类」为组标签, 点击清空
+  (function catChips() {
+    const box = document.getElementById('catChips');
+    box.innerHTML = [[0, '分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])].map(([v, label], i) => {
+      const on = i === 0 ? !state.cat.length : state.cat.includes(v);
+      return `<span class="chip ${i === 0 ? 'lead' : ''}${on ? ' on' : ''}" data-v="${v}" ${i === 0 ? 'title="点击清空分类筛选"' : ''}>${esc(label)}</span>`;
+    }).join('');
+    box.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
+      const v = +c.dataset.v;
+      if (v === 0) state.cat = [];
+      else state.cat = state.cat.includes(v) ? state.cat.filter((x) => x !== v) : [...state.cat, v];
+      renderToolbar(); render();
+    });
+  })();
   chipRow('ownChips', [[0, '持有'], [1, '已持有'], [2, '未持有']], 'own');
   chipRow('pcChips', [[0, '碎片'], [1, '有碎片']], 'pc');
 }
@@ -316,7 +329,7 @@ function filtered() {
     (!state.rar || u.rarity === state.rar) &&
     (!state.lb || (state.lb === 1 ? (lbOk(u) || coreOk(u)) : ((u.lbNeed != null || u.coreNeed != null) && !lbOk(u) && !coreOk(u)))) &&
     (!state.camp || u.camps.includes(state.camp)) &&
-    (!state.cat || (u.cats || []).includes(state.cat)));
+    (!state.cat.length || state.cat.every((c) => (u.cats || []).includes(c))));
   const cmp = {
     power: (a, b) => b.power - a.power,
     atk: (a, b) => (b.atkTotal || 0) - (a.atkTotal || 0) || b.power - a.power,
