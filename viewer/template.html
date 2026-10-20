@@ -33,19 +33,22 @@
   }
   .stat .v { font-size: 22px; font-weight: 700; color: var(--gold); }
   .stat .k { font-size: 12px; color: var(--dim); margin-top: 2px; }
-  .toolbar { padding: 14px 32px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position: sticky; top: 0;
-    background: rgba(11,14,26,.92); backdrop-filter: blur(8px); z-index: 10; border-bottom: 1px solid var(--line); }
+  .toolbar { padding: 14px 32px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
+  /* 筛选区: 与工具栏同为普通文档流, 随页面滚动 */
+  .filters { padding: 12px 32px 4px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   input[type=search], select {
     background: var(--panel); color: var(--text); border: 1px solid var(--line);
     border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none;
   }
   input[type=search] { width: 220px; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 0 100%; }
   .chip {
     padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
     background: var(--panel); color: var(--dim); font-size: 13px; cursor: pointer; user-select: none;
   }
   .chip.on { color: #fff; border-color: currentColor; font-weight: 700; }
+  /* 组内组合模式切换 (任一/同时): 组尾小下拉, 与胶囊 chip 明显区分 */
+  .modeSel { align-self: center; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--dim); font-size: 11px; padding: 2px 4px; margin-left: 2px; font-family: inherit; outline: none; }
   /* 组标签: 金色标题 + 竖线分隔; 亮=该组为「全部」, 暗=已有具体筛选, 点击重置该组 */
   .chip.lead {
     border: none; background: none; padding: 6px 2px; color: var(--dim);
@@ -210,15 +213,6 @@
 <div class="stats" id="stats"></div>
 <div class="toolbar">
   <input type="search" id="q" placeholder="搜索 角色名 / 卡名 / CV …">
-  <div class="chips" id="attrChips"></div>
-  <div class="chips" id="roleChips"></div>
-  <div class="chips" id="rarChips"></div>
-  <div class="chips" id="campChips"></div>
-  <div class="chips" id="spChips"></div>
-  <div class="chips" id="lbChips"></div>
-  <div class="chips" id="catChips" style="display:none"></div>
-  <div class="chips" id="ownChips" style="display:none"></div>
-  <div class="chips" id="pcChips" style="display:none"></div>
   <select id="viewSel">
     <option value="card">视图：卡牌</option>
     <option value="table">视图：表格</option>
@@ -242,6 +236,17 @@
   </select>
   <button id="dirBtn" class="chip" style="font-family:inherit" title="切换排序方向">↓ 降序</button>
 </div>
+<div class="filters">
+  <div class="chips" id="attrChips"></div>
+  <div class="chips" id="roleChips"></div>
+  <div class="chips" id="rarChips"></div>
+  <div class="chips" id="campChips"></div>
+  <div class="chips" id="spChips"></div>
+  <div class="chips" id="lbChips"></div>
+  <div class="chips" id="catChips" style="display:none"></div>
+  <div class="chips" id="ownChips" style="display:none"></div>
+  <div class="chips" id="pcChips" style="display:none"></div>
+</div>
 <main id="main"></main>
 
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
@@ -251,7 +256,7 @@ const DATA = __PAYLOAD__;
 const WIKI_BASE = 'https://twinklestarknights.wikiru.jp/?';
 const { units, stats, wikiRows, sisters, sisterRows, ATTR, ATTR_COLOR, ROLE, CAMP, AFFIL, WIKI_ATTR_ID, WIKI_CAMP_ID, EQ_PART, EQ_PARAM, SP_TYPE, CAT_NAME } = DATA;
 const sisterById = new Map(sisters.map((s) => [s.sid, s]));
-const state = { q: '', attr: 0, role: 0, rar: 0, camp: 0, sp: 0, own: 0, lb: 0, pc: 0, cat: [], sort: 'power', desc: false, view: 'card' };
+const state = { q: '', attr: [], role: [], rar: [], camp: [], sp: [], lb: [], pc: [], own: [], cat: [], mode: {}, sort: 'power', desc: false, view: 'card' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // dump rich text 还原: 先转义, 再把 color 标签 (esc 后为 &lt;color=...&gt;) 还原为彩色 span, 换行转 br
@@ -280,17 +285,25 @@ document.getElementById('stats').innerHTML = [
   ['可升星', stats.lbReady], ['可强化コア', stats.coreReady],
 ].map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
 
+// 组内多选匹配: 依组模式 some(任一=OR)/every(同时=AND), 空选集恒过
+const grpMatch = (key, sel, has) => !sel.length || ((state.mode[key] === 'all' ? sel.every(has) : sel.some(has)));
+
 function chipRow(el, items, key) {
   const box = document.getElementById(el);
+  const sel = state[key];
+  const mode = state.mode[key] || 'any';
   box.innerHTML = items.map(([v, label, color], i) => {
-    const on = state[key] === v;
     const lead = i === 0;
-    return `<span class="chip ${lead ? 'lead' : ''}${on ? ' on' : ''}" data-v="${v}" ${lead ? 'title="点击重置该组筛选"' : ''} ${color ? `style="color:${on ? color : ''}"` : ''}>${color ? `<span class="dot" style="background:${color}"></span>` : ''}${label}</span>`;
-  }).join('');
+    const on = lead ? !sel.length : sel.includes(v);
+    return `<span class="chip ${lead ? 'lead' : ''}${on ? ' on' : ''}" data-v="${v}" ${lead ? 'title="点击清空该组筛选"' : ''} ${color ? `style="color:${on ? color : ''}"` : ''}>${color ? `<span class="dot" style="background:${color}"></span>` : ''}${label}</span>`;
+  }).join('') +
+    `<select class="modeSel" title="本组多选时的组合方式"><option value="any"${mode === 'any' ? ' selected' : ''}>任一</option><option value="all"${mode === 'all' ? ' selected' : ''}>同时</option></select>`;
+  const ms = box.querySelector('.modeSel');
+  ms.onchange = () => { state.mode[key] = ms.value; renderToolbar(); render(); };
   box.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
     const v = +c.dataset.v;
-    // 再次点击已激活的筛选项 = 重置该组为「全部」
-    state[key] = (state[key] === v && v !== 0) ? 0 : v;
+    // 组标签 = 清空该组; 其余 = toggle 进出选集
+    state[key] = v === 0 ? [] : (sel.includes(v) ? sel.filter((x) => x !== v) : [...sel, v]);
     renderToolbar(); render();
   });
 }
@@ -301,20 +314,7 @@ function renderToolbar() {
   chipRow('campChips', [[0, '种族'], ...Object.entries(CAMP).map(([k, v]) => [+k, v])], 'camp');
   chipRow('spChips', [[0, '攻撃'], ...Object.entries(SP_TYPE).map(([k, v]) => [+k, v])], 'sp');
   chipRow('lbChips', [[0, '升星'], [1, '可升星'], [2, '素材不足']], 'lb');
-  // 技能分类: 多选 toggle, 选中项之间为「同时满足」(AND); 「分类」为组标签, 点击清空
-  (function catChips() {
-    const box = document.getElementById('catChips');
-    box.innerHTML = [[0, '分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])].map(([v, label], i) => {
-      const on = i === 0 ? !state.cat.length : state.cat.includes(v);
-      return `<span class="chip ${i === 0 ? 'lead' : ''}${on ? ' on' : ''}" data-v="${v}" ${i === 0 ? 'title="点击清空分类筛选"' : ''}>${esc(label)}</span>`;
-    }).join('');
-    box.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
-      const v = +c.dataset.v;
-      if (v === 0) state.cat = [];
-      else state.cat = state.cat.includes(v) ? state.cat.filter((x) => x !== v) : [...state.cat, v];
-      renderToolbar(); render();
-    });
-  })();
+  chipRow('catChips', [[0, '技能分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])], 'cat');
   chipRow('ownChips', [[0, '持有'], [1, '已持有'], [2, '未持有']], 'own');
   chipRow('pcChips', [[0, '碎片'], [1, '有碎片']], 'pc');
 }
@@ -323,13 +323,13 @@ function filtered() {
   const q = state.q.toLowerCase();
   let arr = units.filter((u) =>
     (!q || (u.cname + u.uname + u.fname + u.cv).toLowerCase().includes(q)) &&
-    (!state.attr || u.attr === state.attr) &&
-    (!state.role || u.role === state.role) &&
-    (!state.sp || u.spType === state.sp) &&
-    (!state.rar || u.rarity === state.rar) &&
-    (!state.lb || (state.lb === 1 ? (lbOk(u) || coreOk(u)) : ((u.lbNeed != null || u.coreNeed != null) && !lbOk(u) && !coreOk(u)))) &&
-    (!state.camp || u.camps.includes(state.camp)) &&
-    (!state.cat.length || state.cat.every((c) => (u.cats || []).includes(c))));
+    grpMatch('attr', state.attr, (v) => u.attr === v) &&
+    grpMatch('role', state.role, (v) => u.role === v) &&
+    grpMatch('sp', state.sp, (v) => u.spType === v) &&
+    grpMatch('rar', state.rar, (v) => u.rarity === v) &&
+    grpMatch('lb', state.lb, (v) => v === 1 ? (lbOk(u) || coreOk(u)) : ((u.lbNeed != null || u.coreNeed != null) && !lbOk(u) && !coreOk(u))) &&
+    grpMatch('camp', state.camp, (v) => u.camps.includes(v)) &&
+    grpMatch('cat', state.cat, (v) => (u.cats || []).includes(v)));
   const cmp = {
     power: (a, b) => b.power - a.power,
     atk: (a, b) => (b.atkTotal || 0) - (a.atkTotal || 0) || b.power - a.power,
@@ -463,13 +463,13 @@ function renderDex() {
   const pcOf = (idx, r) => (unitByRow.get(idx) ? (unitByRow.get(idx).piece || 0) : (r.piece || 0));
   const arr = wikiRows.map((r, idx) => ({ r, idx })).filter(({ r, idx }) =>
     (!q || (r.title + r.yomi + r.no).toLowerCase().includes(q)) &&
-    (!state.attr || WIKI_ATTR_ID[r.attr] === state.attr) &&
-    (!state.role || r.typeId === state.role) &&
-    (!state.sp || r.spId === state.sp) &&
-    (!state.camp || WIKI_CAMP_ID[r.camp] === state.camp) &&
-    (!state.rar || r.rarity === state.rar) &&
-    (!state.pc || pcOf(idx, r) > 0) &&
-    (!state.own || (state.own === 1 ? r.owned : !r.owned)));
+    grpMatch('attr', state.attr, (v) => WIKI_ATTR_ID[r.attr] === v) &&
+    grpMatch('role', state.role, (v) => r.typeId === v) &&
+    grpMatch('sp', state.sp, (v) => r.spId === v) &&
+    grpMatch('camp', state.camp, (v) => WIKI_CAMP_ID[r.camp] === v) &&
+    grpMatch('rar', state.rar, (v) => r.rarity === v) &&
+    (!state.pc.length || pcOf(idx, r) > 0) &&
+    (!state.own.length || state.own.includes(r.owned ? 1 : 2)));
   const ownedFirst = (a, b) => (b.r.owned - a.r.owned) || (b.r.rarity || 0) - (a.r.rarity || 0) || a.r.no.localeCompare(b.r.no);
   const cmp = {
     power: ownedFirst,
@@ -521,9 +521,9 @@ function renderSister() {
   const q = state.q.toLowerCase();
   const arr = sisterRows.filter((r) =>
     (!q || r.name.toLowerCase().includes(q)) &&
-    (!state.attr || r.attr === state.attr) &&
-    (!state.role || r.typeId === state.role) &&
-    (!state.own || (state.own === 1 ? r.owned : !r.owned)));
+    grpMatch('attr', state.attr, (v) => r.attr === v) &&
+    grpMatch('role', state.role, (v) => r.typeId === v) &&
+    (!state.own.length || state.own.includes(r.owned ? 1 : 2)));
   if (state.sort === 'date') arr.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.idx - b.idx); // 其余排序值均按图鉴顺
   if (state.desc) arr.reverse();
   const ownCnt = arr.filter((x) => x.owned).length;
