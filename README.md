@@ -28,6 +28,14 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 
 *Battle Log window: battle timeline — turn separators with cumulative damage, per-attacker skill groups (colored by attribute), Unison events — with a per-segment damage coefficient detail panel*
 
+![Unit codex](screenshots/图鉴.png)
+
+*Unit codex (`viewer/index.html`): full codex grid with a stats bar, per-group filter chips (multi-select with an any/all toggle per group) and sort controls*
+
+![Unit detail](screenshots/角色.png)
+
+*Unit detail popup: portrait, stat breakdown (base + equipment + affection), equipment with enchant rolls, skills with category tags, and profile*
+
 ## Features
 
 - Real-time battle event logging with millisecond timestamps
