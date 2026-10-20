@@ -186,6 +186,7 @@
   .stag { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 99px; margin-right: 4px; vertical-align: 1px; }
   .st-ex { background: rgba(255,217,74,.15); color: var(--gold); }
   .st-ex2 { background: rgba(255,157,74,.18); color: #ffb066; border: 1px solid #ffb06644; } /* EX2+ 强化技 */
+  .scat { background: rgba(154,163,207,.14); color: var(--dim); font-weight: 600; margin-left: 6px; } /* 技能分类标签 */
   .st-u { background: rgba(74,158,255,.18); color: #7ac0ff; }
   .st-s { background: rgba(255,138,196,.15); color: var(--pink); }
   .st-p { background: rgba(139,92,246,.22); color: #c3a6ff; }
@@ -215,6 +216,7 @@
   <div class="chips" id="campChips"></div>
   <div class="chips" id="spChips"></div>
   <div class="chips" id="lbChips"></div>
+  <div class="chips" id="catChips" style="display:none"></div>
   <div class="chips" id="ownChips" style="display:none"></div>
   <div class="chips" id="pcChips" style="display:none"></div>
   <select id="viewSel">
@@ -247,9 +249,9 @@
 <script>
 const DATA = __PAYLOAD__;
 const WIKI_BASE = 'https://twinklestarknights.wikiru.jp/?';
-const { units, stats, wikiRows, sisters, sisterRows, ATTR, ATTR_COLOR, ROLE, CAMP, AFFIL, WIKI_ATTR_ID, WIKI_CAMP_ID, EQ_PART, EQ_PARAM, SP_TYPE } = DATA;
+const { units, stats, wikiRows, sisters, sisterRows, ATTR, ATTR_COLOR, ROLE, CAMP, AFFIL, WIKI_ATTR_ID, WIKI_CAMP_ID, EQ_PART, EQ_PARAM, SP_TYPE, CAT_NAME } = DATA;
 const sisterById = new Map(sisters.map((s) => [s.sid, s]));
-const state = { q: '', attr: 0, role: 0, rar: 0, camp: 0, sp: 0, own: 0, lb: 0, pc: 0, sort: 'power', desc: false, view: 'card' };
+const state = { q: '', attr: 0, role: 0, rar: 0, camp: 0, sp: 0, own: 0, lb: 0, pc: 0, cat: 0, sort: 'power', desc: false, view: 'card' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // dump rich text 还原: 先转义, 再把 color 标签 (esc 后为 &lt;color=...&gt;) 还原为彩色 span, 换行转 br
@@ -299,6 +301,7 @@ function renderToolbar() {
   chipRow('campChips', [[0, '种族'], ...Object.entries(CAMP).map(([k, v]) => [+k, v])], 'camp');
   chipRow('spChips', [[0, '攻撃'], ...Object.entries(SP_TYPE).map(([k, v]) => [+k, v])], 'sp');
   chipRow('lbChips', [[0, '升星'], [1, '可升星'], [2, '素材不足']], 'lb');
+  chipRow('catChips', [[0, '分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])], 'cat');
   chipRow('ownChips', [[0, '持有'], [1, '已持有'], [2, '未持有']], 'own');
   chipRow('pcChips', [[0, '碎片'], [1, '有碎片']], 'pc');
 }
@@ -312,7 +315,8 @@ function filtered() {
     (!state.sp || u.spType === state.sp) &&
     (!state.rar || u.rarity === state.rar) &&
     (!state.lb || (state.lb === 1 ? (lbOk(u) || coreOk(u)) : ((u.lbNeed != null || u.coreNeed != null) && !lbOk(u) && !coreOk(u)))) &&
-    (!state.camp || u.camps.includes(state.camp)));
+    (!state.camp || u.camps.includes(state.camp)) &&
+    (!state.cat || (u.cats || []).includes(state.cat)));
   const cmp = {
     power: (a, b) => b.power - a.power,
     atk: (a, b) => (b.atkTotal || 0) - (a.atkTotal || 0) || b.power - a.power,
@@ -382,6 +386,8 @@ function render() {
   document.getElementById('spChips').style.display = isSis ? 'none' : '';
   // 升星为持有卡专属维度: 仅卡牌/表格/按角色视图可用
   document.getElementById('lbChips').style.display = (state.view === 'dex' || isSis) ? 'none' : '';
+  // 技能分类同为持有卡专属维度 (dump 才有)
+  document.getElementById('catChips').style.display = (state.view === 'dex' || isSis) ? 'none' : '';
   // 碎片为全图鉴专属维度 (未持有角色也可能持有碎片)
   document.getElementById('pcChips').style.display = state.view === 'dex' ? '' : 'none';
   if (isSis) { renderSister(); return; }
@@ -616,10 +622,11 @@ function showModal(id) {
   </div></div>` : '';
   // 技能区: EX1/EX2/ユニゾン/シスター技 + EX2+ (specific_skill, 挂原 EX 槽下方) + 升星解锁的固有被动
   const skillTag = (s) => s.type === 2 ? '<span class="stag st-u">ユニゾン</span>' : s.type === 3 ? '<span class="stag st-s">シスター</span>' : `<span class="stag st-ex">EX${s._exn}</span>`;
+  const catChips = (s) => (s.cats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join('');
   const skillBlock = (s, tagHtml) => `<div class="skill${s.unlock ? '' : ' slock'}">
-      <div class="sname">${tagHtml} <b>${esc(s.name || '固有被动')}</b>${s.cost > 0 ? `<span class="smeta">EX 消耗 ${s.cost}</span>` : ''}${s.max_lv ? `<span class="smeta">Lv ${s.lv}/${s.max_lv}</span>` : ''}${s.unlock ? '' : '<span class="slocktag">未解锁</span>'}</div>
+      <div class="sname">${tagHtml} <b>${esc(s.name || '固有被动')}</b>${catChips(s)}${s.cost > 0 ? `<span class="smeta">EX 消耗 ${s.cost}</span>` : ''}${s.max_lv ? `<span class="smeta">Lv ${s.lv}/${s.max_lv}</span>` : ''}${s.unlock ? '' : '<span class="slocktag">未解锁</span>'}</div>
       ${s.detail ? `<div class="sdetail">${esc(s.detail)}</div>` : ''}
-      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ''}</div><div class="sdetail">${esc(s.ssDetail)}</div>` : ''}
+      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${(s.ssCats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join('')}${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ''}</div><div class="sdetail">${esc(s.ssDetail)}</div>` : ''}
       ${s.cond && !s.unlock ? `<div class="scond">解锁条件：${esc(s.cond)}</div>` : ''}
     </div>`;
   let exN = 0;

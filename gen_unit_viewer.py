@@ -59,6 +59,13 @@ ROLE = {1: 'ATK', 2: 'SPD', 3: 'DEF', 4: 'SUP', 5: 'HEAL'}
 CAMP = {1: '人間', 2: '神族', 3: '魔族'}
 SP_TYPE = {1: '魔法', 2: '斬撃', 3: '打撃'}  # sp_equip_types[0] = 攻撃タイプ (可装备武器类型)
 SP_TYPE_ID = {'魔法': 1, '斬撃': 2, '打撃': 3}  # Wiki 一覧「攻撃タイプ」列文本 → ID
+# 技能分类 (来源: home/homeData 等响应内 skill_category_list 主数据; 9999=无分类哨兵不在表内)
+CAT_NAME = {
+    1001: '全体攻撃', 1002: '多段攻撃', 2001: 'ノーツ後退系',
+    3001: 'ATKアップ', 3002: 'クリティカルアップ', 3003: 'クリダメアップ', 3004: '行動CT短縮',
+    3005: 'バリア系', 3006: 'サブ属性', 4001: '被ダメ増加', 4002: '特殊被ダメ増加系',
+    4003: '属性ダメ増加系', 4004: '行動阻害系', 5001: '状態異常系',
+}
 # 所属名称已全部经 Wiki 角色详情页「所属」栏核验 (3=守護天使, 7=コラプサー, 8=極星学園 等)
 AFFIL = {0: '無所属', 1: '流星学園', 2: '新星学園', 3: '守護天使', 4: 'ネビュラ', 5: '流星附属', 7: 'コラプサー', 8: '極星学園'}
 
@@ -159,13 +166,14 @@ def generate(progress_cb=None):
         if hit:
             hit['piece'] = p.get('have_count') or 0
 
-    def map_skill(s):
+    def map_skill(s, cats=None, ss_cats=None):
         # skills[].ss* = specific_skill_* (EX2+ 强化版技能, dump 里挂原 EX 槽; 无强化槽为 access violation 占位, 置空)
         ss_err = bool(re.match(r'^<error>', str(s.get('specific_skill_name') or '')))
         return {
             'type': s.get('skill_data_type'), 'name': s.get('skill_name'), 'detail': s.get('skill_detail'),
             'lv': s.get('lv'), 'max_lv': s.get('max_lv'), 'cost': s.get('cost_ex_gauge'),
             'unlock': s.get('is_unlock'), 'cond': s.get('unlock_condition'),
+            'cats': cats or [], 'ssCats': ss_cats or [],
             'ssName': '' if ss_err else (s.get('specific_skill_name') or ''),
             'ssDetail': '' if ss_err else (s.get('specific_skill_detail') or ''),
             'ssCost': s.get('specific_skill_cost_ex_gauge') or 0,
@@ -203,6 +211,19 @@ def generate(progress_cb=None):
         st_data = u.get('status_data') or {}
         bd = st_data.get('base_data')
         al = st_data.get('add_love_lv')
+        # 技能分类: by_ex_type 按槽位给出 (9999=无分类哨兵); skill_data 里 type=1 的条目按顺序对应 EX1/EX2,
+        # *_plus 为 EX2+ 强化技的分类 (有强化槽时挂在原 EX 条目的 ssCats)
+        bt = u.get('skill_category_id_list_by_ex_type') or {}
+        ex_cats = [[c for c in (bt.get(k) or []) if c != 9999] for k in ('ex1', 'ex2')]
+        plus_cats = [[c for c in (bt.get(k) or []) if c != 9999] for k in ('ex1_plus', 'ex2_plus')]
+        ex_n, skills = 0, []
+        for s in (u.get('skill_data') or []):
+            cats, ss_cats = [], []
+            if s.get('skill_data_type') == 1 and ex_n < 2:
+                cats = ex_cats[ex_n]
+                ss_cats = plus_cats[ex_n]
+                ex_n += 1
+            skills.append(map_skill(s, cats, ss_cats))
         units.append({
             'id': u.get('u_unit_id'),
             'unit_id': u.get('unit_id'),
@@ -251,7 +272,8 @@ def generate(progress_cb=None):
             'cv': u.get('cv'),
             'profile': u.get('profile'),
             # 新版 dump 已解析的实体 (旧版为类型名占位符): 技能 / 升星解锁被动 / 当前练度白值 / 好感加成
-            'skills': [map_skill(s) for s in (u.get('skill_data') or [])],
+            'cats': [c for c in (u.get('skill_category_id_list') or []) if c != 9999],
+            'skills': skills,
             'uniques': [{'name': s.get('skill_name'), 'detail': s.get('detail'), 'unlock': s.get('is_unlock'), 'cond': s.get('unlock_condition')}
                         for s in (u.get('unique_skill_data') or [])],
             'st': ({'hp': _num(bd.get('hp')), 'atk': bd.get('attack'), 'crit': bd.get('critical'),
@@ -409,7 +431,7 @@ def generate(progress_cb=None):
         'units': units, 'stats': stats, 'wikiRows': wiki_rows, 'sisters': sisters, 'sisterRows': sister_rows,
         'ATTR': ATTR, 'ATTR_COLOR': ATTR_COLOR, 'ROLE': ROLE, 'CAMP': CAMP, 'AFFIL': AFFIL,
         'WIKI_ATTR_ID': WIKI_ATTR_ID, 'WIKI_CAMP_ID': WIKI_CAMP_ID,
-        'EQ_PART': EQ_PART, 'EQ_PARAM': EQ_PARAM, 'SP_TYPE': SP_TYPE,
+        'EQ_PART': EQ_PART, 'EQ_PARAM': EQ_PARAM, 'SP_TYPE': SP_TYPE, 'CAT_NAME': CAT_NAME,
     }
     report(f'payload 组装完成: 卡牌 {stats["total"]} 张 / 图鉴 {stats["collected"]}/{stats["dexTotal"]} / シスター {stats["sisterOwned"]}/{stats["sisterTotal"]}')
 
