@@ -81,7 +81,7 @@ def _num(s):
 
 
 def _int_or_float(f):
-    """Wiki 数值列: 整数保持 int (源 mjs JSON.stringify 不区分, 对齐用)"""
+    """Wiki 数值列: 整数保持 int"""
     if f is None:
         return None
     return int(f) if float(f).is_integer() else f
@@ -117,7 +117,7 @@ def _dl(url, file, retry=RETRY):
 
 
 def _dl_if_image(url, file, retry=RETRY):
-    """补图专用: 仅当响应 Content-Type 为图片才落盘 (对应 fetch_equips.mjs 第 4 段)"""
+    """补图专用: 仅当响应 Content-Type 为图片才落盘"""
     if file.exists():
         return 'skip'
     for _ in range(retry):
@@ -146,7 +146,7 @@ def _cb(progress_cb, stage, current, total, label):
 
 
 # ======================================================================
-# 1. 角色: wiki_data.json + 头像 + 立绘 (移植 fetch_images.mjs)
+# 1. 角色: wiki_data.json + 头像 + 立绘
 # ======================================================================
 def fetch_units(progress_cb=None, icon_only=False):
     IMG_DIR.mkdir(parents=True, exist_ok=True)
@@ -279,7 +279,7 @@ def fetch_units(progress_cb=None, icon_only=False):
 
 
 # ======================================================================
-# 2. シスター: sister_wiki.json + 图标/立绘 (移植 fetch_sisters.mjs)
+# 2. シスター: sister_wiki.json + 图标/立绘
 # ======================================================================
 def fetch_sisters(progress_cb=None):
     IMG_DIR.mkdir(parents=True, exist_ok=True)
@@ -387,7 +387,7 @@ def fetch_sisters(progress_cb=None):
 
 
 # ======================================================================
-# 3. 装备: equip_wiki.json + img/equip/ 图标 (移植 fetch_equips.mjs)
+# 3. 装备: equip_wiki.json + img/equip/ 图标
 # ======================================================================
 def fetch_equips(progress_cb=None):
     EQ_DIR.mkdir(parents=True, exist_ok=True)

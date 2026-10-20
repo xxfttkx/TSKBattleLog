@@ -7,7 +7,7 @@ TSK 静态图鉴生成器
 - 读 userdata/ 下三个 dump：unit_list.json（持有角色）、sister_unit_list.json、
   warehouse.json（chara_piece_list = 角色碎片，item_id 即卡牌 unit_id）
 - 合并 viewer/ 下三个 wiki 静态数据：wiki_data.json / equip_wiki.json /
-  sister_wiki.json（由 tools/fetch_wiki_images.py 运行时抓取，缺失时优雅降级）
+  sister_wiki.json（由 fetch_wiki_images.py 运行时抓取，缺失时优雅降级）
 - 扫描 viewer/img/ 本地图片（{unit_id}.png 立绘 / {unit_id}_icon.png 头像 /
   w{no}_icon.png 未持有卡头像 / equip/{equip_id}.png 装备图标）
 - 用 viewer/template.html 注入 payload，产出单文件 viewer/index.html（双击即用）
@@ -39,7 +39,7 @@ IMG_DIR = VIEWER_DIR / "img"
 TEMPLATE_HTML = RESOURCE_DIR / "viewer" / "template.html"
 OUT_HTML = VIEWER_DIR / "index.html"
 
-# ---- 常量表（照抄 gen_viewer.mjs）----
+# ---- 常量表 ----
 # 升星所需碎片数 (来源: 官方帮助页 help/detail/6/limitBreaking, 与 dump 数据无关)
 # 限界突破: 目标★ → 需求 (★1→2 50 / ★2→3 100 / ★3→4 200 / ★4→5 300)
 LB_COST = {2: 50, 3: 100, 4: 200, 5: 300}
@@ -105,7 +105,7 @@ def ruby_name(s):
 
 
 def _load_json(path, default):
-    """wiki/仓库 json 缺失或损坏时优雅降级（对应源 mjs 的 try/catch）"""
+    """wiki/仓库 json 缺失或损坏时优雅降级（返回 default）"""
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
@@ -449,7 +449,7 @@ def generate(progress_cb=None):
 
 def main():
     out = generate(progress_cb=lambda m: print(m))
-    # 与源 mjs 末尾相同的汇总信息（重算一份仅供控制台展示）
+    # 汇总信息（仅供控制台展示）
     data = json.loads(Path(out).read_text(encoding='utf-8').split('const DATA = ', 1)[1].split(';\n', 1)[0])
     stats = data['stats']
     units = data['units']
