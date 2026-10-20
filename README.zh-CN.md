@@ -43,6 +43,7 @@ TSKBattleLog 捕获并分析游戏运行时的战斗事件——伤害、技能�
 - 日志自动落盘 + 面板内日志查看器（清空 / 复制 / 打开日志目录）
 - 网络 API 抓包：进程内 hook 取得请求/响应明文 JSON，落盘 `logs/capture/`；Capture 页按请求合并展示（接口名、往返耗时、参数摘要），JSON 语法高亮，可切原始事件视图
 - 账号持有数据导出：单位列表（unit/list）与仓库（warehouse/list，含角色碎片）的服务器原始快照落盘 `userdata/`，供外部工具（如 TSKUnitViewer）消费
+- 角色图鉴：由 `userdata/` 落盘数据 + 运行时抓取的 wiki 数据生成静态 `viewer/index.html`——全图鉴（含未持有角色）、升星碎片进度（含可升星数量统计）、装备/技能详情、立绘与头像。数据处理移植自 [TSKUnitViewer](https://github.com/xxfttkx/TSKUnitViewer)
 - 启动时自动探测 GitHub 最新版本，有新版时在设置页显示可点击的下载链接（失败静默）
 
 ## Mod 分类
@@ -84,7 +85,7 @@ pip install frida frida-tools
 - Mod 列表按 观察 / 修改 / 调试 分组，勾选结果持久化到 `mods.json`。注入开始后复选框锁定（战斗中切换 mod 不安全）
 - **重载配置**：重新读取 `trace_config.json`，运行时更新 trace/backtrace 观测点
 - **隐藏单位栏**：隐藏玩家头像栏与敌人列表，专注看日志
-- **设置**页：战斗倍速（默认 3x）、日志字号 / 彩色 / 诊断日志开关、user-data-dump 的「打开 userdata 目录」入口，以及当前版本号与新版下载链接（均持久化到 `gui_config.json`）
+- **设置**页：战斗倍速（默认 3x）、日志字号 / 彩色 / 诊断日志开关、user-data-dump 的「打开 userdata 目录」入口，以及当前版本号与新版下载链接（均持久化到 `gui_config.json`）。「角色图鉴」区块有两个按钮：**生成并打开**（生成 `viewer/index.html` 并在浏览器打开）与**下载 / 更新图片**（带进度条抓取 wiki 数据与立绘头像，增量更新——出新角色后重新下载即可）
 - 日志查看器带 **清空 / 复制日志 / 打开日志目录**；日志同时自动写入 `logs/`（8 KB 缓冲，关闭时 flush）
 - 5000 行环形缓冲；更早的日志自动丢弃
 - 玩家头像栏（48 px wiki 图标）及其上方的紧凑敌人名条。每个头像下方有技能优先级下拉（默认 / 普攻 / EX1 / EX2 / 随机，写入 `char_skill.json` 即时生效）。点击任意单位弹出 **Skill Effects** 窗口，显示实时 buff（明细/汇总切换）以及 ATK（含基础值）、CRT、NoteCount、EX 上升率和普攻回复 EX
@@ -176,3 +177,5 @@ pip install frida frida-tools
 ## 致谢
 
 感谢 [TSKHook-frida](https://github.com/TSKModding/TSKHook-frida) 为 Frida 与 IL2CPP 运行时分析提供宝贵参考。
+
+感谢 [TSKUnitViewer](https://github.com/xxfttkx/TSKUnitViewer)——内置角色图鉴的数据处理移植自该项目。

@@ -130,6 +130,7 @@ jobs:
           --onedir
           --add-data "dist/agent.js;."
           --add-data "version.txt;."
+          --add-data "viewer/template.html;viewer/."
           --hidden-import frida
           control.py
 

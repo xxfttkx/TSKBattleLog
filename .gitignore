@@ -154,6 +154,13 @@ gui_config.json
 # 账号持有数据快照（含账号/好友信息，user-data-dump 导出）
 userdata/
 
+# 角色图鉴运行时产物（仅 template.html 进仓库；图片/wiki 数据为运行时抓取，index.html 为生成产物）
+viewer/img/
+viewer/index.html
+viewer/wiki_data.json
+viewer/equip_wiki.json
+viewer/sister_wiki.json
+
 # Trae IDE：个人状态不入库，但 .trae/skills 工作流技能随仓库共享
 .trae/*
 !.trae/skills/

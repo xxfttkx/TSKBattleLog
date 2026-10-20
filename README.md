@@ -43,6 +43,7 @@ TSKBattleLog captures and analyzes battle events from the game runtime — damag
 - Auto-saved log files + in-panel log viewer (clear / copy / open logs folder)
 - Network API capture: in-process hooks extract request/response plaintext JSON to `logs/capture/`; the Capture tab merges each request into one row (API name, round-trip time, request summary) with JSON syntax highlighting and a raw-event view toggle
 - Account data export: server-side snapshots of the unit list (unit/list) and warehouse (warehouse/list, incl. character pieces) saved to `userdata/`, ready for external tools (e.g. TSKUnitViewer)
+- Unit viewer: generates a static `viewer/index.html` codex from the `userdata/` dumps plus wiki data fetched at runtime — full codex incl. unowned units, limit-break piece progress (with a "ready to LB" count), equipment/skill details, portraits and icons. Data processing is ported from [TSKUnitViewer](https://github.com/xxfttkx/TSKUnitViewer)
 - On startup, checks GitHub for the latest release and shows a clickable download link on the Settings tab when a newer version exists (silent on failure)
 
 ## Mod categories
@@ -84,7 +85,7 @@ Panel features:
 - Mod list grouped by Observer / Modifier / Debug. Selection is persisted to `mods.json`. Checkboxes are locked after injection starts (changing mods mid-battle is unsafe).
 - **重载配置**: re-read `trace_config.json` and update trace/backtrace points at runtime
 - **隐藏单位栏**: hide the player avatar bar and enemy list to focus on logs
-- **设置 (Settings)** tab: battle speed (default 3x), log font size / colored log / diagnostic log toggles, an "open userdata directory" entry for user-data-dump, plus the current version and a new-version download link (all persisted to `gui_config.json`)
+- **设置 (Settings)** tab: battle speed (default 3x), log font size / colored log / diagnostic log toggles, an "open userdata directory" entry for user-data-dump, plus the current version and a new-version download link (all persisted to `gui_config.json`). The **角色图鉴 (Unit Viewer)** section has two buttons: **生成并打开** builds `viewer/index.html` and opens it in the browser; **下载 / 更新图片** fetches wiki data + portraits/icons with a progress bar (incremental — rerun it to pick up newly released units)
 - Log viewer with **清空 / 复制日志 / 打开日志目录**; logs are also auto-saved to `logs/` (8 KB buffer, flushed on close)
 - 5000-line ring buffer; older lines are dropped automatically
 - Player avatar bar (48 px wiki icons) and a compact enemy name strip above it. Each avatar has a skill-priority dropdown (Default / Normal / EX1 / EX2 / Random) that writes to `char_skill.json` and takes effect instantly. Clicking any unit opens a **Skill Effects** window showing live buffs (detail / summary toggle) plus ATK (base), CRT, NoteCount, EX rate and normal-attack EX gain.
@@ -176,3 +177,5 @@ For research, analysis and personal use only. Some features modify battle state 
 ## Credits
 
 Thanks to [TSKHook-frida](https://github.com/TSKModding/TSKHook-frida) for providing a valuable reference for Frida and IL2CPP runtime analysis.
+
+Thanks to [TSKUnitViewer](https://github.com/xxfttkx/TSKUnitViewer) — the built-in unit viewer's data processing is ported from it.

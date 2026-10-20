@@ -564,6 +564,42 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         if self._latest_url:
             webbrowser.open(self._latest_url)
 
+    # ---- 角色图鉴（gen_unit_viewer / fetch_wiki_images，后台线程 + ui_queue 回报）----
+
+    def _gen_viewer_html(self):
+        self.viewer_gen_btn.configure(state="disabled")
+        self.viewer_fetch_btn.configure(state="disabled")
+        self.viewer_status.configure(text="生成中…")
+        threading.Thread(target=self._gen_viewer_worker, daemon=True).start()
+
+    def _gen_viewer_worker(self):
+        try:
+            from gen_unit_viewer import generate
+            path = generate()
+            self.ui_queue.put(("viewerGenDone", (True, str(path))))
+        except Exception:
+            self.ui_queue.put(
+                ("viewerGenDone", (False, traceback.format_exc())))
+
+    def _fetch_viewer_images(self):
+        self.viewer_gen_btn.configure(state="disabled")
+        self.viewer_fetch_btn.configure(state="disabled")
+        self.viewer_progress.pack(anchor="w", pady=(4, 0))
+        self.viewer_progress.configure(maximum=100, value=0)
+        threading.Thread(target=self._fetch_viewer_worker, daemon=True).start()
+
+    def _fetch_viewer_worker(self):
+        def cb(stage, cur, total, label):
+            self.ui_queue.put(
+                ("viewerFetchProgress", (stage, cur, total, label)))
+        try:
+            from fetch_wiki_images import fetch_all
+            fetch_all(progress_cb=cb)
+            self.ui_queue.put(("viewerFetchDone", (True, "")))
+        except Exception:
+            self.ui_queue.put(
+                ("viewerFetchDone", (False, traceback.format_exc())))
+
     # ---- UI 构建 ----
 
     def _build_ui(self):
@@ -846,6 +882,37 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         ttk.Button(lf_dump, text="打开 userdata 目录",
                    command=lambda: os.startfile(ROOT_DIR / "userdata")
                    ).pack(anchor="w")
+
+        # 角色图鉴：userdata/ 三个 dump → viewer/index.html 静态网页
+        # （移植自 TSKUnitViewer；wiki 数据与图片由「下载 / 更新图片」运行时抓取，
+        #   已存在文件自动跳过，新角色出了点一次即增量更新）
+        lf_viewer = ttk.LabelFrame(
+            settings_inner, text="角色图鉴", padding=(10, 8))
+        lf_viewer.pack(fill="x", pady=4)
+        ttk.Label(
+            lf_viewer,
+            text="用 userdata/ 的账号数据生成静态图鉴网页（全图鉴 / 升星碎片进度 / 装备技能详情）。\n"
+                 "首次使用先点「下载 / 更新图片」抓 wiki 数据与图片（约几分钟，之后增量秒更）；"
+                 "再点「生成并打开」。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(0, 4))
+        viewer_btns = ttk.Frame(lf_viewer)
+        viewer_btns.pack(anchor="w", fill="x")
+        self.viewer_gen_btn = ttk.Button(
+            viewer_btns, text="生成并打开", command=self._gen_viewer_html)
+        self.viewer_gen_btn.pack(side="left")
+        self.viewer_fetch_btn = ttk.Button(
+            viewer_btns, text="下载 / 更新图片",
+            command=self._fetch_viewer_images)
+        self.viewer_fetch_btn.pack(side="left", padx=(8, 0))
+        self.viewer_status = ttk.Label(
+            lf_viewer, text="", foreground="#666")
+        self.viewer_status.pack(anchor="w", pady=(4, 0))
+        self.viewer_progress = ttk.Progressbar(
+            lf_viewer, mode="determinate", length=260)
+        # 初始状态：按产物存在与否提示
+        if not (ROOT_DIR / "viewer" / "index.html").exists():
+            self.viewer_status.configure(text="尚未生成")
 
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
         # 右侧：当前版本；有新版时旁边出现蓝色可点击链接（启动后台探测，失败静默）
@@ -1245,6 +1312,36 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
                 elif kind == "captureFile":
                     # 当次抓包会话文件名（network-capture 首条数据时）
                     self._capture_current_file = data
+                elif kind == "viewerGenDone":
+                    ok, info = data
+                    self.viewer_gen_btn.configure(state="normal")
+                    self.viewer_fetch_btn.configure(state="normal")
+                    if ok:
+                        self.viewer_status.configure(text="已生成，浏览器打开中…")
+                        os.startfile(info)
+                    else:
+                        self.viewer_status.configure(text="生成失败（详见日志）")
+                        self._log_internal("[viewer] 生成失败:\n" + info)
+                elif kind == "viewerFetchProgress":
+                    stage, cur, total, label = data
+                    if total > 0:
+                        self.viewer_progress.configure(
+                            maximum=total, value=cur)
+                    self.viewer_status.configure(
+                        text=f"{stage} {cur}/{total}  {label}")
+                elif kind == "viewerFetchDone":
+                    ok, err = data
+                    self.viewer_fetch_btn.configure(state="normal")
+                    self.viewer_gen_btn.configure(state="normal")
+                    if ok:
+                        # 图片是新下的，自动重新生成让图鉴带上图
+                        self.viewer_status.configure(
+                            text="下载完成，重新生成图鉴…")
+                        self._gen_viewer_html()
+                    else:
+                        self.viewer_status.configure(
+                            text="下载失败（详见日志），可重试（已下载的会跳过）")
+                        self._log_internal("[viewer] 下载失败:\n" + err)
         except queue.Empty:
             pass
         except Exception:
