@@ -40,6 +40,8 @@ type CaptureEvent = {
   url?: string;
   /** HTTP 方法（仅 url 事件，来自 UnityWebRequest.get_method） */
   method?: string;
+  /** ApiName 枚举原始数值（仅 meta 事件），用于建真实 enum->URL 映射表 */
+  apiRaw?: number;
   /** @deprecated 旧版本遗留，现在 url 事件 time 就是真实发出时刻；
    * 保留字段是为了旧 jsonl 文件向后兼容 */
   sentAt?: string;
@@ -80,8 +82,9 @@ export class NetworkCaptureMod implements Mod {
 
     // FormatData(api 枚举, 密文, key)：请求方向元数据（接口名）
     this.attach(hc, "FormatData", 3, (args) => {
-      this.lastApi = apiNameOfValue(args[0].toInt32() & 0xff);
-      this.emit({ kind: "meta", api: this.lastApi });
+      const raw = args[0].toInt32() & 0xff;
+      this.lastApi = apiNameOfValue(raw);
+      this.emit({ kind: "meta", api: this.lastApi, apiRaw: raw });
     });
 
     // MaskStringWithXOR(input, mask) -> string：明文正主。
