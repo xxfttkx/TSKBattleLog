@@ -660,7 +660,8 @@ class BattleLogWindowMixin:
                     exgain = (f"{d.get('exGain', '')}"
                               f"{_bonus_txt(d.get('exGainBonus'))}")
                     detail.insert("", "end", values=(
-                        d.get("name", "?"), dmg, pct, exup, exgain))
+                        d.get("name", "?"), dmg, pct, exup, exgain),
+                        tags=(self._bl_attr_tag(d.get("attr")),))
                 self._set_blog_detail_info(
                     (f"回合 {obj.get('from')} -> {obj.get('to')}    "
                      f"累计伤害 {obj.get('total')}{usable_txt}", None))

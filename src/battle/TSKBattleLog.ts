@@ -72,10 +72,12 @@ export interface TurnRecord {
   to: number;
   total: string;
   /** 该回合切换时点各角色的累计伤害（note.damage 精确值；百分比由宿主计算）。
+   *  name 为「[称号] 名字」；attr 供宿主按属性着色（旧快照无此字段，宿主按灰色兜底）。
    *  exUp/exGain 为生效值（含加成），bonus 为加成量，宿主负责显示组装。
    *  旧快照此字段为 percents（整数百分比字符串），宿主按有无 damages 区分 */
   damages: {
     name: string;
+    attr: number;
     damage: string;
     exUp: number;
     exUpBonus: number;
@@ -250,6 +252,7 @@ export class TSKBattleLog {
     this.logs.push(msg);
     const damages: {
       name: string;
+      attr: number;
       damage: string;
       exUp: number;
       exUpBonus: number;
@@ -261,7 +264,8 @@ export class TSKBattleLog {
       const percentage = this.getDamagePercentage(note.damage);
       damageMsg += `${note.characterName}(${percentage}) `;
       damages.push({
-        name: note.characterName,
+        name: note.getName(),
+        attr: note.getAttr(),
         damage: note.damage.toString(),
         exUp: note.getExUpTotal(),
         exUpBonus: note.exUpBonus,
