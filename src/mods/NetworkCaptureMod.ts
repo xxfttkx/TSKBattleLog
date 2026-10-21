@@ -40,8 +40,8 @@ type CaptureEvent = {
   url?: string;
   /** HTTP 方法（仅 url 事件，来自 UnityWebRequest.get_method） */
   method?: string;
-  /** 请求发出时刻（仅 url 事件，SendWebRequest 配对结果；
-   * 空 body 请求没有 req 行，这是它们唯一的真实发出时间戳） */
+  /** @deprecated 旧版本遗留，现在 url 事件 time 就是真实发出时刻；
+   * 保留字段是为了旧 jsonl 文件向后兼容 */
   sentAt?: string;
 };
 
@@ -68,13 +68,8 @@ export class NetworkCaptureMod implements Mod {
 
   private seq = 0;
   private lastApi = "(unknown)";
-  /** 最近一次 ProcessCommon 的 URL 后缀（resp 行命名主依据） */
+  /** 最近一次 SendWebRequest 的 URL 后缀（resp 行命名主依据，枚举表错位，URL 才是事实） */
   private lastUrlPath = "";
-  /** SendWebRequest 发出记录（FIFO，按 URL 与 url 事件配对），上限 64 防泄漏 */
-  private sentQueue: { url: string; time: string }[] = [];
-  /** SendWebRequest 挂钩状态：onLoad 按标准程序集名直取，失败则首次
-   * ProcessCommon 用实例类兜底（惰性会漏掉首个请求的发出时刻） */
-  private sendHookState: "pending" | "done" | "failed" = "pending";
 
   onLoad(image: Il2Cpp.Image): void {
     const hc = image.class("TKS.Network.HttpClient");
@@ -122,60 +117,18 @@ export class NetworkCaptureMod implements Mod {
       },
     );
 
-    // ProcessCommon(req, api 枚举, bool)：最终 URL + HTTP 方法
-    // （get_url/get_method 都是简单 getter，invoke 安全）
-    this.attach(hc, "ProcessCommon", 3, (args) => {
-      let url = "";
-      let method = "";
-      try {
-        const reqObj = new Il2Cpp.Object(args[0]);
-        url =
-          (reqObj.method("get_url", 0).invoke() as Il2Cpp.String).content ?? "";
-        method =
-          (reqObj.method("get_method", 0).invoke() as Il2Cpp.String).content ??
-          "";
-        // SendWebRequest 兜底：onLoad 全程序集解析失败时，
-        // 用运行中实例的类再试一次（惰性代价：首个请求无 sentAt）
-        if (this.sendHookState === "pending") {
-          if (this.hookSendWebRequest(reqObj.class)) {
-            this.sendHookState = "done";
-          } else {
-            this.sendHookState = "failed";
-          }
-        }
-      } catch {
-        url = "";
-      }
-      // api 展示名用 URL 路径后缀（事实）；枚举名错位不可靠，仅在兜底时出场
-      const path = url ? pathOf(url) : "";
-      if (path) this.lastUrlPath = path;
-      // 与 SendWebRequest 记录按 URL FIFO 配对，补上真实发出时刻
-      let sentAt: string | undefined;
-      const qi = this.sentQueue.findIndex((s) => s.url === url);
-      if (qi >= 0) {
-        sentAt = this.sentQueue[qi].time;
-        this.sentQueue.splice(qi, 1);
-      }
-      this.emit({
-        kind: "url",
-        api: path || apiNameOfValue(args[1].toInt32() & 0xff),
-        url,
-        method,
-        ...(sentAt ? { sentAt } : {}),
-      });
-    });
+    // URL 事件由 SendWebRequest 钩点直接 emit（真实发出时刻）。
+    // AssetBundle / 资源下载不走 SendWebRequest（游戏 HttpClient 层封装），
+    // 但我们只关心 /api/ 业务接口，不需要 ProcessCommon 兜底。
 
     log(
-      "[network-capture] hooks ready (FormatData / MaskStringWithXOR / ProcessCommon)",
+      "[network-capture] hooks ready (FormatData / MaskStringWithXOR / SendWebRequest)",
     );
 
-    // SendWebRequest：直接按标准程序集名取（Unity 模块化后 UnityWebRequest
-    // 固定在 UnityEngine.UnityWebRequestModule，O(1) 命中，注入零负担）；
-    // 失败则首个请求时用实例类兜底（代价：该请求无 sentAt）
-    if (this.tryHookSendDirect()) {
-      this.sendHookState = "done";
-    } else {
-      log("[network-capture] SendWebRequest 未定位，等首个请求用实例类兜底");
+    // SendWebRequest：按标准程序集名直取（UnityWebRequest 固定在 UnityEngine.UnityWebRequestModule，
+    // O(1) 命中，注入零负担）
+    if (!this.tryHookSendDirect()) {
+      log("[network-capture] SendWebRequest 未定位，网络抓包可能无 url 事件");
     }
   }
 
@@ -238,9 +191,9 @@ export class NetworkCaptureMod implements Mod {
   }
 
   /**
-   * 挂 UnityWebRequest.SendWebRequest（实例方法，0 参）：记录每个请求的
-   * 真实发出时刻。空 body 的 POST 没有 XOR 加密调用（无 req 行），
-   * 这是它们唯一的发送时间戳来源；响应侧 ProcessCommon 按 URL FIFO 配对。
+   * 挂 UnityWebRequest.SendWebRequest（实例方法，0 参）：在请求真正发出的瞬间
+   * 直接 emit url 事件，time 就是真实发出时刻，不再依赖 ProcessCommon 配对。
+   * 同时更新 lastUrlPath，resp 事件命名靠它。
    * 返回是否挂钩成功。
    */
   private hookSendWebRequest(cls: Il2Cpp.Class): boolean {
@@ -260,10 +213,16 @@ export class NetworkCaptureMod implements Mod {
         const obj = new Il2Cpp.Object(args[0]);
         const url =
           (obj.method("get_url", 0).invoke() as Il2Cpp.String).content ?? "";
-        if (url) {
-          this.sentQueue.push({ url, time: this.nowStr() });
-          if (this.sentQueue.length > 64) this.sentQueue.shift();
-        }
+        const method =
+          (obj.method("get_method", 0).invoke() as Il2Cpp.String).content ?? "";
+        const path = url ? pathOf(url) : "";
+        if (path) this.lastUrlPath = path;
+        this.emit({
+          kind: "url",
+          api: path || "(api待定)",
+          url,
+          method,
+        });
       } catch {
         /* 单条失败忽略 */
       }
@@ -274,7 +233,7 @@ export class NetworkCaptureMod implements Mod {
       },
     });
     log(
-      `[network-capture] SendWebRequest hook ready（${cls.image.assembly.name}，记录真实发出时刻）`,
+      `[network-capture] SendWebRequest hook ready（${cls.image.assembly.name}，真实发出时刻）`,
     );
     return true;
   }

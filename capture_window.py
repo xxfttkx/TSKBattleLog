@@ -111,7 +111,7 @@ class CaptureTabMixin:
             ("time", "时间", 80),
             ("kind", "类型", 48),
             ("api", "接口", 150),
-            ("latency", "耗时", 56),
+            ("latency", "耗时", 72),
             ("preview", "预览", 200),
         ):
             self.capture_tree.heading(col, text=text)
@@ -281,7 +281,7 @@ class CaptureTabMixin:
         # 显示行 -> 所属段（选中时渲染整段用）
         self._capture_display_segs: list[list[dict]] = []
         if raw:
-            # 原始视图：逐事件一行（含 meta、重复 resp），kind 着色
+            # 原始视图：逐事件一行（含 meta、重复 resp、AssetBundle 等非 API 请求），kind 着色
             tree.configure(
                 displaycolumns=("seq", "time", "kind", "api", "preview"))
             for seg in self._capture_segments:
@@ -301,10 +301,16 @@ class CaptureTabMixin:
                     )
                     self._capture_display_segs.append(seg)
             return
-        # 合并视图（默认）：一行 = 一次请求，错误响应整行标红
+        # 合并视图（默认）：一行 = 一次请求，错误响应整行标红；
+        # 过滤掉非 /api/ 段（AssetBundle / 资源下载等），勾「原始事件」才看得见
         tree.configure(
             displaycolumns=("seq", "time", "api", "latency", "preview"))
         for seg in self._capture_segments:
+            # 非 /api/ 段（AssetBundle / 资源下载等）默认隐藏，
+            # 勾「原始事件」才显示；用 url 字段判断完整路径
+            seg_url = next((r.get("url", "") for r in seg if r.get("kind") == "url"), "")
+            if seg_url and "/api/" not in seg_url:
+                continue
             values, err = self._merged_row(seg)
             tree.insert("", "end", values=values,
                         tags=("err",) if err else ())
@@ -312,8 +318,8 @@ class CaptureTabMixin:
 
     def _merged_row(self, seg: list[dict]):
         """段 -> 合并行 (values, err)。时间=请求发出时刻；耗时=发出到
-        resp 的间隔（优先用 url 行的 sentAt——SendWebRequest 真实发出
-        时间戳；无 sentAt 的旧数据回退段首事件时刻）。预览=请求参数摘要
+        resp 的间隔（url 行 time 就是真实发出时刻；旧 jsonl 文件 sentAt
+        作为兜底；都没有时回退段首事件时刻）。预览=请求参数摘要
         → 响应大小。"""
         first = seg[0]
         req = next((r for r in seg if r.get("kind") == "req"), None)
@@ -322,7 +328,12 @@ class CaptureTabMixin:
         api = next((r.get("api") for r in seg if r.get("api")), "")
         latency = ""
         if resp is not None:
-            t0 = (url_row or {}).get("sentAt") or first.get("time")
+            # 优先级：sentAt（旧文件真实时刻）> url.time（新文件真实时刻）
+            # 旧文件 url.time 是 ProcessCommon 错位时刻（假发出时刻），
+            # 新文件 url.time 就是 SendWebRequest 真实发出时刻，没有 sentAt
+            t0 = (url_row or {}).get("sentAt") \
+                or (url_row or {}).get("time") \
+                or first.get("time")
             d = _time_diff_ms(t0, resp.get("time"))
             latency = f"{d}ms" if d is not None else ""
         if req is not None and req.get("plain"):
@@ -447,14 +458,25 @@ class CaptureTabMixin:
         seg_api = next(
             (r.get("api") for r in seg if r.get("api")), "(api待定)")
         head = seg[0]
-        t0 = head.get("time", "")
-        t1 = seg[-1].get("time", "")
-        span = f"{t0} → {t1}" if t1 and t1 != t0 else t0
-        base_ms = self._time_to_ms(t0)
+        url_row = next((r for r in seg if r.get("kind") == "url"), None)
+        resp_row = next((r for r in seg if r.get("kind") == "resp"), None)
+        # 真实网络耗时：旧文件优先 sentAt（真发出时刻），新文件走 url.time
+        start_t = (url_row or {}).get("sentAt") \
+            or (url_row or {}).get("time") \
+            or head.get("time", "")
+        end_t = (resp_row or head).get("time", "")
+        span = f"{start_t} → {end_t}" if end_t and end_t != start_t else start_t
+        net_latency = ""
+        if url_row is not None and resp_row is not None:
+            t0 = url_row.get("sentAt") or url_row.get("time")
+            d = _time_diff_ms(t0, resp_row.get("time"))
+            if d is not None:
+                net_latency = f"    网络耗时 {d}ms"
         self.capture_detail.insert(
             "end",
-            f"── #{head.get('seq', '')} {seg_api}  {span}\n",
+            f"── #{head.get('seq', '')} {seg_api}  {span}{net_latency}\n",
             "seg_head")
+        base_ms = self._time_to_ms(start_t)
         for r in seg:
             kind = r.get("kind")
             ts = r.get("time", "")

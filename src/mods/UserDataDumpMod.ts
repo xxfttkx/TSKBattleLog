@@ -37,6 +37,14 @@ export class UserDataDumpMod implements Mod {
           log("[user-data-dump] unit/list 响应无 result 字段，跳过");
           return;
         }
+        // 服务器有时发两次 unit/list：完整数据 + responseCode-only 空壳。
+        // 空壳 result 只有 {responseCode:"OK"}，没有 unit_list——忽略，避免覆盖好数据
+        if (!result.unit_list) {
+          log(
+            "[user-data-dump] unit/list 响应无 unit_list（可能是空壳 ACK），跳过",
+          );
+          return;
+        }
         const unitList = result.unit_list ?? [];
         const sisterList = result.sister_unit_list ?? [];
         sendHost("unitListDump", {
