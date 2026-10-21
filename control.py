@@ -754,7 +754,89 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         # Capture 页「原始事件」开关初值（gui_config.json 个人偏好）
         self.capture_raw_var.set(self._read_capture_raw())
 
-        # ---- Tab 4：设置（Canvas 滚动容器，内容超高时滚轮/滚动条可下拉） ----
+        # ---- Tab 4：工具（功能操作：数据导出 / 角色图鉴） ----
+        tools_tab = ttk.Frame(self.notebook)
+        self.notebook.add(tools_tab, text="工具")
+
+        tools_canvas = tk.Canvas(tools_tab, highlightthickness=0)
+        tools_scrollbar = ttk.Scrollbar(
+            tools_tab, orient="vertical",
+            command=tools_canvas.yview)
+        tools_inner = ttk.Frame(tools_canvas, padding=(12, 10))
+        tools_inner.bind(
+            "<Configure>",
+            lambda e: tools_canvas.configure(
+                scrollregion=tools_canvas.bbox("all")),
+        )
+        tools_canvas.create_window(
+            (0, 0), window=tools_inner, anchor="nw", tags="inner")
+        tools_canvas.bind(
+            "<Configure>",
+            lambda e: tools_canvas.itemconfigure("inner", width=e.width),
+        )
+        tools_canvas.configure(yscrollcommand=tools_scrollbar.set)
+        tools_canvas.pack(side="left", fill="both", expand=True)
+        tools_scrollbar.pack(side="right", fill="y")
+
+        # user-data-dump：账号持有数据落 userdata/，提供一键打开入口
+        lf_dump = ttk.LabelFrame(
+            tools_inner, text="用户数据导出（user-data-dump）",
+            padding=(10, 8))
+        lf_dump.pack(fill="x", pady=4)
+        ttk.Label(
+            lf_dump,
+            text="开启后自动导出账号持有数据（服务器原始数据，依赖 network-capture 同时开启）：\n"
+                 "拉取角色列表时 → unit_list.json / sister_unit_list.json；"
+                 "打开仓库时 → warehouse.json。\n"
+                 "保存到项目 userdata/ 目录：",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(0, 4))
+        ttk.Button(lf_dump, text="打开 userdata 目录",
+                   command=lambda: os.startfile(ROOT_DIR / "userdata")
+                   ).pack(anchor="w")
+
+        # 角色图鉴：userdata/ 三个 dump → viewer/index.html 静态网页
+        lf_viewer = ttk.LabelFrame(
+            tools_inner, text="角色图鉴", padding=(10, 8))
+        lf_viewer.pack(fill="x", pady=4)
+        ttk.Label(
+            lf_viewer,
+            text="用 userdata/ 的账号数据生成静态图鉴网页（全图鉴 / 升星碎片进度 / 装备技能详情）。\n"
+                 "首次使用先点「下载 / 更新图片」抓 wiki 数据与图片（约几分钟，之后增量秒更）；"
+                 "再点「生成并打开」。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(0, 4))
+        viewer_btns = ttk.Frame(lf_viewer)
+        viewer_btns.pack(anchor="w", fill="x")
+        self.viewer_gen_btn = ttk.Button(
+            viewer_btns, text="生成并打开", command=self._gen_viewer_html)
+        self.viewer_gen_btn.pack(side="left")
+        self.viewer_fetch_btn = ttk.Button(
+            viewer_btns, text="下载 / 更新图片",
+            command=self._fetch_viewer_images)
+        self.viewer_fetch_btn.pack(side="left", padx=(8, 0))
+        self.viewer_status = ttk.Label(
+            lf_viewer, text="", foreground="#666")
+        self.viewer_status.pack(anchor="w", pady=(4, 0))
+        self.viewer_progress = ttk.Progressbar(
+            lf_viewer, mode="determinate", length=260)
+        # 初始状态：按产物存在与否提示
+        if not (ROOT_DIR / "viewer" / "index.html").exists():
+            self.viewer_status.configure(text="尚未生成")
+
+        # 工具页滚轮
+        def _on_tools_wheel(event):
+            tools_canvas.yview_scroll(int(-event.delta / 120), "units")
+
+        def _bind_tools_wheel(widget):
+            widget.bind("<MouseWheel>", _on_tools_wheel)
+            for child in widget.winfo_children():
+                _bind_tools_wheel(child)
+
+        _bind_tools_wheel(tools_inner)
+        tools_canvas.bind("<MouseWheel>", _on_tools_wheel)
+
+        # ---- Tab 5：设置（Canvas 滚动容器，内容超高时滚轮/滚动条可下拉） ----
         settings_tab = ttk.Frame(self.notebook)
         self.notebook.add(settings_tab, text="设置")
 
@@ -865,54 +947,6 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         # 启动即按配置应用一次
         self._apply_log_font_size(self._read_log_font_size())
         self._apply_log_colors(self._read_log_color())
-
-        # user-data-dump：账号持有数据落 userdata/，提供一键打开入口
-        lf_dump = ttk.LabelFrame(
-            settings_inner, text="用户数据导出（user-data-dump）",
-            padding=(10, 8))
-        lf_dump.pack(fill="x", pady=4)
-        ttk.Label(
-            lf_dump,
-            text="开启后自动导出账号持有数据（服务器原始数据，依赖 network-capture 同时开启）：\n"
-                 "拉取角色列表时 → unit_list.json / sister_unit_list.json；"
-                 "打开仓库时 → warehouse.json。\n"
-                 "保存到项目 userdata/ 目录：",
-            justify="left", foreground="#666",
-        ).pack(anchor="w", pady=(0, 4))
-        ttk.Button(lf_dump, text="打开 userdata 目录",
-                   command=lambda: os.startfile(ROOT_DIR / "userdata")
-                   ).pack(anchor="w")
-
-        # 角色图鉴：userdata/ 三个 dump → viewer/index.html 静态网页
-        # （移植自 TSKUnitViewer；wiki 数据与图片由「下载 / 更新图片」运行时抓取，
-        #   已存在文件自动跳过，新角色出了点一次即增量更新）
-        lf_viewer = ttk.LabelFrame(
-            settings_inner, text="角色图鉴", padding=(10, 8))
-        lf_viewer.pack(fill="x", pady=4)
-        ttk.Label(
-            lf_viewer,
-            text="用 userdata/ 的账号数据生成静态图鉴网页（全图鉴 / 升星碎片进度 / 装备技能详情）。\n"
-                 "首次使用先点「下载 / 更新图片」抓 wiki 数据与图片（约几分钟，之后增量秒更）；"
-                 "再点「生成并打开」。",
-            justify="left", foreground="#666",
-        ).pack(anchor="w", pady=(0, 4))
-        viewer_btns = ttk.Frame(lf_viewer)
-        viewer_btns.pack(anchor="w", fill="x")
-        self.viewer_gen_btn = ttk.Button(
-            viewer_btns, text="生成并打开", command=self._gen_viewer_html)
-        self.viewer_gen_btn.pack(side="left")
-        self.viewer_fetch_btn = ttk.Button(
-            viewer_btns, text="下载 / 更新图片",
-            command=self._fetch_viewer_images)
-        self.viewer_fetch_btn.pack(side="left", padx=(8, 0))
-        self.viewer_status = ttk.Label(
-            lf_viewer, text="", foreground="#666")
-        self.viewer_status.pack(anchor="w", pady=(4, 0))
-        self.viewer_progress = ttk.Progressbar(
-            lf_viewer, mode="determinate", length=260)
-        # 初始状态：按产物存在与否提示
-        if not (ROOT_DIR / "viewer" / "index.html").exists():
-            self.viewer_status.configure(text="尚未生成")
 
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
         # 右侧：当前版本；有新版时旁边出现蓝色可点击链接（启动后台探测，失败静默）
