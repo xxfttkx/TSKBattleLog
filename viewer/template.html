@@ -1,383 +1,1248 @@
 <!-- 抽自 TSKUnitViewer gen_viewer.mjs（https://github.com/xxfttkx/TSKUnitViewer），勿手改，改源后重新抽取 -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>星骑图鉴 · Twinkle Star Knights X</title>
-<style>
-  :root {
-    --bg: #0b0e1a; --panel: #141830; --panel2: #1b2145; --line: #2a3161;
-    --text: #e8ebff; --dim: #9aa3cf; --gold: #ffd76a; --pink: #ff7eb6;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: "Segoe UI", "Microsoft YaHei", "Hiragino Sans", sans-serif;
-    min-height: 100vh;
-    background-image:
-      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.6) 50%, transparent 51%),
-      radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,.4) 50%, transparent 51%),
-      radial-gradient(2px 2px at 80% 20%, rgba(255,215,106,.5) 50%, transparent 51%),
-      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,.5) 50%, transparent 51%),
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(90,80,200,.35), transparent);
-  }
-  header { padding: 28px 32px 8px; }
-  h1 { font-size: 26px; letter-spacing: 2px; }
-  h1 .star { color: var(--gold); }
-  .sub { color: var(--dim); font-size: 13px; margin-top: 4px; }
-  .stats { display: flex; flex-wrap: wrap; gap: 14px; padding: 18px 32px 6px; }
-  .stat {
-    background: linear-gradient(135deg, var(--panel), var(--panel2));
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 20px; min-width: 120px;
-  }
-  .stat .v { font-size: 22px; font-weight: 700; color: var(--gold); }
-  .stat .k { font-size: 12px; color: var(--dim); margin-top: 2px; }
-  .toolbar { padding: 14px 32px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
-  /* 筛选区: 与工具栏同为普通文档流, 随页面滚动 */
-  .filters { padding: 12px 32px 4px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  input[type=search], select {
-    background: var(--panel); color: var(--text); border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none;
-  }
-  input[type=search] { width: 220px; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 0 100%; }
-  .chip {
-    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
-    background: var(--panel); color: var(--dim); font-size: 13px; cursor: pointer; user-select: none;
-  }
-  .chip.on { color: #fff; border-color: currentColor; font-weight: 700; }
-  /* 组内组合模式切换 (任一/同时): 组尾小下拉, 与胶囊 chip 明显区分 */
-  .modeSel { align-self: center; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--dim); font-size: 11px; padding: 2px 4px; margin-left: 2px; font-family: inherit; outline: none; }
-  /* 组标签: 金色标题 + 竖线分隔; 亮=该组为「全部」, 暗=已有具体筛选, 点击重置该组 */
-  .chip.lead {
-    border: none; background: none; padding: 6px 2px; color: var(--dim);
-    font-weight: 700; letter-spacing: 1px;
-  }
-  .chip.lead::after {
-    content: ''; display: inline-block; width: 1px; height: 12px;
-    background: var(--line); margin-left: 8px; vertical-align: -1px;
-  }
-  .chip.lead.on { color: var(--gold); text-shadow: 0 0 10px rgba(255,215,106,.35); }
-  .chip.lead:hover { color: var(--gold); }
-  .chip .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
-  .count { color: var(--dim); font-size: 13px; margin-left: auto; }
-  main { padding: 20px 32px 60px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-  .card {
-    background: linear-gradient(160deg, var(--panel), var(--panel2));
-    border: 1px solid var(--line); border-radius: 14px; overflow: hidden; cursor: pointer;
-    transition: transform .15s, box-shadow .15s; position: relative;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 1px rgba(255,215,106,.25); }
-  .portrait {
-    height: 86px; display: flex; align-items: center; justify-content: center; position: relative;
-    font-size: 44px; font-weight: 800; color: rgba(255,255,255,.92); text-shadow: 0 2px 12px rgba(0,0,0,.55);
-  }
-  .portrait .pimg {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; object-position: top center; z-index: 1; image-rendering: auto;
-  }
-  .portrait .picon {
-    position: absolute; inset: 0; margin: auto; width: 74px; height: 74px;
-    object-fit: cover; z-index: 1; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.45);
-  }
-  .timg { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; vertical-align: middle; }
-  .rstars { position: absolute; top: 6px; left: 8px; font-size: 13px; letter-spacing: 1px; color: var(--gold); text-shadow: 0 1px 4px rgba(0,0,0,.8); z-index: 2; }
-  .attrbadge { position: absolute; top: 6px; right: 8px; font-size: 12px; font-weight: 700;
-    background: rgba(0,0,0,.45); border-radius: 999px; padding: 2px 8px; z-index: 2; }
-  .badges { position: absolute; bottom: 5px; left: 8px; display: flex; gap: 5px; z-index: 2; }
-  .wikilink { position: absolute; bottom: 5px; right: 8px; z-index: 3; font-size: 11px; line-height: 1;
-    color: #c8d6ff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 7px; text-decoration: none; }
-  .wikilink:hover { background: rgba(64,110,255,.6); color: #fff; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.25); }
-  .card.notown { opacity: .62; filter: grayscale(.35); cursor: default; }
-  .card.notown:hover { filter: grayscale(.1); }
-  .tag.max { background: linear-gradient(90deg, #c9962c, #ffd76a); color: #201500; font-weight: 800; border: none; }
-  .tag.lovemax { background: linear-gradient(90deg, #d4508f, #ff7eb6); color: #2a0012; font-weight: 800; border: none; }
-  .tag.lbok { background: linear-gradient(90deg, #1f8f5a, #3fd97f); color: #04240f; font-weight: 800; border: none; }
-  /* 升星进度: 碎片持有 / 所需 */
-  .lbrow { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 3px; }
-  .lbrow .k { color: var(--dim); }
-  .lbrow b { font-size: 13px; }
-  .lbrow .ok { color: #3fd97f; font-weight: 700; }
-  .lbrow .ng { color: #ff9ec4; font-weight: 700; }
-  .lbrow .piece { height: 6px; flex: 1; min-width: 60px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
-  .lbrow .piece i { display: block; height: 100%; background: linear-gradient(90deg, #1f8f5a, #3fd97f); }
-  .cardbody { padding: 10px 12px 12px; }
-  .uname { font-size: 15px; font-weight: 700; line-height: 1.3; }
-  .cname { font-size: 12.5px; color: var(--dim); margin-top: 2px; }
-  .nums { display: flex; justify-content: space-between; margin-top: 9px; font-size: 12.5px; }
-  .nums b { color: var(--gold); font-size: 14px; }
-  .nums .heart { color: var(--pink); }
-  .meta { margin-top: 6px; font-size: 11.5px; color: var(--dim); display: flex; gap: 6px; flex-wrap: wrap; }
-  .meta span { background: rgba(255,255,255,.06); border-radius: 5px; padding: 1.5px 6px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-  th { color: var(--dim); font-weight: 600; position: sticky; top: 0; background: var(--panel); cursor: pointer; user-select: none; }
-  tr:hover td { background: rgba(255,255,255,.04); }
-  .tdwrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
-  .role-chip { font-weight: 700; font-size: 12px; }
-  .rowbreak { flex-basis: 100%; height: 0; }
-  .empty { color: var(--dim); text-align: center; padding: 60px 0; }
-  /* modal */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
-  .overlay.show { display: flex; }
-  .modal {
-    background: linear-gradient(160deg, var(--panel), var(--panel2));
-    border: 1px solid var(--line); border-radius: 16px; max-width: 860px; width: 100%;
-    max-height: 85vh; padding: 26px 28px; position: relative;
-    display: flex; gap: 18px; overflow: hidden;
-  }
-  /* 同图模糊铺底 (氛围), 立绘本体在右侧展示面板等比完整显示 */
-  .martbg { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: 15px; overflow: hidden; }
-  .martbg img { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px);
-    object-fit: cover; filter: blur(28px) brightness(.5) saturate(1.2); transform: scale(1.12); }
-  .martbg::after { content: ''; position: absolute; inset: 0; background: rgba(10, 12, 26, .35); }
-  .mmain { flex: 1; min-width: 0; position: relative; z-index: 1; overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; }
-  /* 弹窗滚动条: 细条/透明轨道/悬停点亮 */
-  .mmain, .mfig { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent; }
-  .mmain::-webkit-scrollbar, .mfig::-webkit-scrollbar { width: 6px; }
-  .mmain::-webkit-scrollbar-track, .mfig::-webkit-scrollbar-track { background: transparent; }
-  .mmain::-webkit-scrollbar-thumb, .mfig::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 3px; }
-  .mmain:hover::-webkit-scrollbar-thumb, .mfig:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); }
-  .mmain::-webkit-scrollbar-thumb:hover, .mfig::-webkit-scrollbar-thumb:hover { background: rgba(255,217,106,.5); }
-  .mfig { flex: none; width: 252px; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow-y: auto; padding-right: 2px; overscroll-behavior: contain; }
-  .figpanel { height: clamp(200px, 32vh, 330px); flex: none; border-radius: 14px; border: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  /* 右栏内的白值/档案紧凑单列版 */
-  .mfig .section { margin-top: 2px; }
-  .mfig .statgrid { grid-template-columns: 1fr; gap: 6px; }
-  .mfig .stat { flex-direction: row; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; padding: 7px 10px; }
-  .mfig .stat .sv { font-size: 16px; }
-  .mfig .grid2 { grid-template-columns: 1fr; font-size: 12.5px; gap: 5px; }
-  /* 装备区 */
-  .eq { display: flex; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.02); }
-  .eq .eico { width: 38px; height: 38px; flex: none; border-radius: 8px; background: #0d1126; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--dim); overflow: hidden; }
-  .eq .eico img { width: 100%; height: 100%; object-fit: cover; }
-  .eq .eqi { flex: 1; min-width: 0; }
-  .eq .eqn { font-weight: 700; font-size: 13.5px; }
-  .eq .epart { font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin-right: 6px; vertical-align: 1px; }
-  .eq .starr { color: #ffd94a; letter-spacing: -1px; }
-  .eq .eqm { font-size: 12px; color: var(--dim); margin: 3px 0 4px; }
-  .eq .eqp { display: flex; flex-wrap: wrap; gap: 4px; }
-  .eq .eqp span { font-size: 11.5px; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.06); border: 1px solid var(--line); }
-  .eq .eqs { font-size: 12px; color: var(--dim); margin-top: 4px; line-height: 1.55; }
-  .eq .eqs b { color: var(--fg); font-size: 11px; border-radius: 4px; padding: 0 4px; margin-right: 4px; background: rgba(255,255,255,.08); }
-  .eq .eqench { font-size: 11.5px; color: var(--dim); margin-top: 3px; line-height: 1.5; padding-left: 2px; }
-  .eq .eqench b { color: var(--fg); font-weight: 600; }
-  .eq .eqench .estarr { color: #ffd94a; letter-spacing: -1px; margin-right: 3px; }
-  .eq .eqench .erare { display: inline-block; font-size: 10px; color: #ff9d4a; border: 1px solid #ff9d4a; border-radius: 4px; padding: 0 4px; margin-right: 4px; vertical-align: 1px; }
-  .figpanel img { max-width: 92%; max-height: 92%; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0,0,0,.55)); }
-  .figpanel .ficon { width: 100%; height: 100%; object-fit: cover; }
-  .modal .close { position: absolute; top: 12px; right: 16px; font-size: 22px; color: var(--dim); cursor: pointer; background: none; border: none; z-index: 2; }
-  .modal h2 { font-size: 20px; }
-  .mmain .sub2 { color: var(--dim); font-size: 13px; margin: 2px 0 14px; }
-  .mmain ruby rt { color: var(--dim); font-size: 10px; } /* 姓名注音 (ルビ): 汉字上假名下 */
-  .wlink { color: #7ab7ff; text-decoration: none; font-weight: 600; }
-  .wlink:hover { text-decoration: underline; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; font-size: 13.5px; }
-  .grid2 .k { color: var(--dim); }
-  .section { margin-top: 16px; }
-  .section h3 { font-size: 13px; color: var(--gold); margin-bottom: 6px; letter-spacing: 1px; }
-  .profile { white-space: pre-line; font-size: 13.5px; line-height: 1.75; color: #cfd5f7; background: rgba(0,0,0,.25); border-radius: 10px; padding: 12px 14px; }
-  .statgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
-  .stat { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
-  .stat .sv { font-size: 19px; font-weight: 800; color: #fff; }
-  .stat .sk { font-size: 11px; color: var(--dim); }
-  .stat .sk i { font-style: normal; color: var(--pink); margin-left: 4px; }
-  .stag { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 99px; margin-right: 4px; vertical-align: 1px; }
-  .st-ex { background: rgba(255,217,74,.15); color: var(--gold); }
-  .st-ex2 { background: rgba(255,157,74,.18); color: #ffb066; border: 1px solid #ffb06644; } /* EX2+ 强化技 */
-  .scat { background: rgba(154,163,207,.14); color: var(--dim); font-weight: 600; margin-left: 6px; } /* 技能分类标签 */
-  .st-u { background: rgba(74,158,255,.18); color: #7ac0ff; }
-  .st-s { background: rgba(255,138,196,.15); color: var(--pink); }
-  .st-p { background: rgba(139,92,246,.22); color: #c3a6ff; }
-  .skill { padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,.08); }
-  .skill:last-child { border-bottom: 0; }
-  .sname b { font-size: 13.5px; }
-  .smeta { font-size: 11px; color: var(--dim); margin-left: 8px; }
-  .sdetail { font-size: 12.5px; color: #c9d0f0; line-height: 1.6; margin-top: 3px; }
-  .slock { opacity: .55; }
-  .slocktag { font-size: 10px; color: #aab; border: 1px solid #556; border-radius: 99px; padding: 0 6px; margin-left: 6px; }
-  .scond { font-size: 11.5px; color: #9aa3c7; margin-top: 2px; }
-  .progressbar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); margin-top: 4px; overflow: hidden; }
-  .progressbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), #ffe9a8); }
-</style>
-</head>
-<body>
-<header>
-  <h1><span class="star">✦</span> 星骑图鉴 <span style="font-size:14px;color:var(--dim)">Twinkle Star Knights X</span></h1>
-  <div class="sub">数据来源: unit_list.json（Frida dump）· 点击卡片查看详情</div>
-</header>
-<div class="stats" id="stats"></div>
-<div class="toolbar">
-  <input type="search" id="q" placeholder="搜索 角色名 / 卡名 / CV …">
-  <select id="viewSel">
-    <option value="card">视图：卡牌</option>
-    <option value="table">视图：表格</option>
-    <option value="char">视图：按角色</option>
-    <option value="dex">视图：全图鉴</option>
-    <option value="sister">视图：シスター</option>
-  </select>
-  <span class="count" id="count"></span>
-  <div class="rowbreak"></div>
-  <select id="sortSel">
-    <option value="power">排序：战力</option>
-    <option value="atk">排序：ATK（含装备）</option>
-    <option value="exup">排序：EX 上升（含装备）</option>
-    <option value="exupbase">排序：基础 EX 上升</option>
-    <option value="lv">排序：等级</option>
-    <option value="love">排序：好感度</option>
-    <option value="rarity">排序：稀有度</option>
-    <option value="lb">排序：升星差距（差得少在前）</option>
-    <option value="uid">排序：编号</option>
-    <option value="date">排序：实装日期</option>
-  </select>
-  <button id="dirBtn" class="chip" style="font-family:inherit" title="切换排序方向">↓ 降序</button>
-</div>
-<div class="filters">
-  <div class="chips" id="attrChips"></div>
-  <div class="chips" id="roleChips"></div>
-  <div class="chips" id="rarChips"></div>
-  <div class="chips" id="campChips"></div>
-  <div class="chips" id="spChips"></div>
-  <div class="chips" id="lbChips"></div>
-  <div class="chips" id="catChips" style="display:none"></div>
-  <div class="chips" id="ownChips" style="display:none"></div>
-  <div class="chips" id="pcChips" style="display:none"></div>
-</div>
-<main id="main"></main>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>星骑图鉴 · Twinkle Star Knights X</title>
+    <style>
+      :root {
+        --bg: #0b0e1a;
+        --panel: #141830;
+        --panel2: #1b2145;
+        --line: #2a3161;
+        --text: #e8ebff;
+        --dim: #9aa3cf;
+        --gold: #ffd76a;
+        --pink: #ff7eb6;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "Microsoft YaHei", "Hiragino Sans", sans-serif;
+        min-height: 100vh;
+        background-image:
+          radial-gradient(
+            1px 1px at 20% 30%,
+            rgba(255, 255, 255, 0.6) 50%,
+            transparent 51%
+          ),
+          radial-gradient(
+            1px 1px at 60% 70%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 51%
+          ),
+          radial-gradient(
+            2px 2px at 80% 20%,
+            rgba(255, 215, 106, 0.5) 50%,
+            transparent 51%
+          ),
+          radial-gradient(
+            1px 1px at 40% 80%,
+            rgba(255, 255, 255, 0.5) 50%,
+            transparent 51%
+          ),
+          radial-gradient(
+            ellipse 80% 50% at 50% -10%,
+            rgba(90, 80, 200, 0.35),
+            transparent
+          );
+      }
+      header {
+        padding: 28px 32px 8px;
+      }
+      h1 {
+        font-size: 26px;
+        letter-spacing: 2px;
+      }
+      h1 .star {
+        color: var(--gold);
+      }
+      .sub {
+        color: var(--dim);
+        font-size: 13px;
+        margin-top: 4px;
+      }
+      .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 18px 32px 6px;
+      }
+      .stat {
+        background: linear-gradient(135deg, var(--panel), var(--panel2));
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 20px;
+        min-width: 120px;
+      }
+      .stat .v {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--gold);
+      }
+      .stat .k {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .toolbar {
+        padding: 14px 32px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+      }
+      /* 筛选区: 与工具栏同为普通文档流, 随页面滚动 */
+      .filters {
+        padding: 12px 32px 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      input[type="search"],
+      select {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 14px;
+        outline: none;
+      }
+      input[type="search"] {
+        width: 220px;
+      }
+      .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        flex: 0 0 100%;
+      }
+      .chip {
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--dim);
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .chip.on {
+        color: #fff;
+        border-color: currentColor;
+        font-weight: 700;
+      }
+      /* 组内组合模式切换 (任一/同时): 组尾小下拉, 与胶囊 chip 明显区分 */
+      .modeSel {
+        align-self: center;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--dim);
+        font-size: 11px;
+        padding: 2px 4px;
+        margin-left: 2px;
+        font-family: inherit;
+        outline: none;
+      }
+      /* 组标签: 金色标题 + 竖线分隔; 亮=该组为「全部」, 暗=已有具体筛选, 点击重置该组 */
+      .chip.lead {
+        border: none;
+        background: none;
+        padding: 6px 2px;
+        color: var(--dim);
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+      .chip.lead::after {
+        content: "";
+        display: inline-block;
+        width: 1px;
+        height: 12px;
+        background: var(--line);
+        margin-left: 8px;
+        vertical-align: -1px;
+      }
+      .chip.lead.on {
+        color: var(--gold);
+        text-shadow: 0 0 10px rgba(255, 215, 106, 0.35);
+      }
+      .chip.lead:hover {
+        color: var(--gold);
+      }
+      .chip .dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: 1px;
+      }
+      .count {
+        color: var(--dim);
+        font-size: 13px;
+        margin-left: auto;
+      }
+      main {
+        padding: 20px 32px 60px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: linear-gradient(160deg, var(--panel), var(--panel2));
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+        position: relative;
+      }
+      .card:hover {
+        transform: translateY(-3px);
+        box-shadow:
+          0 8px 24px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(255, 215, 106, 0.25);
+      }
+      .portrait {
+        height: 86px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        font-size: 44px;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.92);
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+      }
+      .portrait .pimg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        z-index: 1;
+        image-rendering: auto;
+      }
+      .portrait .picon {
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 74px;
+        height: 74px;
+        object-fit: cover;
+        z-index: 1;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+      }
+      .timg {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border-radius: 6px;
+        vertical-align: middle;
+      }
+      .rstars {
+        position: absolute;
+        top: 6px;
+        left: 8px;
+        font-size: 13px;
+        letter-spacing: 1px;
+        color: var(--gold);
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        z-index: 2;
+      }
+      .attrbadge {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: 999px;
+        padding: 2px 8px;
+        z-index: 2;
+      }
+      .badges {
+        position: absolute;
+        bottom: 5px;
+        left: 8px;
+        display: flex;
+        gap: 5px;
+        z-index: 2;
+      }
+      .wikilink {
+        position: absolute;
+        bottom: 5px;
+        right: 8px;
+        z-index: 3;
+        font-size: 11px;
+        line-height: 1;
+        color: #c8d6ff;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 6px;
+        padding: 3px 7px;
+        text-decoration: none;
+      }
+      .wikilink:hover {
+        background: rgba(64, 110, 255, 0.6);
+        color: #fff;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+      }
+      .card.notown {
+        opacity: 0.62;
+        filter: grayscale(0.35);
+        cursor: default;
+      }
+      .card.notown:hover {
+        filter: grayscale(0.1);
+      }
+      .tag.max {
+        background: linear-gradient(90deg, #c9962c, #ffd76a);
+        color: #201500;
+        font-weight: 800;
+        border: none;
+      }
+      .tag.lovemax {
+        background: linear-gradient(90deg, #d4508f, #ff7eb6);
+        color: #2a0012;
+        font-weight: 800;
+        border: none;
+      }
+      .tag.lbok {
+        background: linear-gradient(90deg, #1f8f5a, #3fd97f);
+        color: #04240f;
+        font-weight: 800;
+        border: none;
+      }
+      /* 升星进度: 碎片持有 / 所需 */
+      .lbrow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        margin-top: 3px;
+      }
+      .lbrow .k {
+        color: var(--dim);
+      }
+      .lbrow b {
+        font-size: 13px;
+      }
+      .lbrow .ok {
+        color: #3fd97f;
+        font-weight: 700;
+      }
+      .lbrow .ng {
+        color: #ff9ec4;
+        font-weight: 700;
+      }
+      .lbrow .piece {
+        height: 6px;
+        flex: 1;
+        min-width: 60px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      .lbrow .piece i {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #1f8f5a, #3fd97f);
+      }
+      .cardbody {
+        padding: 10px 12px 12px;
+      }
+      .uname {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .cname {
+        font-size: 12.5px;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .nums {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 9px;
+        font-size: 12.5px;
+      }
+      .nums b {
+        color: var(--gold);
+        font-size: 14px;
+      }
+      .nums .heart {
+        color: var(--pink);
+      }
+      .meta {
+        margin-top: 6px;
+        font-size: 11.5px;
+        color: var(--dim);
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .meta span {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 5px;
+        padding: 1.5px 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        white-space: nowrap;
+      }
+      th {
+        color: var(--dim);
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+        cursor: pointer;
+        user-select: none;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .tdwrap {
+        overflow-x: auto;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .role-chip {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .rowbreak {
+        flex-basis: 100%;
+        height: 0;
+      }
+      .empty {
+        color: var(--dim);
+        text-align: center;
+        padding: 60px 0;
+      }
+      /* modal */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        padding: 24px;
+      }
+      .overlay.show {
+        display: flex;
+      }
+      .modal {
+        background: linear-gradient(160deg, var(--panel), var(--panel2));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        max-width: 860px;
+        width: 100%;
+        max-height: 85vh;
+        padding: 26px 28px;
+        position: relative;
+        display: flex;
+        gap: 18px;
+        overflow: hidden;
+      }
+      /* 同图模糊铺底 (氛围), 立绘本体在右侧展示面板等比完整显示 */
+      .martbg {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        border-radius: 15px;
+        overflow: hidden;
+      }
+      .martbg img {
+        position: absolute;
+        inset: -40px;
+        width: calc(100% + 80px);
+        height: calc(100% + 80px);
+        object-fit: cover;
+        filter: blur(28px) brightness(0.5) saturate(1.2);
+        transform: scale(1.12);
+      }
+      .martbg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 12, 26, 0.35);
+      }
+      .mmain {
+        flex: 1;
+        min-width: 0;
+        position: relative;
+        z-index: 1;
+        overflow-y: auto;
+        padding-right: 4px;
+        overscroll-behavior: contain;
+      }
+      /* 弹窗滚动条: 细条/透明轨道/悬停点亮 */
+      .mmain,
+      .mfig {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+      }
+      .mmain::-webkit-scrollbar,
+      .mfig::-webkit-scrollbar {
+        width: 6px;
+      }
+      .mmain::-webkit-scrollbar-track,
+      .mfig::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .mmain::-webkit-scrollbar-thumb,
+      .mfig::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 3px;
+      }
+      .mmain:hover::-webkit-scrollbar-thumb,
+      .mfig:hover::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.22);
+      }
+      .mmain::-webkit-scrollbar-thumb:hover,
+      .mfig::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 217, 106, 0.5);
+      }
+      .mfig {
+        flex: none;
+        width: 252px;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 100%;
+        overflow-y: auto;
+        padding-right: 2px;
+        overscroll-behavior: contain;
+      }
+      .figpanel {
+        height: clamp(200px, 32vh, 330px);
+        flex: none;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      /* 右栏内的白值/档案紧凑单列版 */
+      .mfig .section {
+        margin-top: 2px;
+      }
+      .mfig .statgrid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .mfig .stat {
+        flex-direction: row;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 2px 8px;
+        padding: 7px 10px;
+      }
+      .mfig .stat .sv {
+        font-size: 16px;
+      }
+      .mfig .grid2 {
+        grid-template-columns: 1fr;
+        font-size: 12.5px;
+        gap: 5px;
+      }
+      /* 装备区 */
+      .eq {
+        display: flex;
+        gap: 10px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .eq .eico {
+        width: 38px;
+        height: 38px;
+        flex: none;
+        border-radius: 8px;
+        background: #0d1126;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--dim);
+        overflow: hidden;
+      }
+      .eq .eico img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .eq .eqi {
+        flex: 1;
+        min-width: 0;
+      }
+      .eq .eqn {
+        font-weight: 700;
+        font-size: 13.5px;
+      }
+      .eq .epart {
+        font-size: 10.5px;
+        color: var(--dim);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 6px;
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+      .eq .starr {
+        color: #ffd94a;
+        letter-spacing: -1px;
+      }
+      .eq .eqm {
+        font-size: 12px;
+        color: var(--dim);
+        margin: 3px 0 4px;
+      }
+      .eq .eqp {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .eq .eqp span {
+        font-size: 11.5px;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+      }
+      .eq .eqs {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 4px;
+        line-height: 1.55;
+      }
+      .eq .eqs b {
+        color: var(--fg);
+        font-size: 11px;
+        border-radius: 4px;
+        padding: 0 4px;
+        margin-right: 4px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      /* 百分数高亮 (能力/技能文本里的 16％、+30% 等) */
+      .pcthi {
+        color: var(--gold);
+        font-weight: 700;
+      }
+      .eq .eqench {
+        font-size: 11.5px;
+        color: var(--dim);
+        margin-top: 3px;
+        line-height: 1.5;
+        padding-left: 2px;
+      }
+      .eq .eqench b {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      .eq .eqench .estarr {
+        color: #ffd94a;
+        letter-spacing: -1px;
+        margin-right: 3px;
+      }
+      .eq .eqench .erare {
+        display: inline-block;
+        font-size: 10px;
+        color: #ff9d4a;
+        border: 1px solid #ff9d4a;
+        border-radius: 4px;
+        padding: 0 4px;
+        margin-right: 4px;
+        vertical-align: 1px;
+      }
+      .figpanel img {
+        max-width: 92%;
+        max-height: 92%;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
+      }
+      .figpanel .ficon {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .modal .close {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        font-size: 22px;
+        color: var(--dim);
+        cursor: pointer;
+        background: none;
+        border: none;
+        z-index: 2;
+      }
+      .modal h2 {
+        font-size: 20px;
+      }
+      .mmain .sub2 {
+        color: var(--dim);
+        font-size: 13px;
+        margin: 2px 0 14px;
+      }
+      .mmain ruby rt {
+        color: var(--dim);
+        font-size: 10px;
+      } /* 姓名注音 (ルビ): 汉字上假名下 */
+      .wlink {
+        color: #7ab7ff;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .wlink:hover {
+        text-decoration: underline;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 18px;
+        font-size: 13.5px;
+      }
+      .grid2 .k {
+        color: var(--dim);
+      }
+      .section {
+        margin-top: 16px;
+      }
+      .section h3 {
+        font-size: 13px;
+        color: var(--gold);
+        margin-bottom: 6px;
+        letter-spacing: 1px;
+      }
+      .profile {
+        white-space: pre-line;
+        font-size: 13.5px;
+        line-height: 1.75;
+        color: #cfd5f7;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .statgrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .stat {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .stat .sv {
+        font-size: 19px;
+        font-weight: 800;
+        color: #fff;
+      }
+      .stat .sk {
+        font-size: 11px;
+        color: var(--dim);
+      }
+      .stat .sk i {
+        font-style: normal;
+        color: var(--pink);
+        margin-left: 4px;
+      }
+      .stag {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 1px 7px;
+        border-radius: 99px;
+        margin-right: 4px;
+        vertical-align: 1px;
+      }
+      .st-ex {
+        background: rgba(255, 217, 74, 0.15);
+        color: var(--gold);
+      }
+      .st-ex2 {
+        background: rgba(255, 157, 74, 0.18);
+        color: #ffb066;
+        border: 1px solid #ffb06644;
+      } /* EX2+ 强化技 */
+      .scat {
+        background: rgba(154, 163, 207, 0.14);
+        color: var(--dim);
+        font-weight: 600;
+        margin-left: 6px;
+      } /* 技能分类标签 */
+      .st-u {
+        background: rgba(74, 158, 255, 0.18);
+        color: #7ac0ff;
+      }
+      .st-s {
+        background: rgba(255, 138, 196, 0.15);
+        color: var(--pink);
+      }
+      .st-p {
+        background: rgba(139, 92, 246, 0.22);
+        color: #c3a6ff;
+      }
+      .skill {
+        padding: 8px 0;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+      }
+      .skill:last-child {
+        border-bottom: 0;
+      }
+      .sname b {
+        font-size: 13.5px;
+      }
+      .smeta {
+        font-size: 11px;
+        color: var(--dim);
+        margin-left: 8px;
+      }
+      .sdetail {
+        font-size: 12.5px;
+        color: #c9d0f0;
+        line-height: 1.6;
+        margin-top: 3px;
+      }
+      .slock {
+        opacity: 0.55;
+      }
+      .slocktag {
+        font-size: 10px;
+        color: #aab;
+        border: 1px solid #556;
+        border-radius: 99px;
+        padding: 0 6px;
+        margin-left: 6px;
+      }
+      .scond {
+        font-size: 11.5px;
+        color: #9aa3c7;
+        margin-top: 2px;
+      }
+      .progressbar {
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.1);
+        margin-top: 4px;
+        overflow: hidden;
+      }
+      .progressbar i {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--gold), #ffe9a8);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>
+        <span class="star">✦</span> 星骑图鉴
+        <span style="font-size: 14px; color: var(--dim)"
+          >Twinkle Star Knights X</span
+        >
+      </h1>
+      <div class="sub">
+        数据来源: unit_list.json（Frida dump）· 点击卡片查看详情
+      </div>
+    </header>
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="搜索 角色名 / 卡名 / CV …" />
+      <select id="viewSel">
+        <option value="card">视图：卡牌</option>
+        <option value="table">视图：表格</option>
+        <option value="char">视图：按角色</option>
+        <option value="dex">视图：全图鉴</option>
+        <option value="sister">视图：シスター</option>
+      </select>
+      <span class="count" id="count"></span>
+      <div class="rowbreak"></div>
+      <select id="sortSel">
+        <option value="power">排序：战力</option>
+        <option value="atk">排序：ATK（含装备）</option>
+        <option value="exup">排序：EX 上升（含装备）</option>
+        <option value="exupbase">排序：基础 EX 上升</option>
+        <option value="lv">排序：等级</option>
+        <option value="love">排序：好感度</option>
+        <option value="rarity">排序：稀有度</option>
+        <option value="lb">排序：升星差距（差得少在前）</option>
+        <option value="uid">排序：编号</option>
+        <option value="date">排序：实装日期</option>
+      </select>
+      <button
+        id="dirBtn"
+        class="chip"
+        style="font-family: inherit"
+        title="切换排序方向"
+      >
+        ↓ 降序
+      </button>
+    </div>
+    <div class="filters">
+      <div class="chips" id="attrChips"></div>
+      <div class="chips" id="roleChips"></div>
+      <div class="chips" id="rarChips"></div>
+      <div class="chips" id="campChips"></div>
+      <div class="chips" id="spChips"></div>
+      <div class="chips" id="lbChips"></div>
+      <div class="chips" id="catChips" style="display: none"></div>
+      <div class="chips" id="ownChips" style="display: none"></div>
+      <div class="chips" id="pcChips" style="display: none"></div>
+    </div>
+    <main id="main"></main>
 
-<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+    <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 
-<script>
-const DATA = __PAYLOAD__;
-const WIKI_BASE = 'https://twinklestarknights.wikiru.jp/?';
-const { units, stats, wikiRows, sisters, sisterRows, ATTR, ATTR_COLOR, ROLE, CAMP, AFFIL, WIKI_ATTR_ID, WIKI_CAMP_ID, EQ_PART, EQ_PARAM, SP_TYPE, CAT_NAME } = DATA;
-const sisterById = new Map(sisters.map((s) => [s.sid, s]));
-const state = { q: '', attr: [], role: [], rar: [], camp: [], sp: [], lb: [], pc: [], own: [], cat: [], mode: {}, sort: 'power', desc: false, view: 'card' };
+    <script>
+      const DATA = __PAYLOAD__;
+      const WIKI_BASE = "https://twinklestarknights.wikiru.jp/?";
+      const {
+        units,
+        stats,
+        wikiRows,
+        sisters,
+        sisterRows,
+        ATTR,
+        ATTR_COLOR,
+        ROLE,
+        CAMP,
+        AFFIL,
+        WIKI_ATTR_ID,
+        WIKI_CAMP_ID,
+        EQ_PART,
+        EQ_PARAM,
+        SP_TYPE,
+        CAT_NAME,
+      } = DATA;
+      const sisterById = new Map(sisters.map((s) => [s.sid, s]));
+      const state = {
+        q: "",
+        attr: [],
+        role: [],
+        rar: [],
+        camp: [],
+        sp: [],
+        lb: [],
+        pc: [],
+        own: [],
+        cat: [],
+        mode: {},
+        sort: "power",
+        desc: false,
+        view: "card",
+      };
 
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// dump rich text 还原: 先转义, 再把 color 标签 (esc 后为 &lt;color=...&gt;) 还原为彩色 span, 换行转 br
-// 注意: 本函数位于 HTML 模板字符串内, 正则里的反斜杠在 .mjs 源码中必须双写
-const colorize = (s) => esc(s)
-  .replace(/&lt;color=(#[0-9A-Fa-f]{6})&gt;/g, '<span style="color:$1">')
-  .replace(/&lt;\/color&gt;/g, '</span>')
-  .replace(/\n/g, '<br>');
-const stars = (n) => '★'.repeat(n);
-// 千分比原始值 → 百分比文本 (300 -> '3', 1195 -> '11.95')
-const pct = (v) => { const x = (v || 0) / 100; return Number.isInteger(x) ? String(x) : String(+x.toFixed(2)); };
-// 稀有度显示: 升星(限界突破)过的卡显示 初始→当前 (json rarity=当前, Wiki ★=初始)
-const rareStr = (u) => (u.wRar && u.wRar < u.rarity ? `★${u.wRar}→${u.rarity}` : stars(u.rarity));
-// 头像(50x50)用 picon 居中展示, 立绘大图用 pimg 裁剪铺满 (按文件名后缀区分)
-const imgTag = (src) => (!src ? '' : `<img class="${src.endsWith('_icon.png') ? 'picon' : 'pimg'}" src="${src}" loading="lazy" onerror="this.remove()">`);
-const affilName = (a) => AFFIL[a] ?? ('所属' + a);
-// 双重陣営/所属卡: 显示完整集合 (如 人間·神族 / 新星学園·ネビュラ?)
-const campStr = (u) => (u.camps || [u.camp]).map((id) => CAMP[id]).join('·');
-const affilStr = (u) => (u.affils || [u.affil]).map(affilName).join('·');
-const unitByRow = new Map(); // rowIdx -> 持有 unit
-for (const u of units) if (u.rowIdx != null) unitByRow.set(u.rowIdx, u);
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      // 百分数高亮: 先转义, 再把 16％ / +30% / 12.5% 包成金色 span (全角/半角百分号都认)
+      const pcthi = (s) =>
+        esc(s).replace(
+          /([+\-−]?\d+(?:\.\d+)?\s*[％%])/g,
+          '<span class="pcthi">$1</span>',
+        );
+      // dump rich text 还原: 先转义, 再把 color 标签 (esc 后为 &lt;color=...&gt;) 还原为彩色 span, 换行转 br
+      // 注意: 本函数位于 HTML 模板字符串内, 正则里的反斜杠在 .mjs 源码中必须双写
+      const colorize = (s) =>
+        pcthi(s)
+          .replace(
+            /&lt;color=(#[0-9A-Fa-f]{6})&gt;/g,
+            '<span style="color:$1">',
+          )
+          .replace(/&lt;\/color&gt;/g, "</span>")
+          .replace(/\n/g, "<br>");
+      const stars = (n) => "★".repeat(n);
+      // 千分比原始值 → 百分比文本 (300 -> '3', 1195 -> '11.95')
+      const pct = (v) => {
+        const x = (v || 0) / 100;
+        return Number.isInteger(x) ? String(x) : String(+x.toFixed(2));
+      };
+      // 稀有度显示: 升星(限界突破)过的卡显示 初始→当前 (json rarity=当前, Wiki ★=初始)
+      const rareStr = (u) =>
+        u.wRar && u.wRar < u.rarity
+          ? `★${u.wRar}→${u.rarity}`
+          : stars(u.rarity);
+      // 头像(50x50)用 picon 居中展示, 立绘大图用 pimg 裁剪铺满 (按文件名后缀区分)
+      const imgTag = (src) =>
+        !src
+          ? ""
+          : `<img class="${src.endsWith("_icon.png") ? "picon" : "pimg"}" src="${src}" loading="lazy" onerror="this.remove()">`;
+      const affilName = (a) => AFFIL[a] ?? "所属" + a;
+      // 双重陣営/所属卡: 显示完整集合 (如 人間·神族 / 新星学園·ネビュラ?)
+      const campStr = (u) =>
+        (u.camps || [u.camp]).map((id) => CAMP[id]).join("·");
+      const affilStr = (u) => (u.affils || [u.affil]).map(affilName).join("·");
+      const unitByRow = new Map(); // rowIdx -> 持有 unit
+      for (const u of units) if (u.rowIdx != null) unitByRow.set(u.rowIdx, u);
 
-document.getElementById('stats').innerHTML = [
-  ['持有卡牌', stats.total], ['登场角色', stats.chars], ['总战力', stats.totalPower.toLocaleString()],
-  ['图鉴收集', stats.collected + ' / ' + stats.dexTotal], ['★5', stats.r5], ['满级', stats.maxLv], ['好感满', stats.maxLove],
-  ['可升星', stats.lbReady], ['可强化コア', stats.coreReady],
-].map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+      document.getElementById("stats").innerHTML = [
+        ["持有卡牌", stats.total],
+        ["登场角色", stats.chars],
+        ["总战力", stats.totalPower.toLocaleString()],
+        ["图鉴收集", stats.collected + " / " + stats.dexTotal],
+        ["★5", stats.r5],
+        ["满级", stats.maxLv],
+        ["好感满", stats.maxLove],
+        ["可升星", stats.lbReady],
+        ["可强化コア", stats.coreReady],
+      ]
+        .map(
+          ([k, v]) =>
+            `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`,
+        )
+        .join("");
 
-// 组内多选匹配: 依组模式 some(任一=OR)/every(同时=AND), 空选集恒过
-const grpMatch = (key, sel, has) => !sel.length || ((state.mode[key] === 'all' ? sel.every(has) : sel.some(has)));
+      // 组内多选匹配: 依组模式 some(任一=OR)/every(同时=AND), 空选集恒过
+      const grpMatch = (key, sel, has) =>
+        !sel.length ||
+        (state.mode[key] === "all" ? sel.every(has) : sel.some(has));
 
-function chipRow(el, items, key) {
-  const box = document.getElementById(el);
-  const sel = state[key];
-  const mode = state.mode[key] || 'any';
-  box.innerHTML = items.map(([v, label, color], i) => {
-    const lead = i === 0;
-    const on = lead ? !sel.length : sel.includes(v);
-    return `<span class="chip ${lead ? 'lead' : ''}${on ? ' on' : ''}" data-v="${v}" ${lead ? 'title="点击清空该组筛选"' : ''} ${color ? `style="color:${on ? color : ''}"` : ''}>${color ? `<span class="dot" style="background:${color}"></span>` : ''}${label}</span>`;
-  }).join('') +
-    `<select class="modeSel" title="本组多选时的组合方式"><option value="any"${mode === 'any' ? ' selected' : ''}>任一</option><option value="all"${mode === 'all' ? ' selected' : ''}>同时</option></select>`;
-  const ms = box.querySelector('.modeSel');
-  ms.onchange = () => { state.mode[key] = ms.value; renderToolbar(); render(); };
-  box.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
-    const v = +c.dataset.v;
-    // 组标签 = 清空该组; 其余 = toggle 进出选集
-    state[key] = v === 0 ? [] : (sel.includes(v) ? sel.filter((x) => x !== v) : [...sel, v]);
-    renderToolbar(); render();
-  });
-}
-function renderToolbar() {
-  chipRow('attrChips', [[0, '属性'], ...Object.entries(ATTR).map(([k, v]) => [+k, v, ATTR_COLOR[k]])], 'attr');
-  chipRow('roleChips', [[0, '类型'], ...Object.entries(ROLE).map(([k, v]) => [+k, v])], 'role');
-  chipRow('rarChips', [[0, '稀有度'], [5, '★5'], [4, '★4'], [3, '★3'], [2, '★2']], 'rar');
-  chipRow('campChips', [[0, '种族'], ...Object.entries(CAMP).map(([k, v]) => [+k, v])], 'camp');
-  chipRow('spChips', [[0, '攻撃'], ...Object.entries(SP_TYPE).map(([k, v]) => [+k, v])], 'sp');
-  chipRow('lbChips', [[0, '升星'], [1, '可升星'], [2, '素材不足']], 'lb');
-  chipRow('catChips', [[0, '技能分类'], ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v])], 'cat');
-  chipRow('ownChips', [[0, '持有'], [1, '已持有'], [2, '未持有']], 'own');
-  chipRow('pcChips', [[0, '碎片'], [1, '有碎片']], 'pc');
-}
+      function chipRow(el, items, key) {
+        const box = document.getElementById(el);
+        const sel = state[key];
+        const mode = state.mode[key] || "any";
+        box.innerHTML =
+          items
+            .map(([v, label, color], i) => {
+              const lead = i === 0;
+              const on = lead ? !sel.length : sel.includes(v);
+              return `<span class="chip ${lead ? "lead" : ""}${on ? " on" : ""}" data-v="${v}" ${lead ? 'title="点击清空该组筛选"' : ""} ${color ? `style="color:${on ? color : ""}"` : ""}>${color ? `<span class="dot" style="background:${color}"></span>` : ""}${label}</span>`;
+            })
+            .join("") +
+          `<select class="modeSel" title="本组多选时的组合方式"><option value="any"${mode === "any" ? " selected" : ""}>任一</option><option value="all"${mode === "all" ? " selected" : ""}>同时</option></select>`;
+        const ms = box.querySelector(".modeSel");
+        ms.onchange = () => {
+          state.mode[key] = ms.value;
+          renderToolbar();
+          render();
+        };
+        box.querySelectorAll(".chip").forEach(
+          (c) =>
+            (c.onclick = () => {
+              const v = +c.dataset.v;
+              // 组标签 = 清空该组; 其余 = toggle 进出选集
+              state[key] =
+                v === 0
+                  ? []
+                  : sel.includes(v)
+                    ? sel.filter((x) => x !== v)
+                    : [...sel, v];
+              renderToolbar();
+              render();
+            }),
+        );
+      }
+      function renderToolbar() {
+        chipRow(
+          "attrChips",
+          [
+            [0, "属性"],
+            ...Object.entries(ATTR).map(([k, v]) => [+k, v, ATTR_COLOR[k]]),
+          ],
+          "attr",
+        );
+        chipRow(
+          "roleChips",
+          [[0, "类型"], ...Object.entries(ROLE).map(([k, v]) => [+k, v])],
+          "role",
+        );
+        chipRow(
+          "rarChips",
+          [
+            [0, "稀有度"],
+            [5, "★5"],
+            [4, "★4"],
+            [3, "★3"],
+            [2, "★2"],
+          ],
+          "rar",
+        );
+        chipRow(
+          "campChips",
+          [[0, "种族"], ...Object.entries(CAMP).map(([k, v]) => [+k, v])],
+          "camp",
+        );
+        chipRow(
+          "spChips",
+          [[0, "攻撃"], ...Object.entries(SP_TYPE).map(([k, v]) => [+k, v])],
+          "sp",
+        );
+        chipRow(
+          "lbChips",
+          [
+            [0, "升星"],
+            [1, "可升星"],
+            [2, "素材不足"],
+          ],
+          "lb",
+        );
+        chipRow(
+          "catChips",
+          [
+            [0, "技能分类"],
+            ...Object.entries(CAT_NAME).map(([k, v]) => [+k, v]),
+          ],
+          "cat",
+        );
+        chipRow(
+          "ownChips",
+          [
+            [0, "持有"],
+            [1, "已持有"],
+            [2, "未持有"],
+          ],
+          "own",
+        );
+        chipRow(
+          "pcChips",
+          [
+            [0, "碎片"],
+            [1, "有碎片"],
+          ],
+          "pc",
+        );
+      }
 
-function filtered() {
-  const q = state.q.toLowerCase();
-  let arr = units.filter((u) =>
-    (!q || (u.cname + u.uname + u.fname + u.cv).toLowerCase().includes(q)) &&
-    grpMatch('attr', state.attr, (v) => u.attr === v) &&
-    grpMatch('role', state.role, (v) => u.role === v) &&
-    grpMatch('sp', state.sp, (v) => u.spType === v) &&
-    grpMatch('rar', state.rar, (v) => u.rarity === v) &&
-    grpMatch('lb', state.lb, (v) => v === 1 ? (lbOk(u) || coreOk(u)) : ((u.lbNeed != null || u.coreNeed != null) && !lbOk(u) && !coreOk(u))) &&
-    grpMatch('camp', state.camp, (v) => u.camps.includes(v)) &&
-    grpMatch('cat', state.cat, (v) => (u.cats || []).includes(v)));
-  const cmp = {
-    power: (a, b) => b.power - a.power,
-    atk: (a, b) => (b.atkTotal || 0) - (a.atkTotal || 0) || b.power - a.power,
-    exup: (a, b) => (b.exUpTotal || 0) - (a.exUpTotal || 0) || b.power - a.power,
-    exupbase: (a, b) => ((b.st && b.st.exRate) || 0) - ((a.st && a.st.exRate) || 0) || b.power - a.power,
-    lv: (a, b) => b.lv - a.lv || b.power - a.power,
-    love: (a, b) => b.love - a.love || b.power - a.power,
-    rarity: (a, b) => b.rarity - a.rarity || b.power - a.power,
-    lb: (a, b) => Math.max(lbGap(a), 0) - Math.max(lbGap(b), 0) || b.power - a.power, // 升星差距: 已够(差<=0 归零)在前, 其次差得少的在前
-    uid: (a, b) => a.unit_id - b.unit_id,
-    date: (a, b) => (b.wdate || '').localeCompare(a.wdate || '') || b.power - a.power,
-  }[state.sort];
-  arr.sort(cmp);
-  return state.desc ? arr.reverse() : arr;
-}
+      function filtered() {
+        const q = state.q.toLowerCase();
+        let arr = units.filter(
+          (u) =>
+            (!q ||
+              (u.cname + u.uname + u.fname + u.cv).toLowerCase().includes(q)) &&
+            grpMatch("attr", state.attr, (v) => u.attr === v) &&
+            grpMatch("role", state.role, (v) => u.role === v) &&
+            grpMatch("sp", state.sp, (v) => u.spType === v) &&
+            grpMatch("rar", state.rar, (v) => u.rarity === v) &&
+            grpMatch("lb", state.lb, (v) =>
+              v === 1
+                ? lbOk(u) || coreOk(u)
+                : (u.lbNeed != null || u.coreNeed != null) &&
+                  !lbOk(u) &&
+                  !coreOk(u),
+            ) &&
+            grpMatch("camp", state.camp, (v) => u.camps.includes(v)) &&
+            grpMatch("cat", state.cat, (v) => (u.cats || []).includes(v)),
+        );
+        const cmp = {
+          power: (a, b) => b.power - a.power,
+          atk: (a, b) =>
+            (b.atkTotal || 0) - (a.atkTotal || 0) || b.power - a.power,
+          exup: (a, b) =>
+            (b.exUpTotal || 0) - (a.exUpTotal || 0) || b.power - a.power,
+          exupbase: (a, b) =>
+            ((b.st && b.st.exRate) || 0) - ((a.st && a.st.exRate) || 0) ||
+            b.power - a.power,
+          lv: (a, b) => b.lv - a.lv || b.power - a.power,
+          love: (a, b) => b.love - a.love || b.power - a.power,
+          rarity: (a, b) => b.rarity - a.rarity || b.power - a.power,
+          lb: (a, b) =>
+            Math.max(lbGap(a), 0) - Math.max(lbGap(b), 0) || b.power - a.power, // 升星差距: 已够(差<=0 归零)在前, 其次差得少的在前
+          uid: (a, b) => a.unit_id - b.unit_id,
+          date: (a, b) =>
+            (b.wdate || "").localeCompare(a.wdate || "") || b.power - a.power,
+        }[state.sort];
+        arr.sort(cmp);
+        return state.desc ? arr.reverse() : arr;
+      }
 
-// 升星状态: 限界突破 (rarity<5) / コアLV强化 (★5 后); lbNeed/coreNeed 为 null = 该阶段已满
-// piece = 持有碎片数 (chara_piece_list)
-const lbOk = (u) => u.lbNeed != null && u.piece >= u.lbNeed;
-const coreOk = (u) => u.coreNeed != null && u.piece >= u.coreNeed;
-// 距下一阶段还差多少碎片 (<=0 = 已够可升; 无升星需求=满星满コア的卡排最后)
-const lbGap = (u) => u.lbNeed != null ? u.lbNeed - u.piece : (u.coreNeed != null ? u.coreNeed - u.piece : 99999);
-// 卡片徽标: 可升星 / 还差多少碎片
-const lbBadge = (u) => {
-  if (u.lbNeed != null) return lbOk(u)
-    ? `<span class="tag lbok">可升星 ★${u.rarity + 1}</span>`
-    : `<span class="tag">升★${u.rarity + 1} ${u.piece}/${u.lbNeed}</span>`;
-  if (u.coreNeed != null) return coreOk(u)
-    ? `<span class="tag lbok">可强化コア ${u.core + 1}</span>`
-    : `<span class="tag">コア${u.core + 1} ${u.piece}/${u.coreNeed}</span>`;
-  return '';
-};
+      // 升星状态: 限界突破 (rarity<5) / コアLV强化 (★5 后); lbNeed/coreNeed 为 null = 该阶段已满
+      // piece = 持有碎片数 (chara_piece_list)
+      const lbOk = (u) => u.lbNeed != null && u.piece >= u.lbNeed;
+      const coreOk = (u) => u.coreNeed != null && u.piece >= u.coreNeed;
+      // 距下一阶段还差多少碎片 (<=0 = 已够可升; 无升星需求=满星满コア的卡排最后)
+      const lbGap = (u) =>
+        u.lbNeed != null
+          ? u.lbNeed - u.piece
+          : u.coreNeed != null
+            ? u.coreNeed - u.piece
+            : 99999;
+      // 卡片徽标: 可升星 / 还差多少碎片
+      const lbBadge = (u) => {
+        if (u.lbNeed != null)
+          return lbOk(u)
+            ? `<span class="tag lbok">可升星 ★${u.rarity + 1}</span>`
+            : `<span class="tag">升★${u.rarity + 1} ${u.piece}/${u.lbNeed}</span>`;
+        if (u.coreNeed != null)
+          return coreOk(u)
+            ? `<span class="tag lbok">可强化コア ${u.core + 1}</span>`
+            : `<span class="tag">コア${u.core + 1} ${u.piece}/${u.coreNeed}</span>`;
+        return "";
+      };
 
-function cardHTML(u) {
-  const c = ATTR_COLOR[u.attr];
-  const lvMax = u.lv >= u.max_lv;
-  const loveMax = u.max_love > 0 && u.love >= u.max_love;
-  return `<div class="card" data-id="${u.id}">
+      function cardHTML(u) {
+        const c = ATTR_COLOR[u.attr];
+        const lvMax = u.lv >= u.max_lv;
+        const loveMax = u.max_love > 0 && u.love >= u.max_love;
+        return `<div class="card" data-id="${u.id}">
     <div class="portrait" style="background:linear-gradient(150deg,${c}55,${c}18 60%,transparent),linear-gradient(160deg,#1b2145,#141830)">
       ${imgTag(u.icon || u.art)}
       <div class="rstars">${rareStr(u)}</div>
       <div class="attrbadge" style="color:${c}">${ATTR[u.attr]}</div>
       ${esc(u.cname[0])}
       <div class="badges">
-        ${lvMax ? '<span class="tag max">Lv MAX</span>' : (u.limit > 0 ? `<span class="tag">解放${u.limit}</span>` : '')}
-        ${u.core > 0 ? `<span class="tag">コア${u.core}</span>` : ''}
-        ${loveMax ? '<span class="tag lovemax">♥MAX</span>' : ''}
-        ${u.bond ? '<span class="tag">绊</span>' : ''}
+        ${lvMax ? '<span class="tag max">Lv MAX</span>' : u.limit > 0 ? `<span class="tag">解放${u.limit}</span>` : ""}
+        ${u.core > 0 ? `<span class="tag">コア${u.core}</span>` : ""}
+        ${loveMax ? '<span class="tag lovemax">♥MAX</span>' : ""}
+        ${u.bond ? '<span class="tag">绊</span>' : ""}
         ${lbBadge(u)}
       </div>
     </div>
@@ -385,62 +1250,100 @@ function cardHTML(u) {
       <div class="uname">${esc(u.uname)}</div>
       <div class="cname">${esc(u.cname)}</div>
       <div class="nums"><span>Lv ${u.lv}<span style="color:var(--dim)">/${u.max_lv}</span></span><span class="heart">♥ ${u.love}</span><span><b>${u.power.toLocaleString()}</b></span></div>
-      <div class="meta"><span class="role-chip" style="color:${{1:'#ff8a7a',2:'#7ae0ff',3:'#8fa0ff',4:'#c39bff',5:'#ff9ec4'}[u.role]}">${ROLE[u.role]}</span>${SP_TYPE[u.spType] ? `<span>${SP_TYPE[u.spType]}</span>` : ''}<span>${esc(campStr(u))}</span><span>${esc(affilStr(u))}</span></div>
+      <div class="meta"><span class="role-chip" style="color:${{ 1: "#ff8a7a", 2: "#7ae0ff", 3: "#8fa0ff", 4: "#c39bff", 5: "#ff9ec4" }[u.role]}">${ROLE[u.role]}</span>${SP_TYPE[u.spType] ? `<span>${SP_TYPE[u.spType]}</span>` : ""}<span>${esc(campStr(u))}</span><span>${esc(affilStr(u))}</span></div>
     </div>
   </div>`;
-}
+      }
 
-function render() {
-  const isSis = state.view === 'sister';
-  document.getElementById('ownChips').style.display = (state.view === 'dex' || isSis) ? '' : 'none';
-  // シスター视图: 无稀有度/种族/攻撃タイプ概念, 隐藏对应筛选组
-  document.getElementById('rarChips').style.display = isSis ? 'none' : '';
-  document.getElementById('campChips').style.display = isSis ? 'none' : '';
-  document.getElementById('spChips').style.display = isSis ? 'none' : '';
-  // 升星为持有卡专属维度: 仅卡牌/表格/按角色视图可用
-  document.getElementById('lbChips').style.display = (state.view === 'dex' || isSis) ? 'none' : '';
-  // 技能分类同为持有卡专属维度 (dump 才有)
-  document.getElementById('catChips').style.display = (state.view === 'dex' || isSis) ? 'none' : '';
-  // 碎片为全图鉴专属维度 (未持有角色也可能持有碎片)
-  document.getElementById('pcChips').style.display = state.view === 'dex' ? '' : 'none';
-  if (isSis) { renderSister(); return; }
-  if (state.view === 'dex') { renderDex(); return; }
-  const arr = filtered();
-  document.getElementById('count').textContent = `共 ${arr.length} 张`;
-  const main = document.getElementById('main');
-  if (!arr.length) { main.innerHTML = '<div class="empty">没有符合筛选条件的卡牌</div>'; return; }
-  if (state.view === 'card') {
-    main.innerHTML = '<div class="grid">' + arr.map(cardHTML).join('') + '</div>';
-    main.querySelectorAll('.card').forEach((el) => el.onclick = () => showModal(+el.dataset.id));
-  } else if (state.view === 'table') {
-    const rows = arr.map((u) => `<tr>
-      <td>${u.icon || u.art ? `<img class="timg" src="${u.icon || u.art}" loading="lazy" onerror="this.remove()">` : ''}</td>
+      function render() {
+        const isSis = state.view === "sister";
+        document.getElementById("ownChips").style.display =
+          state.view === "dex" || isSis ? "" : "none";
+        // シスター视图: 无稀有度/种族/攻撃タイプ概念, 隐藏对应筛选组
+        document.getElementById("rarChips").style.display = isSis ? "none" : "";
+        document.getElementById("campChips").style.display = isSis
+          ? "none"
+          : "";
+        document.getElementById("spChips").style.display = isSis ? "none" : "";
+        // 升星为持有卡专属维度: 仅卡牌/表格/按角色视图可用
+        document.getElementById("lbChips").style.display =
+          state.view === "dex" || isSis ? "none" : "";
+        // 技能分类同为持有卡专属维度 (dump 才有)
+        document.getElementById("catChips").style.display =
+          state.view === "dex" || isSis ? "none" : "";
+        // 碎片为全图鉴专属维度 (未持有角色也可能持有碎片)
+        document.getElementById("pcChips").style.display =
+          state.view === "dex" ? "" : "none";
+        if (isSis) {
+          renderSister();
+          return;
+        }
+        if (state.view === "dex") {
+          renderDex();
+          return;
+        }
+        const arr = filtered();
+        document.getElementById("count").textContent = `共 ${arr.length} 张`;
+        const main = document.getElementById("main");
+        if (!arr.length) {
+          main.innerHTML = '<div class="empty">没有符合筛选条件的卡牌</div>';
+          return;
+        }
+        if (state.view === "card") {
+          main.innerHTML =
+            '<div class="grid">' + arr.map(cardHTML).join("") + "</div>";
+          main
+            .querySelectorAll(".card")
+            .forEach((el) => (el.onclick = () => showModal(+el.dataset.id)));
+        } else if (state.view === "table") {
+          const rows = arr
+            .map(
+              (u) => `<tr>
+      <td>${u.icon || u.art ? `<img class="timg" src="${u.icon || u.art}" loading="lazy" onerror="this.remove()">` : ""}</td>
       <td style="color:var(--gold)">${rareStr(u)}</td>
       <td style="color:${ATTR_COLOR[u.attr]}">${ATTR[u.attr]}</td>
       <td>${esc(u.cname)}</td><td>${esc(u.uname)}</td>
-      <td class="role-chip">${ROLE[u.role]}</td><td>${SP_TYPE[u.spType] || ''}</td><td>${esc(campStr(u))}</td><td>${esc(affilStr(u))}</td>
-      <td>${u.lv}/${u.max_lv}${u.lv >= u.max_lv ? ' <span style="color:var(--gold)">MAX</span>' : ''}</td>
+      <td class="role-chip">${ROLE[u.role]}</td><td>${SP_TYPE[u.spType] || ""}</td><td>${esc(campStr(u))}</td><td>${esc(affilStr(u))}</td>
+      <td>${u.lv}/${u.max_lv}${u.lv >= u.max_lv ? ' <span style="color:var(--gold)">MAX</span>' : ""}</td>
       <td style="color:var(--pink)">${u.love}</td>
       <td><b>${u.power.toLocaleString()}</b></td>
-      <td>${u.limit || '-'}</td><td>${esc(u.birthday)}</td><td>${esc(u.cv)}</td>
-      <td>${u.lbNeed != null ? (lbOk(u) ? '<span style="color:#3fd97f;font-weight:700">可升星</span>' : '差 ' + (u.lbNeed - u.piece)) : (u.coreNeed != null ? (coreOk(u) ? '<span style="color:#3fd97f;font-weight:700">可强化</span>' : '差 ' + (u.coreNeed - u.piece)) : '-')}</td>
-    </tr>`).join('');
-    main.innerHTML = `<div class="tdwrap"><table><thead><tr>
+      <td>${u.limit || "-"}</td><td>${esc(u.birthday)}</td><td>${esc(u.cv)}</td>
+      <td>${u.lbNeed != null ? (lbOk(u) ? '<span style="color:#3fd97f;font-weight:700">可升星</span>' : "差 " + (u.lbNeed - u.piece)) : u.coreNeed != null ? (coreOk(u) ? '<span style="color:#3fd97f;font-weight:700">可强化</span>' : "差 " + (u.coreNeed - u.piece)) : "-"}</td>
+    </tr>`,
+            )
+            .join("");
+          main.innerHTML = `<div class="tdwrap"><table><thead><tr>
       <th></th><th>★</th><th>属性</th><th>角色</th><th>卡名</th><th>类型</th><th>攻撃</th><th>种族</th><th>所属</th><th>Lv</th><th>♥</th><th>战力</th><th>解放</th><th>生日</th><th>CV</th><th>升星</th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
-  } else if (state.view === 'char') {
-    const byChar = new Map();
-    for (const u of arr) { if (!byChar.has(u.char_id)) byChar.set(u.char_id, []); byChar.get(u.char_id).push(u); }
-    const list = [...byChar.values()].map((g) => ({ g, top: g.reduce((a, b) => b.power > a.power ? b : a) }))
-      .sort((a, b) => b.top.power - a.top.power);
-    main.innerHTML = '<div class="grid">' + list.map(({ g, top }) => {
-      const c = ATTR_COLOR[top.attr];
-      const cards = g.map((u) => `<div style="margin:3px 0;display:flex;gap:8px;align-items:baseline;font-size:12.5px">
+        } else if (state.view === "char") {
+          const byChar = new Map();
+          for (const u of arr) {
+            if (!byChar.has(u.char_id)) byChar.set(u.char_id, []);
+            byChar.get(u.char_id).push(u);
+          }
+          const list = [...byChar.values()]
+            .map((g) => ({
+              g,
+              top: g.reduce((a, b) => (b.power > a.power ? b : a)),
+            }))
+            .sort((a, b) => b.top.power - a.top.power);
+          main.innerHTML =
+            '<div class="grid">' +
+            list
+              .map(({ g, top }) => {
+                const c = ATTR_COLOR[top.attr];
+                const cards = g
+                  .map(
+                    (
+                      u,
+                    ) => `<div style="margin:3px 0;display:flex;gap:8px;align-items:baseline;font-size:12.5px">
         <span style="color:var(--gold);font-size:11px">${rareStr(u)}</span>
         <span style="color:${ATTR_COLOR[u.attr]};font-weight:700">${ATTR[u.attr]}</span>
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.uname)}</span>
-        <span style="color:var(--dim)">Lv${u.lv}</span><span><b style="color:var(--gold)">${u.power.toLocaleString()}</b></span></div>`).join('');
-      return `<div class="card" data-id="${top.id}">
+        <span style="color:var(--dim)">Lv${u.lv}</span><span><b style="color:var(--gold)">${u.power.toLocaleString()}</b></span></div>`,
+                  )
+                  .join("");
+                return `<div class="card" data-id="${top.id}">
         <div class="portrait" style="background:linear-gradient(150deg,${c}55,${c}18 60%,transparent),linear-gradient(160deg,#1b2145,#141830);font-size:38px">
           ${imgTag(top.icon || top.art)}
           <div class="rstars">${g.length} 张卡</div>${esc(top.cname[0])}</div>
@@ -450,146 +1353,216 @@ function render() {
           <div class="nums"><span>Lv ${Math.max(...g.map((x) => x.lv))}</span><span><b>${top.power.toLocaleString()}</b></span></div>
           <div style="margin-top:8px;border-top:1px dashed var(--line);padding-top:7px">${cards}</div>
         </div></div>`;
-    }).join('') + '</div>';
-    main.querySelectorAll('.card').forEach((el) => el.onclick = () => showModal(+el.dataset.id));
-  }
-}
+              })
+              .join("") +
+            "</div>";
+          main
+            .querySelectorAll(".card")
+            .forEach((el) => (el.onclick = () => showModal(+el.dataset.id)));
+        }
+      }
 
-// 全图鉴视图: 展示 Wiki 全部角色 (含未持有), 未持有置灰
-function renderDex() {
-  const main = document.getElementById('main');
-  const q = state.q.toLowerCase();
-  // 碎片持有数: 已持有卡取 dump 值, 未持有卡取 Wiki 行匹配到的仓库碎片数
-  const pcOf = (idx, r) => (unitByRow.get(idx) ? (unitByRow.get(idx).piece || 0) : (r.piece || 0));
-  const arr = wikiRows.map((r, idx) => ({ r, idx })).filter(({ r, idx }) =>
-    (!q || (r.title + r.yomi + r.no).toLowerCase().includes(q)) &&
-    grpMatch('attr', state.attr, (v) => WIKI_ATTR_ID[r.attr] === v) &&
-    grpMatch('role', state.role, (v) => r.typeId === v) &&
-    grpMatch('sp', state.sp, (v) => r.spId === v) &&
-    grpMatch('camp', state.camp, (v) => WIKI_CAMP_ID[r.camp] === v) &&
-    grpMatch('rar', state.rar, (v) => r.rarity === v) &&
-    (!state.pc.length || pcOf(idx, r) > 0) &&
-    (!state.own.length || state.own.includes(r.owned ? 1 : 2)));
-  const ownedFirst = (a, b) => (b.r.owned - a.r.owned) || (b.r.rarity || 0) - (a.r.rarity || 0) || a.r.no.localeCompare(b.r.no);
-  const cmp = {
-    power: ownedFirst,
-    lv: ownedFirst,
-    love: ownedFirst,
-    rarity: (a, b) => (b.r.rarity || 0) - (a.r.rarity || 0) || a.r.no.localeCompare(b.r.no), // 按初始稀有度
-    uid: (a, b) => a.r.no.localeCompare(b.r.no),
-    date: (a, b) => (b.r.releaseDate || '').localeCompare(a.r.releaseDate || '') || a.r.no.localeCompare(b.r.no),
-  }[state.sort] || ownedFirst;
-  arr.sort(cmp);
-  if (state.desc) arr.reverse();
-  const ownCnt = arr.filter((x) => x.r.owned).length;
-  document.getElementById('count').textContent = `共 ${arr.length} 名（持有 ${ownCnt} / 未持有 ${arr.length - ownCnt}）`;
-  if (!arr.length) { main.innerHTML = '<div class="empty">没有符合筛选条件的角色</div>'; return; }
-  main.innerHTML = '<div class="grid">' + arr.map(({ r, idx }) => {
-    const u = unitByRow.get(idx);
-    const pc = pcOf(idx, r);
-    const c = ATTR_COLOR[WIKI_ATTR_ID[r.attr] || 0];
-    const imgSrc = u ? (u.icon || u.art || r.wimg) : r.wimg;
-    const rst = u ? rareStr(u) : stars(r.rarity || 0);
-    return `<div class="card ${r.owned ? '' : 'notown'}" data-row="${idx}">
+      // 全图鉴视图: 展示 Wiki 全部角色 (含未持有), 未持有置灰
+      function renderDex() {
+        const main = document.getElementById("main");
+        const q = state.q.toLowerCase();
+        // 碎片持有数: 已持有卡取 dump 值, 未持有卡取 Wiki 行匹配到的仓库碎片数
+        const pcOf = (idx, r) =>
+          unitByRow.get(idx) ? unitByRow.get(idx).piece || 0 : r.piece || 0;
+        const arr = wikiRows
+          .map((r, idx) => ({ r, idx }))
+          .filter(
+            ({ r, idx }) =>
+              (!q || (r.title + r.yomi + r.no).toLowerCase().includes(q)) &&
+              grpMatch("attr", state.attr, (v) => WIKI_ATTR_ID[r.attr] === v) &&
+              grpMatch("role", state.role, (v) => r.typeId === v) &&
+              grpMatch("sp", state.sp, (v) => r.spId === v) &&
+              grpMatch("camp", state.camp, (v) => WIKI_CAMP_ID[r.camp] === v) &&
+              grpMatch("rar", state.rar, (v) => r.rarity === v) &&
+              (!state.pc.length || pcOf(idx, r) > 0) &&
+              (!state.own.length || state.own.includes(r.owned ? 1 : 2)),
+          );
+        const ownedFirst = (a, b) =>
+          b.r.owned - a.r.owned ||
+          (b.r.rarity || 0) - (a.r.rarity || 0) ||
+          a.r.no.localeCompare(b.r.no);
+        const cmp =
+          {
+            power: ownedFirst,
+            lv: ownedFirst,
+            love: ownedFirst,
+            rarity: (a, b) =>
+              (b.r.rarity || 0) - (a.r.rarity || 0) ||
+              a.r.no.localeCompare(b.r.no), // 按初始稀有度
+            uid: (a, b) => a.r.no.localeCompare(b.r.no),
+            date: (a, b) =>
+              (b.r.releaseDate || "").localeCompare(a.r.releaseDate || "") ||
+              a.r.no.localeCompare(b.r.no),
+          }[state.sort] || ownedFirst;
+        arr.sort(cmp);
+        if (state.desc) arr.reverse();
+        const ownCnt = arr.filter((x) => x.r.owned).length;
+        document.getElementById("count").textContent =
+          `共 ${arr.length} 名（持有 ${ownCnt} / 未持有 ${arr.length - ownCnt}）`;
+        if (!arr.length) {
+          main.innerHTML = '<div class="empty">没有符合筛选条件的角色</div>';
+          return;
+        }
+        main.innerHTML =
+          '<div class="grid">' +
+          arr
+            .map(({ r, idx }) => {
+              const u = unitByRow.get(idx);
+              const pc = pcOf(idx, r);
+              const c = ATTR_COLOR[WIKI_ATTR_ID[r.attr] || 0];
+              const imgSrc = u ? u.icon || u.art || r.wimg : r.wimg;
+              const rst = u ? rareStr(u) : stars(r.rarity || 0);
+              return `<div class="card ${r.owned ? "" : "notown"}" data-row="${idx}">
       <div class="portrait" style="background:linear-gradient(150deg,${c}55,${c}18 60%,transparent),linear-gradient(160deg,#1b2145,#141830)">
         ${imgTag(imgSrc)}
         <div class="rstars">${rst}</div>
-        <div class="attrbadge" style="color:${c}">${r.attr || '?'}</div>
-        ${!imgSrc ? esc((r.title || '?')[0]) : ''}
+        <div class="attrbadge" style="color:${c}">${r.attr || "?"}</div>
+        ${!imgSrc ? esc((r.title || "?")[0]) : ""}
         <div class="badges">
           ${r.owned ? '<span class="tag">已持有</span>' : '<span class="tag" style="background:#555">未持有</span>'}
-          ${pc > 0 ? `<span class="tag lbok" title="仓库持有碎片 ${pc} 个">碎片 ${pc}</span>` : ''}
+          ${pc > 0 ? `<span class="tag lbok" title="仓库持有碎片 ${pc} 个">碎片 ${pc}</span>` : ""}
         </div>
-        ${r.href ? `<a class="wikilink" href="${WIKI_BASE}${r.href.replace(/&/g, '&amp;')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="在 Wiki 中查看">↗ Wiki</a>` : ''}
+        ${r.href ? `<a class="wikilink" href="${WIKI_BASE}${r.href.replace(/&/g, "&amp;")}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="在 Wiki 中查看">↗ Wiki</a>` : ""}
       </div>
       <div class="cardbody">
         <div class="uname">${esc(r.title || r.no)}</div>
-        <div class="cname">${esc(r.yomi || '')}</div>
-        <div class="meta"><span class="role-chip">${ROLE[r.typeId] || r.type || '?'}</span>${SP_TYPE[r.spId] ? `<span>${SP_TYPE[r.spId]}</span>` : ''}<span>${r.camp || '?'}</span><span>${esc(r.affil || '')}</span>${r.releaseDate ? `<span>${r.releaseDate}</span>` : ''}</div>
+        <div class="cname">${esc(r.yomi || "")}</div>
+        <div class="meta"><span class="role-chip">${ROLE[r.typeId] || r.type || "?"}</span>${SP_TYPE[r.spId] ? `<span>${SP_TYPE[r.spId]}</span>` : ""}<span>${r.camp || "?"}</span><span>${esc(r.affil || "")}</span>${r.releaseDate ? `<span>${r.releaseDate}</span>` : ""}</div>
       </div>
     </div>`;
-  }).join('') + '</div>';
-  main.querySelectorAll('.card').forEach((el) => {
-    const u = unitByRow.get(+el.dataset.row);
-    if (u) el.onclick = () => showModal(u.id);
-  });
-}
+            })
+            .join("") +
+          "</div>";
+        main.querySelectorAll(".card").forEach((el) => {
+          const u = unitByRow.get(+el.dataset.row);
+          if (u) el.onclick = () => showModal(u.id);
+        });
+      }
 
-// シスター视图: Wiki 全 71 名 (未持有置灰), 全部可点开详情 (未持有显示 Wiki 满级参考)
-function renderSister() {
-  const main = document.getElementById('main');
-  const q = state.q.toLowerCase();
-  const arr = sisterRows.filter((r) =>
-    (!q || r.name.toLowerCase().includes(q)) &&
-    grpMatch('attr', state.attr, (v) => r.attr === v) &&
-    grpMatch('role', state.role, (v) => r.typeId === v) &&
-    (!state.own.length || state.own.includes(r.owned ? 1 : 2)));
-  if (state.sort === 'date') arr.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.idx - b.idx); // 其余排序值均按图鉴顺
-  if (state.desc) arr.reverse();
-  const ownCnt = arr.filter((x) => x.owned).length;
-  document.getElementById('count').textContent = `共 ${arr.length} 名（持有 ${ownCnt} / 未持有 ${arr.length - ownCnt}）`;
-  if (!arr.length) { main.innerHTML = '<div class="empty">没有符合筛选条件的シスター</div>'; return; }
-  main.innerHTML = '<div class="grid">' + arr.map((r) => {
-    const s = r.sid != null ? sisterById.get(r.sid) : null;
-    const c = ATTR_COLOR[r.attr] || '#8890b8';
-    const imgSrc = r.wimg; // 一律 Wiki シスター专属图标 (Q 版), 不复用 unit 图
-    return `<div class="card ${r.owned ? '' : 'notown'}" data-idx="${r.idx}"${r.owned ? '' : ' style="cursor:pointer"'}>
+      // シスター视图: Wiki 全 71 名 (未持有置灰), 全部可点开详情 (未持有显示 Wiki 满级参考)
+      function renderSister() {
+        const main = document.getElementById("main");
+        const q = state.q.toLowerCase();
+        const arr = sisterRows.filter(
+          (r) =>
+            (!q || r.name.toLowerCase().includes(q)) &&
+            grpMatch("attr", state.attr, (v) => r.attr === v) &&
+            grpMatch("role", state.role, (v) => r.typeId === v) &&
+            (!state.own.length || state.own.includes(r.owned ? 1 : 2)),
+        );
+        if (state.sort === "date")
+          arr.sort(
+            (a, b) =>
+              (b.date || "").localeCompare(a.date || "") || a.idx - b.idx,
+          ); // 其余排序值均按图鉴顺
+        if (state.desc) arr.reverse();
+        const ownCnt = arr.filter((x) => x.owned).length;
+        document.getElementById("count").textContent =
+          `共 ${arr.length} 名（持有 ${ownCnt} / 未持有 ${arr.length - ownCnt}）`;
+        if (!arr.length) {
+          main.innerHTML =
+            '<div class="empty">没有符合筛选条件的シスター</div>';
+          return;
+        }
+        main.innerHTML =
+          '<div class="grid">' +
+          arr
+            .map((r) => {
+              const s = r.sid != null ? sisterById.get(r.sid) : null;
+              const c = ATTR_COLOR[r.attr] || "#8890b8";
+              const imgSrc = r.wimg; // 一律 Wiki シスター专属图标 (Q 版), 不复用 unit 图
+              return `<div class="card ${r.owned ? "" : "notown"}" data-idx="${r.idx}"${r.owned ? "" : ' style="cursor:pointer"'}>
       <div class="portrait" style="background:linear-gradient(150deg,${c}55,${c}18 60%,transparent),linear-gradient(160deg,#1b2145,#141830)">
         ${imgTag(imgSrc)}
-        <div class="attrbadge" style="color:${c}">${ATTR[r.attr] || '?'}</div>
-        ${!imgSrc ? esc(r.name[0]) : ''}
+        <div class="attrbadge" style="color:${c}">${ATTR[r.attr] || "?"}</div>
+        ${!imgSrc ? esc(r.name[0]) : ""}
         <div class="badges">
           ${r.owned ? (s && s.lb > 0 ? `<span class="tag">突破${s.lb}</span>` : '<span class="tag">已持有</span>') : '<span class="tag" style="background:#555">未持有</span>'}
         </div>
       </div>
       <div class="cardbody">
         <div class="uname">${esc(r.name)}</div>
-        <div class="meta"><span class="role-chip">${ROLE[r.typeId] || '?'}</span>${r.gauge ? `<span>ゲージ ${esc(r.gauge)}</span>` : ''}${r.date ? `<span>${esc(r.date)}</span>` : ''}</div>
+        <div class="meta"><span class="role-chip">${ROLE[r.typeId] || "?"}</span>${r.gauge ? `<span>ゲージ ${esc(r.gauge)}</span>` : ""}${r.date ? `<span>${esc(r.date)}</span>` : ""}</div>
       </div>
     </div>`;
-  }).join('') + '</div>';
-  main.querySelectorAll('.card').forEach((el) => {
-    el.onclick = () => showSister(+el.dataset.idx);
-  });
-}
+            })
+            .join("") +
+          "</div>";
+        main.querySelectorAll(".card").forEach((el) => {
+          el.onclick = () => showSister(+el.dataset.idx);
+        });
+      }
 
-// シスター详情弹窗 (持有+未持有): 持有=dump 当前练度技能 + Wiki 参考; 未持有=Wiki 满级效果参考; 标题区均带 Wiki 页面链接
-function showSister(rowIdx) {
-  const r = sisterRows[rowIdx];
-  if (!r) return;
-  const s = r.sid != null ? sisterById.get(r.sid) : null;
-  const c = ATTR_COLOR[r.attr] || '#8890b8';
-  const row = (k, v) => `<div><span class="k">${k}</span> ${v ?? '<span class="k">-</span>'}</div>`;
-  const wikiUrl = r.href ? `${WIKI_BASE}${r.href.replace(/&/g, '&amp;')}` : null;
-  const nextStr = (n) => (n ? `<div class="sdetail" style="color:#9aa3c7">→ Lv${n.lv}: ${colorize(n.detail)}</div>` : '');
-  const sisSkill = (tag, name, lv, max, detail, next, extraHtml = '', lock = false) => `<div class="skill${lock ? ' slock' : ''}">
-      <div class="sname">${tag} <b>${esc(name)}</b>${lv ? `<span class="smeta">Lv ${lv}/${max}</span>` : ''}${lock ? '<span class="slocktag">未解放</span>' : ''}</div>
-      ${detail ? `<div class="sdetail">${colorize(detail)}</div>` : ''}
+      // シスター详情弹窗 (持有+未持有): 持有=dump 当前练度技能 + Wiki 参考; 未持有=Wiki 满级效果参考; 标题区均带 Wiki 页面链接
+      function showSister(rowIdx) {
+        const r = sisterRows[rowIdx];
+        if (!r) return;
+        const s = r.sid != null ? sisterById.get(r.sid) : null;
+        const c = ATTR_COLOR[r.attr] || "#8890b8";
+        const row = (k, v) =>
+          `<div><span class="k">${k}</span> ${v ?? '<span class="k">-</span>'}</div>`;
+        const wikiUrl = r.href
+          ? `${WIKI_BASE}${r.href.replace(/&/g, "&amp;")}`
+          : null;
+        const nextStr = (n) =>
+          n
+            ? `<div class="sdetail" style="color:#9aa3c7">→ Lv${n.lv}: ${colorize(n.detail)}</div>`
+            : "";
+        const sisSkill = (
+          tag,
+          name,
+          lv,
+          max,
+          detail,
+          next,
+          extraHtml = "",
+          lock = false,
+        ) => `<div class="skill${lock ? " slock" : ""}">
+      <div class="sname">${tag} <b>${esc(name)}</b>${lv ? `<span class="smeta">Lv ${lv}/${max}</span>` : ""}${lock ? '<span class="slocktag">未解放</span>' : ""}</div>
+      ${detail ? `<div class="sdetail">${colorize(detail)}</div>` : ""}
       ${nextStr(next)}
       ${extraHtml}
     </div>`;
-  const condHtml = r.cond ? `<div class="scond">発動条件：${esc(r.cond)}${r.target ? ` ／ 対象：${esc(r.target)}` : ''}</div>` : '';
-  const teamHtml = r.team ? sisSkill('<span class="stag st-s">参考</span>', 'チームスキル（满级）', null, null, r.team, null) : '';
-  const skillsHtml = s ? `<div class="section"><h3>技能</h3>
-    ${s.support ? sisSkill('<span class="stag st-ex">支援</span>', s.support.name, s.support.lv, s.support.max, s.support.detail, s.support.next) : ''}
-    ${s.active ? sisSkill('<span class="stag st-u">アクティブ</span>', s.active.name, s.active.lv, s.active.max, s.active.detail, s.active.next, condHtml) : ''}
-    ${s.extra && s.extra.name ? sisSkill('<span class="stag st-p">解放</span>', s.extra.name, null, null, s.extra.detail, null, '', !s.extra.released) : ''}
+        const condHtml = r.cond
+          ? `<div class="scond">発動条件：${esc(r.cond)}${r.target ? ` ／ 対象：${esc(r.target)}` : ""}</div>`
+          : "";
+        const teamHtml = r.team
+          ? sisSkill(
+              '<span class="stag st-s">参考</span>',
+              "チームスキル（满级）",
+              null,
+              null,
+              r.team,
+              null,
+            )
+          : "";
+        const skillsHtml = s
+          ? `<div class="section"><h3>技能</h3>
+    ${s.support ? sisSkill('<span class="stag st-ex">支援</span>', s.support.name, s.support.lv, s.support.max, s.support.detail, s.support.next) : ""}
+    ${s.active ? sisSkill('<span class="stag st-u">アクティブ</span>', s.active.name, s.active.lv, s.active.max, s.active.detail, s.active.next, condHtml) : ""}
+    ${s.extra && s.extra.name ? sisSkill('<span class="stag st-p">解放</span>', s.extra.name, null, null, s.extra.detail, null, "", !s.extra.released) : ""}
     ${teamHtml}
-  </div>` : `<div class="section"><h3>技能 <span class="k">（未持有 · Wiki 满级参考）</span></h3>
-    ${r.effect ? sisSkill('<span class="stag st-u">アクティブ</span>', 'アクティブスキル', null, null, r.effect, null, condHtml) : ''}
+  </div>`
+          : `<div class="section"><h3>技能 <span class="k">（未持有 · Wiki 满级参考）</span></h3>
+    ${r.effect ? sisSkill('<span class="stag st-u">アクティブ</span>', "アクティブスキル", null, null, r.effect, null, condHtml) : ""}
     ${teamHtml}
   </div>`;
-  const sisArt = r.wart || r.wimg; // Wiki シスター专属立绘 (Q 版 SD), 无立绘时退回图标
-  document.getElementById('modal').innerHTML = `
-    <div class="martbg">${sisArt ? `<img src="${sisArt}" onerror="this.parentElement.remove()">` : ''}</div>
+        const sisArt = r.wart || r.wimg; // Wiki シスター专属立绘 (Q 版 SD), 无立绘时退回图标
+        document.getElementById("modal").innerHTML = `
+    <div class="martbg">${sisArt ? `<img src="${sisArt}" onerror="this.parentElement.remove()">` : ""}</div>
     <button class="close" onclick="closeOverlay()">✕</button>
     <div class="mmain">
-      <div><h2>${esc(r.name)}${s ? '' : ' <span class="slocktag" style="margin-left:8px">未持有</span>'}</h2><div class="sub2"><span style="color:var(--gold)">シスター</span> · <span style="color:${c};font-weight:700">${ATTR[r.attr] || '?'}</span> · ${ROLE[r.typeId] || '?'}${s && s.camp ? ' · ' + CAMP[s.camp] : ''}${r.date ? ' · 実装 ' + esc(r.date) : ''}${wikiUrl ? ` · <a class="wlink" href="${wikiUrl}" target="_blank" rel="noopener">Wiki ↗</a>` : ''}</div></div>
+      <div><h2>${esc(r.name)}${s ? "" : ' <span class="slocktag" style="margin-left:8px">未持有</span>'}</h2><div class="sub2"><span style="color:var(--gold)">シスター</span> · <span style="color:${c};font-weight:700">${ATTR[r.attr] || "?"}</span> · ${ROLE[r.typeId] || "?"}${s && s.camp ? " · " + CAMP[s.camp] : ""}${r.date ? " · 実装 " + esc(r.date) : ""}${wikiUrl ? ` · <a class="wlink" href="${wikiUrl}" target="_blank" rel="noopener">Wiki ↗</a>` : ""}</div></div>
       <div class="grid2" style="margin-top:14px">
-        ${s ? row('限界突破', s.lb + ' 次') : row('Wiki 図鑑番号', 'No.' + (r.idx + 1))}
-        ${r.gauge ? row('ゲージ速度', esc(r.gauge)) : ''}
-        ${r.obtain ? row('入手方法', esc(r.obtain)) : ''}
-        ${s ? row('シスター番号', s.sid) : ''}
+        ${s ? row("限界突破", s.lb + " 次") : row("Wiki 図鑑番号", "No." + (r.idx + 1))}
+        ${r.gauge ? row("ゲージ速度", esc(r.gauge)) : ""}
+        ${r.obtain ? row("入手方法", esc(r.obtain)) : ""}
+        ${s ? row("シスター番号", s.sid) : ""}
       </div>
       ${skillsHtml}
     </div>
@@ -599,150 +1572,251 @@ function showSister(rowIdx) {
       </div>
     </div>
   `;
-  openOverlay();
-}
+        openOverlay();
+      }
 
-function showModal(id) {
-  const u = units.find((x) => x.id === id);
-  if (!u) return;
-  const c = ATTR_COLOR[u.attr];
-  const loveMax = u.max_love > 0 && u.love >= u.max_love;
-  const row = (k, v) => `<div><span class="k">${k}</span> ${v ?? '<span class="k">-</span>'}</div>`;
-  // 白值面板 (当前练度白值 + 好感加成明细, Wiki 只有 Lv1 值)
-  const statHtml = u.st ? `<div class="section"><h3>白值（当前练度）</h3><div class="statgrid">
-      <div class="stat"><span class="sv">${(u.hpTotal || u.st.hp).toLocaleString()}</span><span class="sk">HP${(u.eqBonus && u.eqBonus.hp) || (u.loveB && u.loveB.hp) ? `<i>合计(基础 ${u.st.hp.toLocaleString()}${u.eqBonus && u.eqBonus.hp ? ` + 装备 ${u.eqBonus.hp}` : ''}${u.loveB && u.loveB.hp ? ` + 好感 ${u.loveB.hp}` : ''})</i>` : ''}</span></div>
-      <div class="stat"><span class="sv">${(u.atkTotal || u.st.atk).toLocaleString()}</span><span class="sk">ATK${(u.eqBonus && u.eqBonus.atk) || (u.loveB && u.loveB.atk) ? `<i>合计(基础 ${u.st.atk.toLocaleString()}${u.eqBonus && u.eqBonus.atk ? ` + 装备 ${u.eqBonus.atk}` : ''}${u.loveB && u.loveB.atk ? ` + 好感 ${u.loveB.atk}` : ''})</i>` : ''}</span></div>
-      <div class="stat"><span class="sv">${pct((u.st.crit || 0) + (u.eqBonus ? u.eqBonus.crit * 100 : 0) + ((u.loveB && u.loveB.crit) || 0))}%</span><span class="sk">CRIT${(u.eqBonus && u.eqBonus.crit) || (u.loveB && u.loveB.crit) ? `<i>合计(基础 ${pct(u.st.crit)}%${u.eqBonus && u.eqBonus.crit ? ` + 装备 ${pct(u.eqBonus.crit * 100)}%` : ''}${u.loveB && u.loveB.crit ? ` + 好感 ${pct(u.loveB.crit)}%` : ''})</i>` : ''}</span></div>
-      <div class="stat"><span class="sv">${u.st.initEx + (u.eqBonus ? u.eqBonus.ex : 0)}</span><span class="sk">EX${u.eqBonus && u.eqBonus.ex ? `<i>合计(基础 ${u.st.initEx} + 装备 ${u.eqBonus.ex})</i>` : ''}</span></div>
-      <div class="stat"><span class="sv">${u.st.exRate + (u.eqBonus ? u.eqBonus.exUp : 0)}</span><span class="sk">EX 上升${u.eqBonus && u.eqBonus.exUp ? `<i>合计(基础 ${u.st.exRate} + 装备 ${u.eqBonus.exUp})</i>` : ''}</span></div>
+      function showModal(id) {
+        const u = units.find((x) => x.id === id);
+        if (!u) return;
+        const c = ATTR_COLOR[u.attr];
+        const loveMax = u.max_love > 0 && u.love >= u.max_love;
+        const row = (k, v) =>
+          `<div><span class="k">${k}</span> ${v ?? '<span class="k">-</span>'}</div>`;
+        // 白值面板 (当前练度白值 + 好感加成明细, Wiki 只有 Lv1 值)
+        const statHtml = u.st
+          ? `<div class="section"><h3>白值（当前练度）</h3><div class="statgrid">
+      <div class="stat"><span class="sv">${(u.hpTotal || u.st.hp).toLocaleString()}</span><span class="sk">HP${(u.eqBonus && u.eqBonus.hp) || (u.loveB && u.loveB.hp) ? `<i>合计(基础 ${u.st.hp.toLocaleString()}${u.eqBonus && u.eqBonus.hp ? ` + 装备 ${u.eqBonus.hp}` : ""}${u.loveB && u.loveB.hp ? ` + 好感 ${u.loveB.hp}` : ""})</i>` : ""}</span></div>
+      <div class="stat"><span class="sv">${(u.atkTotal || u.st.atk).toLocaleString()}</span><span class="sk">ATK${(u.eqBonus && u.eqBonus.atk) || (u.loveB && u.loveB.atk) ? `<i>合计(基础 ${u.st.atk.toLocaleString()}${u.eqBonus && u.eqBonus.atk ? ` + 装备 ${u.eqBonus.atk}` : ""}${u.loveB && u.loveB.atk ? ` + 好感 ${u.loveB.atk}` : ""})</i>` : ""}</span></div>
+      <div class="stat"><span class="sv">${pct((u.st.crit || 0) + (u.eqBonus ? u.eqBonus.crit * 100 : 0) + ((u.loveB && u.loveB.crit) || 0))}%</span><span class="sk">CRIT${(u.eqBonus && u.eqBonus.crit) || (u.loveB && u.loveB.crit) ? `<i>合计(基础 ${pct(u.st.crit)}%${u.eqBonus && u.eqBonus.crit ? ` + 装备 ${pct(u.eqBonus.crit * 100)}%` : ""}${u.loveB && u.loveB.crit ? ` + 好感 ${pct(u.loveB.crit)}%` : ""})</i>` : ""}</span></div>
+      <div class="stat"><span class="sv">${u.st.initEx + (u.eqBonus ? u.eqBonus.ex : 0)}</span><span class="sk">EX${u.eqBonus && u.eqBonus.ex ? `<i>合计(基础 ${u.st.initEx} + 装备 ${u.eqBonus.ex})</i>` : ""}</span></div>
+      <div class="stat"><span class="sv">${u.st.exRate + (u.eqBonus ? u.eqBonus.exUp : 0)}</span><span class="sk">EX 上升${u.eqBonus && u.eqBonus.exUp ? `<i>合计(基础 ${u.st.exRate} + 装备 ${u.eqBonus.exUp})</i>` : ""}</span></div>
       <div class="stat"><span class="sv">${u.st.wtMin}~${u.st.wtMax}</span><span class="sk">行动CT</span></div>
-    </div></div>` : '';
-  // 装备参数: 当前练度参数 chips + Wiki 满强アビリティ
-  const paramStr = (p) => EQ_PARAM[p.t] === undefined ? p.t + ':' + p.v : `${EQ_PARAM[p.t]}${p.t === 3 ? (p.v / 100).toFixed(2) + '%' : '+' + p.v.toLocaleString()}`;
-  // 装备区: 每卡 3 部位 (dump 里 equip_data 顺序随机, 渲染前按 武器→防具→装飾品 固定排序)
-  const eqHtml = (u.equips || []).length ? `<div class="section"><h3>装备</h3><div style="display:flex;flex-direction:column;gap:8px">
-    ${[...u.equips].sort((a, b) => a.part - b.part).map((e) => `<div class="eq">
-      <div class="eico">${e.icon ? `<img src="${e.icon}" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span>${(e.name || '?')[0]}</span>`}</div>
+    </div></div>`
+          : "";
+        // 装备参数: 当前练度参数 chips + Wiki 满强アビリティ
+        const paramStr = (p) =>
+          EQ_PARAM[p.t] === undefined
+            ? p.t + ":" + p.v
+            : `${EQ_PARAM[p.t]}${p.t === 3 ? (p.v / 100).toFixed(2) + "%" : "+" + p.v.toLocaleString()}`;
+        // 装备区: 每卡 3 部位 (dump 里 equip_data 顺序随机, 渲染前按 武器→防具→装飾品 固定排序)
+        const eqHtml = (u.equips || []).length
+          ? `<div class="section"><h3>装备</h3><div style="display:flex;flex-direction:column;gap:8px">
+    ${[...u.equips]
+      .sort((a, b) => a.part - b.part)
+      .map(
+        (e) => `<div class="eq">
+      <div class="eico">${e.icon ? `<img src="${e.icon}" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span>${(e.name || "?")[0]}</span>`}</div>
       <div class="eqi">
-        <div class="eqn"><span class="epart">${EQ_PART[e.part] || e.part}</span><span class="starr">${'★'.repeat(e.rarity || 1)}</span> ${esc(e.name)}</div>
-        <div class="eqm">Lv ${e.lv}/${e.max_lv}${e.max_lb ? ` · 突破 ${e.lb}/${e.max_lb}` : ''}${e.enchTotal ? ` · 附魔 ${e.enchOpen}/${e.enchTotal}` : ''}${e.wObtain ? ` · ${esc(e.wObtain)}` : ''}</div>
-        <div class="eqp">${(e.params || []).map((p) => `<span>${paramStr(p)}</span>`).join('')}</div>
-        ${e.skill ? `<div class="eqs"><b>アビリティ</b> ${esc(e.skill)}${e.skill_lv ? ` <span class="k">Lv${e.skill_lv}</span>` : ''}</div>` : ''}
-        ${e.wAbility && e.wAbility !== e.skill ? `<div class="eqs"><b>初期(最大)</b> ${esc(e.wAbility)}</div>` : ''}
-        ${e.enchants && e.enchants.some(en => en.open) ? `<div class="eqs"><b>附魔</b></div>` + e.enchants.filter(en => en.open).map(en => `<div class="eqench">${en.rare ? '<span class="erare">稀有</span>' : ''}<span class="estarr">${'★'.repeat(en.rarity || 1)}</span> <b>${esc(en.name)}</b>${en.tier ? ` <span class="k">Lv${en.tier}</span>` : ''} — ${esc(en.text)}</div>`).join('') : ''}
+        <div class="eqn"><span class="epart">${EQ_PART[e.part] || e.part}</span><span class="starr">${"★".repeat(e.rarity || 1)}</span> ${esc(e.name)}</div>
+        <div class="eqm">Lv ${e.lv}/${e.max_lv}${e.max_lb ? ` · 突破 ${e.lb}/${e.max_lb}` : ""}${e.enchTotal ? ` · 附魔 ${e.enchOpen}/${e.enchTotal}` : ""}${e.wObtain ? ` · ${esc(e.wObtain)}` : ""}</div>
+        <div class="eqp">${(e.params || []).map((p) => `<span>${paramStr(p)}</span>`).join("")}</div>
+        ${e.skill ? `<div class="eqs"><b>アビリティ</b> ${pcthi(e.skill)}${e.skill_lv ? ` <span class="k">Lv${e.skill_lv}</span>` : ""}</div>` : ""}
+        ${e.wAbility && e.wAbility !== e.skill ? `<div class="eqs"><b>初期(最大)</b> ${pcthi(e.wAbility)}</div>` : ""}
+        ${
+          e.enchants && e.enchants.some((en) => en.open)
+            ? `<div class="eqs"><b>附魔</b></div>` +
+              e.enchants
+                .filter((en) => en.open)
+                .map(
+                  (en) =>
+                    `<div class="eqench">${en.rare ? '<span class="erare">稀有</span>' : ""}<span class="estarr">${"★".repeat(en.rarity || 1)}</span> <b>${esc(en.name)}</b>${en.tier ? ` <span class="k">Lv${en.tier}</span>` : ""} — ${pcthi(en.text)}</div>`,
+                )
+                .join("")
+            : ""
+        }
       </div>
-    </div>`).join('')}
-  </div></div>` : '';
-  // 技能区: EX1/EX2/ユニゾン/シスター技 + EX2+ (specific_skill, 挂原 EX 槽下方) + 升星解锁的固有被动
-  const skillTag = (s) => s.type === 2 ? '<span class="stag st-u">ユニゾン</span>' : s.type === 3 ? '<span class="stag st-s">シスター</span>' : `<span class="stag st-ex">EX${s._exn}</span>`;
-  const catChips = (s) => (s.cats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join('');
-  const skillBlock = (s, tagHtml) => `<div class="skill${s.unlock ? '' : ' slock'}">
-      <div class="sname">${tagHtml} <b>${esc(s.name || '固有被动')}</b>${catChips(s)}${s.cost > 0 ? `<span class="smeta">EX 消耗 ${s.cost}</span>` : ''}${s.max_lv ? `<span class="smeta">Lv ${s.lv}/${s.max_lv}</span>` : ''}${s.unlock ? '' : '<span class="slocktag">未解锁</span>'}</div>
-      ${s.detail ? `<div class="sdetail">${esc(s.detail)}</div>` : ''}
-      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${(s.ssCats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join('')}${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ''}</div><div class="sdetail">${esc(s.ssDetail)}</div>` : ''}
-      ${s.cond && !s.unlock ? `<div class="scond">解锁条件：${esc(s.cond)}</div>` : ''}
+    </div>`,
+      )
+      .join("")}
+  </div></div>`
+          : "";
+        // 技能区: EX1/EX2/ユニゾン/シスター技 + EX2+ (specific_skill, 挂原 EX 槽下方) + 升星解锁的固有被动
+        const skillTag = (s) =>
+          s.type === 2
+            ? '<span class="stag st-u">ユニゾン</span>'
+            : s.type === 3
+              ? '<span class="stag st-s">シスター</span>'
+              : `<span class="stag st-ex">EX${s._exn}</span>`;
+        const catChips = (s) =>
+          (s.cats || [])
+            .map(
+              (c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`,
+            )
+            .join("");
+        const skillBlock = (
+          s,
+          tagHtml,
+        ) => `<div class="skill${s.unlock ? "" : " slock"}">
+      <div class="sname">${tagHtml} <b>${esc(s.name || "固有被动")}</b>${catChips(s)}${s.cost > 0 ? `<span class="smeta">EX 消耗 ${s.cost}</span>` : ""}${s.max_lv ? `<span class="smeta">Lv ${s.lv}/${s.max_lv}</span>` : ""}${s.unlock ? "" : '<span class="slocktag">未解锁</span>'}</div>
+      ${s.detail ? `<div class="sdetail">${pcthi(s.detail)}</div>` : ""}
+      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${(s.ssCats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join("")}${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ""}</div><div class="sdetail">${pcthi(s.ssDetail)}</div>` : ""}
+      ${s.cond && !s.unlock ? `<div class="scond">解锁条件：${esc(s.cond)}</div>` : ""}
     </div>`;
-  let exN = 0;
-  const skillsHtml = (u.skills || []).length ? `<div class="section"><h3>技能</h3>` +
-    u.skills.map((s) => { if (s.type === 1) s._exn = ++exN; return skillBlock(s, skillTag(s)); }).join('') +
-    (u.uniques || []).map((s) => skillBlock(s, '<span class="stag st-p">被动</span>')).join('') + `</div>` : '';
-  // 升星区: 碎片持有量 + 限界突破 (★1~★4) / コアLV强化 (★5 后) 的进度条
-  const lbLine = (label, from, to, need, okText) => {
-    const has = u.piece, ok = has >= need, w = Math.min(100, Math.round((has / need) * 100));
-    return `<div class="lbrow"><span class="k">${label}</span><b>${from} → ${to}</b><span class="k">${has}/${need}</span><span class="piece"><i style="width:${w}%"></i></span><span class="${ok ? 'ok' : 'ng'}">${ok ? okText : '差 ' + (need - has)}</span></div>`;
-  };
-  const starRows = [];
-  if (u.pieceName) starRows.push(`<div class="lbrow"><span class="k">碎片</span><b>${esc(u.pieceName)}</b></div>`);
-  if (u.lbNeed != null) starRows.push(lbLine('限界突破', stars(u.rarity), stars(u.rarity + 1), u.lbNeed, '可升星'));
-  else starRows.push(`<div class="lbrow"><span class="k">限界突破</span><b>${stars(u.rarity)} 已满</b></div>`);
-  if (u.coreNeed != null) starRows.push(lbLine('コアLV強化', 'コア' + u.core, 'コア' + (u.core + 1), u.coreNeed, '可强化'));
-  else if (u.maxCore && u.core >= u.maxCore) starRows.push(`<div class="lbrow"><span class="k">コア</span><b>${u.core} / ${u.maxCore} 已满</b></div>`);
-  const starHtml = starRows.length ? `<div class="section"><h3>升星</h3>${starRows.join('')}</div>` : '';
-  // 弹窗结构: 同图模糊底 + 左侧信息(滚动) + 右侧立绘展示面板(等比完整显示)
-  document.getElementById('modal').innerHTML = `
-    <div class="martbg">${u.art ? `<img src="${u.art}" onerror="this.parentElement.remove()">` : ''}</div>
+        let exN = 0;
+        const skillsHtml = (u.skills || []).length
+          ? `<div class="section"><h3>技能</h3>` +
+            u.skills
+              .map((s) => {
+                if (s.type === 1) s._exn = ++exN;
+                return skillBlock(s, skillTag(s));
+              })
+              .join("") +
+            (u.uniques || [])
+              .map((s) => skillBlock(s, '<span class="stag st-p">被动</span>'))
+              .join("") +
+            `</div>`
+          : "";
+        // 升星区: 碎片持有量 + 限界突破 (★1~★4) / コアLV强化 (★5 后) 的进度条
+        const lbLine = (label, from, to, need, okText) => {
+          const has = u.piece,
+            ok = has >= need,
+            w = Math.min(100, Math.round((has / need) * 100));
+          return `<div class="lbrow"><span class="k">${label}</span><b>${from} → ${to}</b><span class="k">${has}/${need}</span><span class="piece"><i style="width:${w}%"></i></span><span class="${ok ? "ok" : "ng"}">${ok ? okText : "差 " + (need - has)}</span></div>`;
+        };
+        const starRows = [];
+        if (u.pieceName)
+          starRows.push(
+            `<div class="lbrow"><span class="k">碎片</span><b>${esc(u.pieceName)}</b></div>`,
+          );
+        if (u.lbNeed != null)
+          starRows.push(
+            lbLine(
+              "限界突破",
+              stars(u.rarity),
+              stars(u.rarity + 1),
+              u.lbNeed,
+              "可升星",
+            ),
+          );
+        else
+          starRows.push(
+            `<div class="lbrow"><span class="k">限界突破</span><b>${stars(u.rarity)} 已满</b></div>`,
+          );
+        if (u.coreNeed != null)
+          starRows.push(
+            lbLine(
+              "コアLV強化",
+              "コア" + u.core,
+              "コア" + (u.core + 1),
+              u.coreNeed,
+              "可强化",
+            ),
+          );
+        else if (u.maxCore && u.core >= u.maxCore)
+          starRows.push(
+            `<div class="lbrow"><span class="k">コア</span><b>${u.core} / ${u.maxCore} 已满</b></div>`,
+          );
+        const starHtml = starRows.length
+          ? `<div class="section"><h3>升星</h3>${starRows.join("")}</div>`
+          : "";
+        // 弹窗结构: 同图模糊底 + 左侧信息(滚动) + 右侧立绘展示面板(等比完整显示)
+        document.getElementById("modal").innerHTML = `
+    <div class="martbg">${u.art ? `<img src="${u.art}" onerror="this.parentElement.remove()">` : ""}</div>
     <button class="close" onclick="closeOverlay()">✕</button>
     <div class="mmain">
-      <div><h2>${esc(u.uname)}</h2><div class="sub2"><ruby>${u.fnameRuby}</ruby> · <span style="color:var(--gold)">${rareStr(u)}</span> · <span style="color:${c};font-weight:700">${ATTR[u.attr]}</span> · ${ROLE[u.role]}${u.spType && SP_TYPE[u.spType] ? ` · ${SP_TYPE[u.spType]}` : ''}${u.whref ? ` · <a class="wlink" href="${WIKI_BASE}${u.whref.replace(/&/g, '&amp;')}" target="_blank" rel="noopener">Wiki ↗</a>` : ''}</div></div>
+      <div><h2>${esc(u.uname)}</h2><div class="sub2"><ruby>${u.fnameRuby}</ruby> · <span style="color:var(--gold)">${rareStr(u)}</span> · <span style="color:${c};font-weight:700">${ATTR[u.attr]}</span> · ${ROLE[u.role]}${u.spType && SP_TYPE[u.spType] ? ` · ${SP_TYPE[u.spType]}` : ""}${u.whref ? ` · <a class="wlink" href="${WIKI_BASE}${u.whref.replace(/&/g, "&amp;")}" target="_blank" rel="noopener">Wiki ↗</a>` : ""}</div></div>
       <div class="grid2" style="margin-top:14px">
-      ${row('战力', '<b style="color:var(--gold)">' + u.power.toLocaleString() + '</b>')}
-      ${row('队伍HP', u.team_hp.toLocaleString())}
-      ${row('等级', u.lv + ' / ' + u.max_lv + (u.lv >= u.max_lv ? ' <span style="color:var(--gold)">MAX</span>' : ''))}
-      ${row('上限解放', u.limit + ' 次')}
-      ${u.maxCore ? row('コア', u.core + '/' + u.maxCore) : ''}
-      ${row('稀有度', rareStr(u) + (u.max_rarity ? ' <span class="k">/ 上限' + stars(u.max_rarity) + '</span>' : ''))}
-      ${row('好感度', '<span style="color:var(--pink)">♥ ' + u.love + ' / ' + (u.max_love || '?') + (loveMax ? ' MAX' : '') + '</span>')}
-      ${row('种族', esc(campStr(u)))}
-      ${row('所属', esc(affilStr(u)))}
-      ${row('卡牌编号', u.unit_id + ' (illust ' + u.illust + ')')}
+      ${row("战力", '<b style="color:var(--gold)">' + u.power.toLocaleString() + "</b>")}
+      ${row("队伍HP", u.team_hp.toLocaleString())}
+      ${row("等级", u.lv + " / " + u.max_lv + (u.lv >= u.max_lv ? ' <span style="color:var(--gold)">MAX</span>' : ""))}
+      ${row("上限解放", u.limit + " 次")}
+      ${u.maxCore ? row("コア", u.core + "/" + u.maxCore) : ""}
+      ${row("稀有度", rareStr(u) + (u.max_rarity ? ' <span class="k">/ 上限' + stars(u.max_rarity) + "</span>" : ""))}
+      ${row("好感度", '<span style="color:var(--pink)">♥ ' + u.love + " / " + (u.max_love || "?") + (loveMax ? " MAX" : "") + "</span>")}
+      ${row("种族", esc(campStr(u)))}
+      ${row("所属", esc(affilStr(u)))}
+      ${row("卡牌编号", u.unit_id + " (illust " + u.illust + ")")}
     </div>
     ${starHtml}
     ${eqHtml}
     ${skillsHtml}
-      ${u.profile ? `<div class="section"><h3>简介</h3><div class="profile">${esc(u.profile)}</div></div>` : ''}
+      ${u.profile ? `<div class="section"><h3>简介</h3><div class="profile">${esc(u.profile)}</div></div>` : ""}
     </div>
     <div class="mfig">
       <div class="figpanel" style="background:linear-gradient(150deg,${c}40,${c}12 60%,transparent),linear-gradient(160deg,#1b2145,#141830)">
-        ${u.art ? `<img src="${u.art}" onerror="this.remove()">` : (u.icon ? `<img class="ficon" src="${u.icon}" onerror="this.remove()">` : `<span style="font-size:72px;font-weight:800">${esc(u.cname[0])}</span>`)}
+        ${u.art ? `<img src="${u.art}" onerror="this.remove()">` : u.icon ? `<img class="ficon" src="${u.icon}" onerror="this.remove()">` : `<span style="font-size:72px;font-weight:800">${esc(u.cname[0])}</span>`}
       </div>
       ${statHtml}
       <div class="section"><h3>档案</h3>
         <div class="grid2">
-          ${row('全名', '<ruby>' + u.fnameRuby + '</ruby>')}${row('生日', esc(u.birthday))}
-          ${row('守护星', esc(u.star))}${row('学年', u.year ? u.year + ' 年级' : '')}
-          ${row('CV', esc(u.cv))}${row('社团', esc(u.club || '-'))}
-          ${row('委员/职务', esc(u.committee || '-'))}${row('爱好', esc(u.hobby || '-'))}
+          ${row("全名", "<ruby>" + u.fnameRuby + "</ruby>")}${row("生日", esc(u.birthday))}
+          ${row("守护星", esc(u.star))}${row("学年", u.year ? u.year + " 年级" : "")}
+          ${row("CV", esc(u.cv))}${row("社团", esc(u.club || "-"))}
+          ${row("委员/职务", esc(u.committee || "-"))}${row("爱好", esc(u.hobby || "-"))}
         </div>
       </div>
     </div>
   `;
-  openOverlay();
-}
-document.getElementById('overlay').onclick = (e) => { if (e.target.id === 'overlay') closeOverlay(); };
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
+        openOverlay();
+      }
+      document.getElementById("overlay").onclick = (e) => {
+        if (e.target.id === "overlay") closeOverlay();
+      };
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeOverlay();
+      });
 
-// 弹窗开关: 联动 history (手机端系统返回手势/返回键优先关弹窗, 不退出页面) + 锁定背景滚动 (iOS 用 position:fixed 方案)
-let lockedScrollY = 0;
-function openOverlay() {
-  const ov = document.getElementById('overlay');
-  if (ov.classList.contains('show')) return;
-  history.pushState({ modal: 1 }, '');
-  ov.classList.add('show');
-  lockedScrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${lockedScrollY}px`;
-  document.body.style.width = '100%';
-}
-function unlockBg() {
-  if (document.body.style.position !== 'fixed') return;
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.width = '';
-  window.scrollTo(0, lockedScrollY);
-}
-function closeOverlay() {
-  const ov = document.getElementById('overlay');
-  const wasOpen = ov.classList.contains('show');
-  ov.classList.remove('show');
-  unlockBg();
-  // ✕/遮罩/Esc 关闭时清理 pushState 的历史项 (会触发 popstate, 那时弹窗已关, 监听器空转)
-  if (wasOpen && history.state && history.state.modal) history.back();
-}
-// 系统返回手势/返回键: 弹窗开着则拦截为关弹窗
-window.addEventListener('popstate', () => {
-  const ov = document.getElementById('overlay');
-  if (ov.classList.contains('show')) { ov.classList.remove('show'); unlockBg(); }
-});
+      // 弹窗开关: 联动 history (手机端系统返回手势/返回键优先关弹窗, 不退出页面) + 锁定背景滚动 (iOS 用 position:fixed 方案)
+      let lockedScrollY = 0;
+      function openOverlay() {
+        const ov = document.getElementById("overlay");
+        if (ov.classList.contains("show")) return;
+        history.pushState({ modal: 1 }, "");
+        ov.classList.add("show");
+        lockedScrollY = window.scrollY;
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${lockedScrollY}px`;
+        document.body.style.width = "100%";
+      }
+      function unlockBg() {
+        if (document.body.style.position !== "fixed") return;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        window.scrollTo(0, lockedScrollY);
+      }
+      function closeOverlay() {
+        const ov = document.getElementById("overlay");
+        const wasOpen = ov.classList.contains("show");
+        ov.classList.remove("show");
+        unlockBg();
+        // ✕/遮罩/Esc 关闭时清理 pushState 的历史项 (会触发 popstate, 那时弹窗已关, 监听器空转)
+        if (wasOpen && history.state && history.state.modal) history.back();
+      }
+      // 系统返回手势/返回键: 弹窗开着则拦截为关弹窗
+      window.addEventListener("popstate", () => {
+        const ov = document.getElementById("overlay");
+        if (ov.classList.contains("show")) {
+          ov.classList.remove("show");
+          unlockBg();
+        }
+      });
 
-let deb;
-document.getElementById('q').oninput = (e) => { clearTimeout(deb); deb = setTimeout(() => { state.q = e.target.value.trim(); render(); }, 120); };
-document.getElementById('sortSel').onchange = (e) => { state.sort = e.target.value; render(); };
-document.getElementById('viewSel').onchange = (e) => { state.view = e.target.value; render(); };
-const dirBtn = document.getElementById('dirBtn');
-dirBtn.onclick = () => { state.desc = !state.desc; dirBtn.textContent = state.desc ? '↑ 升序' : '↓ 降序'; render(); };
+      let deb;
+      document.getElementById("q").oninput = (e) => {
+        clearTimeout(deb);
+        deb = setTimeout(() => {
+          state.q = e.target.value.trim();
+          render();
+        }, 120);
+      };
+      document.getElementById("sortSel").onchange = (e) => {
+        state.sort = e.target.value;
+        render();
+      };
+      document.getElementById("viewSel").onchange = (e) => {
+        state.view = e.target.value;
+        render();
+      };
+      const dirBtn = document.getElementById("dirBtn");
+      dirBtn.onclick = () => {
+        state.desc = !state.desc;
+        dirBtn.textContent = state.desc ? "↑ 升序" : "↓ 降序";
+        render();
+      };
 
-renderToolbar();
-render();
-</script>
-</body>
+      renderToolbar();
+      render();
+    </script>
+  </body>
 </html>
