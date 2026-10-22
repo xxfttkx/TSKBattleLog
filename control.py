@@ -429,6 +429,15 @@ class FridaBridge:
             err = message.get("stack") or message.get("description") or str(message)
             self._log_internal(f"[agent-error] {err}")
 
+    def _read_capture_bundle(self) -> bool:
+        """读 gui_config.json 的 captureBundle（记录资源包请求开关），回退 False（默认关，少刷屏）。
+        模块级工具，FridaBridge._append_capture 与 App 设置页共用。"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("captureBundle", False))
+        except Exception:
+            return False
+
     def _append_capture(self, payload: dict):
         """network-capture mod 数据逐行 append 到 logs/capture/*.jsonl。
         每条独立 open/close：网络请求频次低，换取崩溃安全。
@@ -1188,12 +1197,8 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
             return False
 
     def _read_capture_bundle(self) -> bool:
-        """读 gui_config.json 的 captureBundle（记录资源包请求开关），回退 False（默认关，少刷屏）"""
-        try:
-            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
-            return bool(cfg.get("captureBundle", False))
-        except Exception:
-            return False
+        """读 gui_config.json 的 captureBundle：直接复用 FridaBridge 同名实现"""
+        return self.bridge._read_capture_bundle()
 
     def _on_capture_bundle_toggle(self):
         self._save_gui_config()
