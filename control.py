@@ -431,8 +431,15 @@ class FridaBridge:
 
     def _append_capture(self, payload: dict):
         """network-capture mod 数据逐行 append 到 logs/capture/*.jsonl。
-        每条独立 open/close：网络请求频次低，换取崩溃安全。"""
+        每条独立 open/close：网络请求频次低，换取崩溃安全。
+        GET 请求实测全是 AssetBundle 资源下载（一次会话上千条），
+        由「记录资源包请求」开关控制是否落盘，默认关闭（少刷屏）。"""
         try:
+            # 过滤 GET url 事件（实测：GET 全是 bundle，POST 全是 API）
+            if not self._read_capture_bundle():
+                if (payload.get("kind") == "url"
+                        and payload.get("method") == "GET"):
+                    return
             cap_dir = ROOT_DIR / "logs" / "capture"
             if self._capture_path is None:
                 cap_dir.mkdir(parents=True, exist_ok=True)
@@ -948,6 +955,25 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         self._apply_log_font_size(self._read_log_font_size())
         self._apply_log_colors(self._read_log_color())
 
+        # 网络抓包：bundle 请求是否落盘（个人偏好，默认开）
+        lf_cap = ttk.LabelFrame(
+            settings_inner, text="网络抓包（Capture 页）", padding=(10, 8))
+        lf_cap.pack(fill="x", pady=4)
+        self.capture_bundle_var = tk.BooleanVar(
+            value=self._read_capture_bundle())
+        ttk.Checkbutton(
+            lf_cap, text="记录资源包请求（GET / AssetBundle）",
+            variable=self.capture_bundle_var,
+            command=self._on_capture_bundle_toggle,
+        ).pack(anchor="w")
+        ttk.Label(
+            lf_cap,
+            text="默认关闭。实测 GET 请求全是 AssetBundle 资源下载，一次会话上千条，"
+                 "关闭后只落 /api/ POST 业务接口。\n"
+                 "切换即时生效，不影响已开始写入的当前文件。",
+            justify="left", foreground="#666",
+        ).pack(anchor="w", pady=(2, 0))
+
         # 版本信息（只读，唯一来源 package.json，打包时由 CI 写入 version.txt）
         # 右侧：当前版本；有新版时旁边出现蓝色可点击链接（启动后台探测，失败静默）
         ver_frame = ttk.Frame(settings_inner)
@@ -1161,6 +1187,17 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
         except Exception:
             return False
 
+    def _read_capture_bundle(self) -> bool:
+        """读 gui_config.json 的 captureBundle（记录资源包请求开关），回退 False（默认关，少刷屏）"""
+        try:
+            cfg = json.loads(GUI_CONFIG.read_text(encoding="utf-8"))
+            return bool(cfg.get("captureBundle", False))
+        except Exception:
+            return False
+
+    def _on_capture_bundle_toggle(self):
+        self._save_gui_config()
+
     def _on_mod_toggled(self, name: str, var: tk.BooleanVar):
         # 注入前勾选只写入 mods.json：注入握手时由 initMods 全量下发给 agent。
         # 注入后复选框已冻结，本回调不会再触发。
@@ -1280,6 +1317,10 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
                 pass
             try:
                 cfg["captureRaw"] = bool(self.capture_raw_var.get())
+            except Exception:
+                pass
+            try:
+                cfg["captureBundle"] = bool(self.capture_bundle_var.get())
             except Exception:
                 pass
             # 战斗日志窗口几何：开着取实时值，已关取关闭前暂存值
