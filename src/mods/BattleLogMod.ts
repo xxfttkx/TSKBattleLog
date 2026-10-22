@@ -110,6 +110,8 @@ export class BattleLogMod implements Mod {
 
     // 回合计数：hook BattleUpdate，对比 turnCount 变化
     this.setupTurnCountHook(image);
+    // GetTeam*Count NativeFunction 惰性解析（archive.md「invoke 失败」坑）
+    this.resolveTeamCountFns(image);
 
     // 伤害系数采集器（5 Offset + 易伤 + 被动），数据挂到 CalcSegment.coeffs
     damageCoeffs.install(image, this);
@@ -151,6 +153,108 @@ export class BattleLogMod implements Mod {
         }
       },
     });
+  }
+
+  /** TSKBattleNote 4 个 GetTeamXxxCount 的 NativeFunction 表（惰性解析）。
+   * 不用 il2cpp-bridge invoke：带 ContainsUnimplementedInstructions，invoke 静默失败
+   * （archive.md「il2cpp-bridge invoke 失败」同款坑） */
+  private teamCountFns: Partial<
+    Record<
+      "attackType" | "attr" | "race" | "role",
+      (h: NativePointer) => number
+    >
+  > = {};
+  private teamCountResolved = false;
+  /** 玩家队 notes List 句柄（Initialize 的 args[4]，type==0 时记录） */
+  private playerNotesListHandle: NativePointer | null = null;
+
+  /** 惰性解析 4 个 GetTeamXxxCount 为 NativeFunction，解析失败只警告一次 */
+  private resolveTeamCountFns(image: Il2Cpp.Image): void {
+    if (this.teamCountResolved) return;
+    this.teamCountResolved = true;
+    try {
+      const cls = image.tryClass("TSKBattleNote");
+      if (!cls) {
+        log("[battle-log] TSKBattleNote not found, GetTeam*Count disabled");
+        return;
+      }
+      const defs: Array<
+        [keyof typeof this.teamCountFns, string, NativeFunctionArgumentType[]]
+      > = [
+        ["attackType", "GetTeamAttackTypeCount", []],
+        // GetTeamAttrCount(bool isMainOnly=false)：默认参数 il2cpp 是调用方填的语法糖，
+        // NativeFunction 必须显式传；false=数全队（含 sub），true=只数 main
+        ["attr", "GetTeamAttrCount", ["bool"]],
+        ["race", "GetTeamRaceCount", []],
+        ["role", "GetTeamRoleCount", []],
+      ];
+      for (const [key, name, extraArgs] of defs) {
+        try {
+          const m = cls.method(name, extraArgs.length);
+          if (!m || m.virtualAddress.isNull()) {
+            log(`[battle-log] ${name} address is null`);
+            continue;
+          }
+          const fn = new NativeFunction(m.virtualAddress, "int", [
+            "pointer",
+            ...extraArgs,
+            "pointer",
+          ] as NativeFunctionArgumentType[]);
+          // 末尾 NULL 是 method_info 槽位；extraArgs 全填默认值（false / 0）
+          this.teamCountFns[key] = (h) =>
+            (fn as any)(h, ...extraArgs.map(() => 0), NULL) as number;
+        } catch (e) {
+          log(`[battle-log] resolve ${name} failed: ${e}`);
+        }
+      }
+      log(
+        `[battle-log] GetTeam*Count resolved: ${Object.keys(this.teamCountFns).join(",")}`,
+      );
+    } catch (e) {
+      log(`[battle-log] resolve TSKBattleNote failed: ${e}`);
+    }
+  }
+
+  /** 从我方 notes List 第一项现算 4 个 GetTeam*Count。
+   * 只在 snapshot() 被拉取时调用——删除 teamCount 推送后不再周期计算，
+   * 战斗日志窗口的「刷新」按钮驱动一次计算，开销可忽略。
+   * 失败/战斗中未初始化返回 null */
+  private computeTeamCounts(): {
+    attackType: number;
+    attr: number;
+    race: number;
+    role: number;
+  } | null {
+    const fnEntries = Object.entries(this.teamCountFns);
+    if (fnEntries.length === 0) return null;
+    if (!this.playerNotesListHandle || this.playerNotesListHandle.isNull())
+      return null;
+    let noteHandle: NativePointer;
+    try {
+      // List<TSKBattleNote>._items[0] -> note
+      const list = new Il2Cpp.Object(this.playerNotesListHandle);
+      const items = list.field("_items").value as Il2Cpp.Array<Il2Cpp.Object>;
+      if (items.length === 0) return null;
+      const note = items.get(0);
+      if (!note || note.handle.isNull()) return null;
+      noteHandle = note.handle;
+    } catch {
+      return null;
+    }
+    const values: Record<string, number> = {};
+    for (const [key, fn] of fnEntries) {
+      try {
+        values[key] = (fn as (h: NativePointer) => number)(noteHandle);
+      } catch {
+        return null;
+      }
+    }
+    return {
+      attackType: values.attackType,
+      attr: values.attr,
+      race: values.race,
+      role: values.role,
+    };
   }
 
   // ===== CaluculationNormalDamage 段细节采集（quiet hook）=====
@@ -258,6 +362,9 @@ export class BattleLogMod implements Mod {
 
   /** 宿主「战斗日志」窗口按需拉取当前战斗快照 */
   snapshot(): BattleLogSnapshot {
+    // 现算 teamCounts 写入 tskBattleLog（仅此处触发 NativeFunction 调用，
+    // 删除 teamCount 推送后平时零开销）
+    this.tskBattleLog.teamCounts = this.computeTeamCounts();
     return this.tskBattleLog.snapshot();
   }
 
@@ -265,9 +372,13 @@ export class BattleLogMod implements Mod {
    *  守卫：只有本场真正有 Player Initialize 且有出击角色时才保存，
    *  避免无玩家信息的 End 事件（误触发/重复 End/只有敌方初始化）落盘脏快照。 */
   private handleEndBattle: MethodEnterHandler = () => {
-    if (!this.tskBattleLog.shouldSave()) return;
-    this.tskBattleLog.onEndBattle();
-    sendHost("battleLogEnded", this.tskBattleLog.snapshot());
+    // 战斗结束：清空 notes 缓存（下一场 init 才会重填）
+    // 先 snapshot（内部现算 teamCounts，此刻 playerNotesListHandle 还有效）再清
+    if (this.tskBattleLog.shouldSave()) {
+      this.tskBattleLog.onEndBattle();
+      sendHost("battleLogEnded", this.snapshot());
+    }
+    this.playerNotesListHandle = null;
   };
 
   private handleInitialize: MethodEnterHandler = (_cls, _method, args) => {
@@ -335,6 +446,7 @@ export class BattleLogMod implements Mod {
 
     if (teamType === "Player" || teamType === "Unknown") {
       this.tskBattleLog.init(notes, modeName);
+      this.playerNotesListHandle = args[4];
     } else if (teamType === "Enemy") {
       // 敌方不进 notes（伤害统计只认玩家），仅留名单 + 定格模式供结束快照。
       // Player Initialize 恒报 Normal 不可信，真正的模式只在 Enemy Initialize；

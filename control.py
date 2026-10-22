@@ -1360,6 +1360,12 @@ class App(tk.Tk, BattleLogWindowMixin, CaptureTabMixin):
 
     # ---- 消息轮询 ----
 
+    def _log_internal(self, text: str):
+        """App 侧 _log_internal：委托给 bridge（该方法本体在 FridaBridge）。
+        mixin（battle_log_window / capture_window）和 App 自身异常分支都用 self._log_internal，
+        没有这个委托会 AttributeError。"""
+        self.bridge._log_internal(text)
+
     def _poll_queue(self):
         try:
             while True:

@@ -158,6 +158,14 @@ export interface BattleLogSnapshot {
   damageTotal: string;
   unisonDamageTotal: string;
   turnCount: number;
+  /** 我方队伍 4 个 GetTeam*Count（BattleLogMod 周期写入；战斗结束/未初始化为 null）。
+   * 旧快照无此字段 */
+  teamCounts?: {
+    attackType: number;
+    attr: number;
+    race: number;
+    role: number;
+  } | null;
 }
 
 export class TSKBattleLog {
@@ -203,6 +211,15 @@ export class TSKBattleLog {
 
   constructor() {}
 
+  /** 我方队伍 4 个 GetTeam*Count（BattleLogMod 每次 refreshTeamCounts 写入）。
+   * 战斗结束/未初始化 = null；snapshot 时随包发给宿主 */
+  teamCounts: {
+    attackType: number;
+    attr: number;
+    race: number;
+    role: number;
+  } | null = null;
+
   clear(): void {
     this.notes = [];
     this.logs = [];
@@ -218,6 +235,7 @@ export class TSKBattleLog {
     this.mode = "";
     this.enemyModeSet = false;
     this.enemyUnits = [];
+    this.teamCounts = null;
     this.initialEx = 0;
     this.firstRoundUsableEx = 0;
     this.battleStarted = false;
@@ -601,6 +619,7 @@ export class TSKBattleLog {
       damageTotal: this.damageTotal.toString(),
       unisonDamageTotal: this.unisonDamageTotal.toString(),
       turnCount: this.turnCount,
+      teamCounts: this.teamCounts ? { ...this.teamCounts } : null,
     };
   }
 }

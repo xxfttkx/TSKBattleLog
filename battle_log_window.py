@@ -88,6 +88,8 @@ class BattleLogWindowMixin:
             return
         self._blog_dialog["info"].configure(foreground="#1a5fb4",
                                             text="读取中...")
+        # team_count 与 info 行为一致：刷新时切到「读取中...」，snap 到达后一次性覆盖
+        self._blog_dialog["team_count"].configure(text="读取中...")
         self.bridge.post({"type": "battleLogRequest"})
 
     def _read_battle_log_geometry(self) -> str | None:
@@ -122,6 +124,11 @@ class BattleLogWindowMixin:
             t.insert("end", txt, (tag,) if tag else ())
         t.configure(state="disabled")
 
+    def _team_count_text(self, payload: dict) -> str:
+        keys = (("attackType", "攻击类型"), ("attr", "属性"), ("race", "种族"), ("role", "类型"))
+        parts = [f"{label}{payload[k]}" for k, label in keys if payload.get(k) is not None]
+        return " ".join(parts) if parts else "攻击类型0 属性0 种族0 类型0"
+
     def _open_battle_log_dialog(self):
         if self._blog_dialog is not None:
             top_old = self._blog_dialog["top"]
@@ -149,6 +156,14 @@ class BattleLogWindowMixin:
         info.pack(side="left")
         ttk.Button(header, text="刷新",
                    command=self._refresh_battle_log).pack(side="right")
+
+        # 队伍 4 个 GetTeam*Count（agent BattleUpdate 周期上报，战斗结束清空）：
+        # 独立一行放在 header 下面，字号颜色与 info 完全一致
+        # 初值硬编码 0，snap 到达后由 _render_battle_log 用 snap.teamCounts 覆盖
+        team_count = ttk.Label(top, text="攻击类型0 属性0 种族0 类型0",
+                               foreground="#1a5fb4",
+                               font=("", 10, "bold"))
+        team_count.pack(fill="x", padx=8, pady=(0, 2))
 
         # 历史列表并入本窗口的第二个标签页，避免多窗口互相遮挡
         notebook = ttk.Notebook(top)
@@ -209,6 +224,7 @@ class BattleLogWindowMixin:
 
         dlg = {"top": top, "info": info, "tree": tree,
                "detail": detail, "detail_info": detail_info,
+               "team_count": team_count,
                "rows": {}, "notebook": notebook}
         self._blog_dialog = dlg
         dlg["history_tree"] = self._build_history_tab(notebook)
@@ -621,6 +637,10 @@ class BattleLogWindowMixin:
                  f"Unison次数 {unison_count} / "
                  f"当前回合数 {len(turns)}）",
         )
+        # snap 里带 teamCounts（战斗中拉取/历史快照均有；旧快照无此字段或值为 null）：
+        # 用它覆盖 team_count 行；空值（战斗结束/未初始化）显示 0 而不是停留在「读取中...」
+        team_counts = snap.get("teamCounts")
+        dlg["team_count"].configure(text=self._team_count_text(team_counts or {}))
 
     def _on_battle_log_select(self):
         dlg = self._blog_dialog
