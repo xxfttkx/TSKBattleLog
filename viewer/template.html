@@ -1010,6 +1010,15 @@
           )
           .replace(/&lt;\/color&gt;/g, "</span>")
           .replace(/\n/g, "<br>");
+      // wiki 长文本断行: EX1：/EX2：/EX2+：/※ 前断行, 「/」也作为分隔换行 (仅用于 wiki 来源字段)
+      const wikiBreak = (s) =>
+        colorize(
+          String(s ?? "")
+            .trim()
+            .replace(/\s*\/\s*/g, "\n")
+            .replace(/\s*(EX[12]\+?：|※)/g, "\n$1")
+            .replace(/^\n+/, ""),
+        );
       const stars = (n) => "★".repeat(n);
       // 千分比原始值 → 百分比文本 (300 -> '3', 1195 -> '11.95')
       const pct = (v) => {
@@ -1610,8 +1619,8 @@
         <div class="eqn"><span class="epart">${EQ_PART[e.part] || e.part}</span><span class="starr">${"★".repeat(e.rarity || 1)}</span> ${esc(e.name)}</div>
         <div class="eqm">Lv ${e.lv}/${e.max_lv}${e.max_lb ? ` · 突破 ${e.lb}/${e.max_lb}` : ""}${e.enchTotal ? ` · 附魔 ${e.enchOpen}/${e.enchTotal}` : ""}${e.wObtain ? ` · ${esc(e.wObtain)}` : ""}</div>
         <div class="eqp">${(e.params || []).map((p) => `<span>${paramStr(p)}</span>`).join("")}</div>
-        ${e.skill ? `<div class="eqs"><b>アビリティ</b> ${pcthi(e.skill)}${e.skill_lv ? ` <span class="k">Lv${e.skill_lv}</span>` : ""}</div>` : ""}
-        ${e.wAbility && e.wAbility !== e.skill ? `<div class="eqs"><b>初期(最大)</b> ${pcthi(e.wAbility)}</div>` : ""}
+        ${e.skill ? `<div class="eqs"><b>アビリティ</b> ${colorize(e.skill)}${e.skill_lv ? ` <span class="k">Lv${e.skill_lv}</span>` : ""}</div>` : ""}
+        ${e.wAbility && e.wAbility !== e.skill ? `<div class="eqs"><b>初期(最大)</b> ${wikiBreak(e.wAbility)}</div>` : ""}
         ${
           e.enchants && e.enchants.some((en) => en.open)
             ? `<div class="eqs"><b>附魔</b></div>` +
@@ -1619,7 +1628,7 @@
                 .filter((en) => en.open)
                 .map(
                   (en) =>
-                    `<div class="eqench">${en.rare ? '<span class="erare">稀有</span>' : ""}<span class="estarr">${"★".repeat(en.rarity || 1)}</span> <b>${esc(en.name)}</b>${en.tier ? ` <span class="k">Lv${en.tier}</span>` : ""} — ${pcthi(en.text)}</div>`,
+                    `<div class="eqench">${en.rare ? '<span class="erare">稀有</span>' : ""}<span class="estarr">${"★".repeat(en.rarity || 1)}</span> <b>${esc(en.name)}</b>${en.tier ? ` <span class="k">Lv${en.tier}</span>` : ""} — ${colorize(en.text)}</div>`,
                 )
                 .join("")
             : ""
@@ -1648,8 +1657,8 @@
           tagHtml,
         ) => `<div class="skill${s.unlock ? "" : " slock"}">
       <div class="sname">${tagHtml} <b>${esc(s.name || "固有被动")}</b>${catChips(s)}${s.cost > 0 ? `<span class="smeta">EX 消耗 ${s.cost}</span>` : ""}${s.max_lv ? `<span class="smeta">Lv ${s.lv}/${s.max_lv}</span>` : ""}${s.unlock ? "" : '<span class="slocktag">未解锁</span>'}</div>
-      ${s.detail ? `<div class="sdetail">${pcthi(s.detail)}</div>` : ""}
-      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${(s.ssCats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join("")}${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ""}</div><div class="sdetail">${pcthi(s.ssDetail)}</div>` : ""}
+      ${s.detail ? `<div class="sdetail">${colorize(s.detail)}</div>` : ""}
+      ${s.ssName ? `<div class="sname" style="margin-top:7px"><span class="stag st-ex2">EX${s._exn || 1}+</span> <b>${esc(s.ssName)}</b>${(s.ssCats || []).map((c) => `<span class="stag scat">${esc(CAT_NAME[c] || c)}</span>`).join("")}${s.ssCost > 0 ? `<span class="smeta">EX 消耗 ${s.ssCost}</span>` : ""}</div><div class="sdetail">${colorize(s.ssDetail)}</div>` : ""}
       ${s.cond && !s.unlock ? `<div class="scond">解锁条件：${esc(s.cond)}</div>` : ""}
     </div>`;
         let exN = 0;
