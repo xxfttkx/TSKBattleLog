@@ -363,8 +363,13 @@ export class BattleLogMod implements Mod {
   /** 宿主「战斗日志」窗口按需拉取当前战斗快照 */
   snapshot(): BattleLogSnapshot {
     // 现算 teamCounts 写入 tskBattleLog（仅此处触发 NativeFunction 调用，
-    // 删除 teamCount 推送后平时零开销）
-    this.tskBattleLog.teamCounts = this.computeTeamCounts();
+    // 删除 teamCount 推送后平时零开销）；战斗结束后 playerNotesListHandle
+    // 已清，computeTeamCounts 返回 null——此时保留上一次的值（战斗结束前最后一次），
+    // 不要覆盖成 null，否则用户打开窗口会看到 0
+    const latest = this.computeTeamCounts();
+    if (latest !== null) {
+      this.tskBattleLog.teamCounts = latest;
+    }
     return this.tskBattleLog.snapshot();
   }
 
